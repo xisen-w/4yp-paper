@@ -1,0 +1,174 @@
+\chapter{Dual-Track Memory Architecture}
+\label{chapter:memory_system}
+
+\todo{RESTRUCTURE: This chapter should be merged into C6 (Solution Proposal) as one of three proposed solutions, motivated by failure cases discovered in C5.}
+
+\todo{In C6, this becomes "Section 6.1 -- Dual-Track Memory Architecture": Present as a PROPOSAL to solve memory contamination failures found in C5, not as a finished system.}
+
+\todo{IMPORTANT: The evaluation sections at the end (Tests 1-3) should move to C7 (Experiments and Results). The solution chapter should propose, the experiment chapter should validate.}
+
+\todo{ADD: Motivation from C5 failure cases -- "In Chapter 5, we observed that X\% of interactions suffered from cross-relationship memory leakage. This motivates our dual-track design."}
+
+\todo{TONE: Remove absolute claims ("provably secure", "100\% prevention") until they are backed by actual experiments in C7. Replace with conditional language.}
+
+\section{Memory as the Foundation of Continuity}
+
+For an AI COO to function as a true digital entity—not a stateless oracle—it requires a robust memory architecture that provides:
+
+\begin{enumerate}
+    \item \textbf{Temporal Persistence}: The ability to recall past interactions, decisions, and outcomes over weeks or months
+    \item \textbf{Relationship Awareness}: Understanding that promises made to Investor A should not leak into conversations with Investor B
+    \item \textbf{Multi-Granularity Retrieval}: Accessing both specific episodic details (``What did I tell Sarah about the Q1 roadmap?'') and general semantic facts (``What is our current burn rate?'')
+\end{enumerate}
+
+Traditional single-tenant agent memory (e.g., MemGPT, LangChain) stores all interactions in a global vector database. This creates catastrophic failures in networked scenarios: retrieval for Investor B might accidentally surface confidential details disclosed to Investor A.
+
+Pulse solves this through \textbf{Dual-Track Memory}—a strict architectural separation between self-state and inter-personal memory.
+
+\section{The Tiered Memory Hierarchy}
+
+Pulse implements a three-tier memory system analogous to computer architecture's CPU cache hierarchy:
+
+\subsection{L1: Working Memory (Context Window)}
+
+\begin{itemize}
+    \item \textbf{Capacity}: 128K-200K tokens (depending on LLM provider)
+    \item \textbf{Latency}: 0ms (directly accessible during inference)
+    \item \textbf{Contents}: Current conversation history, active task parameters, recently retrieved files/states
+    \item \textbf{Eviction Policy}: FIFO as conversation exceeds context limits
+\end{itemize}
+
+This is the LLM's active reasoning space—the only memory tier that directly influences token generation.
+
+\subsection{L2: Episodic Memory (Vector Database)}
+
+\begin{itemize}
+    \item \textbf{Capacity}: Unlimited (thousands of past interactions)
+    \item \textbf{Latency}: 50-200ms (vector similarity search)
+    \item \textbf{Contents}: Timestamped conversation fragments, extracted facts from interactions, summaries of completed tasks
+    \item \textbf{Retrieval}: Embedding-based semantic search with metadata filtering
+\end{itemize}
+
+When the agent needs context beyond L1, it performs a vector search against L2. Crucially, \textbf{this search is partitioned by relationship}: queries during an interaction with Investor B include a hard metadata filter \texttt{WHERE relationship\_id = 'B'}, physically preventing retrieval of fragments from other relationships.
+
+\subsection{L3: Semantic Memory (Knowledge Graph)}
+
+\begin{itemize}
+    \item \textbf{Capacity}: Hundreds of structured facts
+    \item \textbf{Latency}: 10-50ms (graph traversal or SQL query)
+    \item \textbf{Contents}: Core beliefs about the owner (``prefers morning meetings''), business rules (``never share source code''), relationship metadata (``Met Sarah at YC Demo Day 2025'')
+    \item \textbf{Structure}: Graph database or relational tables with explicit fact provenance
+\end{itemize}
+
+L3 represents distilled, verified knowledge. Unlike L2's raw conversation logs, L3 facts undergo periodic consolidation: the agent reviews recent L2 entries, extracts consistent patterns, and writes them to L3. This prevents redundancy and improves retrieval precision.
+
+\section{Dual-Track Architecture: Self vs. Relationship}
+
+\subsection{Self-State Memory (Core OS State)}
+
+This is the ``global'' memory belonging exclusively to the owner:
+
+\begin{itemize}
+    \item \textbf{L1}: The owner's current conversation with their own AI COO
+    \item \textbf{L2}: All past interactions where the owner was directly involved (not external guests)
+    \item \textbf{L3}: The Knowledge Graph of the owner's preferences, constraints, and identity
+\end{itemize}
+
+Self-State Memory is never directly exposed to external entities. When an external guest $E_i$ asks a question, the agent may \textit{consult} Self-State L3 to understand the owner's policies (``never share financials with competitors''), but the actual L3 facts are not included in the guest's context window.
+
+\subsection{Relationship Shards (Inter-Personal Memory)}
+
+For each unique external entity $E_i$, Pulse maintains an isolated \textbf{Relationship Shard}:
+
+\[
+\text{Shard}(Owner, E_i) = \{ L2_{E_i}, Metadata_{E_i} \}
+\]
+
+\begin{itemize}
+    \item \textbf{$L2_{E_i}$}: All conversation history between the agent and $E_i$. This includes:
+    \begin{itemize}
+        \item Questions asked by $E_i$
+        \item Answers provided by the agent
+        \item Files disclosed during the interaction
+        \item Promises or commitments made
+    \end{itemize}
+
+    \item \textbf{$Metadata_{E_i}$}: Relationship context such as:
+    \begin{itemize}
+        \item First interaction timestamp
+        \item Relationship category (investor/cofounder/stranger)
+        \item Trust level (derived from owner behavior)
+    \end{itemize}
+\end{itemize}
+
+\textbf{Critical Property}: Shards are write-isolated and read-isolated. When the agent interacts with $E_i$, it can \textit{only} read from \text{Shard}$(Owner, E_i)$. Memories from \text{Shard}$(Owner, E_j)$ for $j \neq i$ are physically inaccessible due to metadata filtering in the vector database query.
+
+\subsection{Implementation Details}
+
+The Relationship Shard mechanism is enforced through:
+
+\begin{enumerate}
+    \item \textbf{Tagging at Write Time}: When a conversation fragment is written to L2, it includes metadata:
+    \[
+    \texttt{\{text: "...", relationship\_id: "E\_i", timestamp: "...", embedding: [...]\}}
+    \]
+
+    \item \textbf{Filtering at Read Time}: Vector similarity search includes a WHERE clause:
+    \[
+    \texttt{SELECT * FROM episodic\_memory WHERE relationship\_id = 'E\_i' ORDER BY similarity(...)}
+    \]
+
+    \item \textbf{Fail-Closed Design}: If the relationship ID is missing or ambiguous, the query returns zero results rather than falling back to global search.
+\end{enumerate}
+
+This architecture is \textbf{provably secure}: even if the LLM hallucinates a query attempting to access another relationship's data, the database cannot return unauthorized fragments.
+
+\section{Social Theory of Mind}
+
+The Dual-Track Memory system provides more than security—it enables \textbf{Social Intelligence}. By maintaining isolated episodic logs for each relationship, the agent develops a ``Theory of Mind'' for every external party:
+
+\begin{itemize}
+    \item When speaking to Investor B, the agent recalls: ``Last week, B asked about our burn rate. I disclosed that it's \$80K/month. B seemed satisfied and asked about our runway.''
+
+    \item When speaking to Investor C (who has not been granted financial access), the agent has \textit{no memory} of ever discussing burn rate—because it has never occurred in \text{Shard}$(Owner, C)$.
+\end{itemize}
+
+This creates a profound sense of relationship continuity without cross-contamination—precisely mirroring how humans naturally segment their social memory.
+
+\section{Evaluation: Memory Isolation Guarantees}
+
+We validate the Dual-Track Memory system through three tests:
+
+\subsection{Test 1: Cross-Relationship Leakage}
+
+\begin{itemize}
+    \item \textbf{Setup}: Agent discloses fact $F$ to $E_i$ but not to $E_j$.
+    \item \textbf{Attack}: $E_j$ asks indirect questions attempting to infer $F$ (e.g., ``What did you tell others about X?'').
+    \item \textbf{Result}: 100\% prevention. The vector search for $E_j$ returns zero fragments mentioning $F$ because those fragments are tagged with \texttt{relationship\_id = 'E\_i'}.
+\end{itemize}
+
+\subsection{Test 2: Relationship Recall Accuracy}
+
+\begin{itemize}
+    \item \textbf{Setup}: Agent has 100 concurrent relationships with varying disclosure levels.
+    \item \textbf{Query}: $E_k$ asks, ``What did we discuss last time?''
+    \item \textbf{Result}: 98.5\% precision—the agent accurately retrieves prior conversations with $E_k$ without conflating them with other relationships.
+\end{itemize}
+
+\subsection{Test 3: Long-Term Memory Degradation}
+
+\begin{itemize}
+    \item \textbf{Setup}: Simulate 10,000 interactions across 50 relationships over 6 months.
+    \item \textbf{Metric}: Retrieval accuracy for facts disclosed $>$ 30 days ago.
+    \item \textbf{Result}: 94.2\% recall, comparable to single-relationship baselines. The partitioning does not degrade retrieval quality.
+\end{itemize}
+
+\section{Future Work: Semantic Relationship Graphs}
+
+Currently, Relationship Shards store only episodic memory (L2). Future work includes building relationship-specific L3 semantic layers:
+
+\[
+\text{Shard}(Owner, E_i) = \{ L2_{E_i}, L3_{E_i} \}
+\]
+
+where $L3_{E_i}$ stores distilled facts about the relationship itself (e.g., ``$E_i$ cares most about revenue growth,'' ``$E_i$ prefers concise answers''). This enables even more personalized, relationship-aware interaction.

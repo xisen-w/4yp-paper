@@ -1,0 +1,70 @@
+%
+% File    : pulse_4yp_thesis.tex
+% Author  : Xisen Wang
+% Created : March 23, 2026
+% ____________________________________________________________________________
+%
+% DESCRIPTION :
+%
+% 4th Year Project Report: Pulse - A Secure AgentOS for Cross-Boundary
+% Coordination
+% ____________________________________________________________________________
+
+
+\documentclass[report]{oxengthesis}
+
+
+%
+% Document metadata
+%
+
+\title       {Pulse: A Secure AgentOS for Cross-Boundary AI Coordination}
+\author      {Xisen Wang}
+\degree      { {\huge 4$^{th}$-Year Project Report} }
+\college     {Keble College}
+\supervisor  {Professor Philip Torr}
+\date        {Trinity Term, 2026}
+
+
+%
+% Document contents
+%
+
+\makeglossaries
+
+\begin{document}
+
+\frontmatter
+\makefrontmatterpages
+
+\mainmatter
+
+
+% TODO: Final chapter order should be:
+% C1: Introduction (chap_introduction)
+% C2: Related Work (chap_literature_review) -- NEW
+% C3: Problem Formulation (chap_problem_setup, stripped of landscape analysis)
+% C4: Benchmark Design (chap_architecture, reframed)
+% C5: Failure Cases & Results (NEW, split from chap_evaluation)
+% C6: Solution Proposal (MERGE chap_memory_system + chap_security)
+% C7: Experiments & Results (split from chap_evaluation)
+% C8: Conclusions (chap_conclusion)
+%
+\include{chap_introduction}
+\include{chap_literature_review}
+\include{chap_problem_setup}
+\include{chap_architecture}
+\include{chap_memory_system}
+\include{chap_security}
+\include{chap_evaluation}
+\include{chap_conclusion}
+
+\appendix
+
+\include{appendix_technical}
+\include{appendix_related_works}
+
+\backmatter
+\listofreferences
+
+\end{document}

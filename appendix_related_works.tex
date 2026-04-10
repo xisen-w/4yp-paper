@@ -1,0 +1,323 @@
+\chapter{Extended Related Work Analysis}
+\label{appendix:related_works}
+
+\section{Single-Tenant Agent Frameworks}
+
+\subsection{MemGPT (Packer et al., 2023)}
+
+\textbf{Core Contribution}: Hierarchical memory system with OS-like virtual context management.
+
+\textbf{Architecture}:
+\begin{itemize}
+    \item \textbf{Main Context}: Active LLM working memory
+    \item \textbf{Disk}: Long-term storage for conversation history
+    \item \textbf{Paging}: Dynamically swap memory pages between main context and disk
+\end{itemize}
+
+\textbf{Limitations for Networked Scenarios}:
+\begin{itemize}
+    \item Memory is globally accessible—no relationship-specific partitioning
+    \item No security boundaries—assumes trusted single-tenant execution
+    \item No cross-agent communication primitives
+\end{itemize}
+
+\textbf{Pulse's Advancement}: Dual-Track Memory extends MemGPT's tiered architecture with relationship shards, enabling secure multi-party interactions.
+
+\subsection{OpenClaw / Manus (Commercial Systems)}
+
+\textbf{Core Contribution}: Production-grade task automation with computer vision and browser control.
+
+\textbf{Capabilities}:
+\begin{itemize}
+    \item GUI automation (clicking, typing, navigating)
+    \item Multi-step workflow orchestration
+    \item Integration with desktop applications
+\end{itemize}
+
+\textbf{Limitations for Networked Scenarios}:
+\begin{itemize}
+    \item Designed for internal workspace—no access governance model
+    \item Assumes user is always the principal—no external agent concept
+    \item Security through obscurity (user's local machine)
+\end{itemize}
+
+\textbf{Pulse's Advancement}: Context Cells provide physical security boundaries enabling external parties to interact with the agent without full workspace access.
+
+\subsection{AutoGPT / BabyAGI (Open Source)}
+
+\textbf{Core Contribution}: Autonomous task decomposition and execution loops.
+
+\textbf{Architecture}:
+\begin{itemize}
+    \item Self-prompting agents that plan multi-step tasks
+    \item Tool use through plugins
+    \item Memory through vector databases or simple files
+\end{itemize}
+
+\textbf{Limitations for Networked Scenarios}:
+\begin{itemize}
+    \item No persistent identity—each run starts fresh
+    \item No relationship awareness
+    \item No security model for external access
+\end{itemize}
+
+\textbf{Pulse's Advancement}: Proactive Heartbeat mechanism + persistent identity + relationship-aware memory create a true "lifelong" agent, not just a task executor.
+
+\section{Agent Communication Protocols}
+
+\subsection{Multi-Agent Systems (JADE, FIPA-ACL)}
+
+\textbf{Core Contribution}: Standardized message-passing protocols for agent coordination.
+
+\textbf{FIPA-ACL Message Structure}:
+\begin{verbatim}
+(REQUEST
+  :sender agent1
+  :receiver agent2
+  :content (action (deliver package123))
+  :language FIPA-SL)
+\end{verbatim}
+
+\textbf{Design Philosophy}:
+\begin{itemize}
+    \item Agents as autonomous software entities
+    \item Speech acts for communication (REQUEST, INFORM, QUERY)
+    \item Ontology-based content representation
+\end{itemize}
+
+\textbf{Limitations for LLM-Based Agents}:
+\begin{itemize}
+    \item Assumes deterministic agent behavior—no handling of LLM non-determinism
+    \item No security model—assumes trusted agent federation
+    \item Rigid ontologies—incompatible with natural language flexibility
+\end{itemize}
+
+\textbf{Pulse's Advancement}: Hybrid approach—structured JSON payloads for reliability + natural language for flexibility, combined with zero-trust authentication via Context Cells.
+
+\subsection{LLM-Based A2A Communication (Wang et al., 2024)}
+
+\textbf{Core Contribution}: Agents negotiate through natural language exchanges.
+
+\textbf{Example Flow}:
+\begin{verbatim}
+Agent A: "I propose we meet on Tuesday at 2pm."
+Agent B: "I'm unavailable then. How about Wednesday at 3pm?"
+Agent A: "Wednesday works. Confirmed."
+\end{verbatim}
+
+\textbf{Advantages}:
+\begin{itemize}
+    \item Leverages LLM's natural language understanding
+    \item Flexible—can handle unanticipated scenarios
+\end{itemize}
+
+\textbf{Limitations}:
+\begin{itemize}
+    \item High latency (3+ LLM roundtrips per agreement)
+    \item Token-inefficient (verbose text exchanges)
+    \item Hallucination risks (Agent A might agree to something Agent B never proposed)
+    \item No access governance—assumes agents have unrestricted context
+\end{itemize}
+
+\textbf{Pulse's Advancement}: Structured intent exchange for common tasks (scheduling, document requests) with natural language fallback for complex negotiations. Context Cells ensure data access is scoped per relationship.
+
+\section{Privacy-Preserving AI Systems}
+
+\subsection{Federated Learning}
+
+\textbf{Core Contribution}: Train models collaboratively without centralizing data.
+
+\textbf{Architecture}:
+\begin{itemize}
+    \item Local model training on device
+    \item Gradient sharing (not raw data)
+    \item Central aggregation for global model
+\end{itemize}
+
+\textbf{Relevance to Pulse}:
+\begin{itemize}
+    \item Similar philosophy: enable collaboration without full data sharing
+    \item Different use case: FL is for model training, Pulse is for operational coordination
+\end{itemize}
+
+\textbf{Potential Integration}: Federated learning could enable agents to improve their policy models (Escalation Protocol) without sharing sensitive precedent data with a central server.
+
+\subsection{Differential Privacy}
+
+\textbf{Core Contribution}: Quantify and limit information leakage from queries.
+
+\textbf{Definition}:
+\[
+P[M(D) \in S] \leq e^{\epsilon} \cdot P[M(D') \in S] + \delta
+\]
+
+where $D$ and $D'$ differ by one record.
+
+\textbf{Application to Pulse}: Future work could formally bound the information leakage from indirect inference attacks using differential privacy metrics.
+
+\textbf{Challenge}: DP typically adds noise to results. For operational coordination (e.g., ``When are you free?''), noisy answers are unacceptable. Research needed on \textit{selective DP}—apply DP only to sensitive aggregates, not individual operational queries.
+
+\section{AI Safety and Alignment}
+
+\subsection{Constitutional AI (Anthropic)}
+
+\textbf{Core Contribution}: Self-critique and revision based on constitutional principles.
+
+\textbf{Training Process}:
+\begin{enumerate}
+    \item Generate initial response
+    \item Critique response against constitution (``Is this helpful and harmless?'')
+    \item Revise response based on critique
+    \item Train model on revised responses (RLHF)
+\end{enumerate}
+
+\textbf{Relevance to Pulse}:
+\begin{itemize}
+    \item The ``Macro Constitution'' in Pulse's Escalation Protocol is inspired by Constitutional AI
+    \item However, Pulse enforces constitution through \textit{system architecture}, not just training
+\end{itemize}
+
+\textbf{Key Difference}: Constitutional AI trusts the model to follow principles. Pulse's Context Cells provide physical enforcement—the model \textit{cannot} violate the constitution even if compromised.
+
+\subsection{RLHF and Instruction Following}
+
+\textbf{Core Contribution}: Fine-tune models to follow user instructions reliably.
+
+\textbf{Limitations Exposed by Pulse}:
+\begin{itemize}
+    \item RLHF improves average-case instruction following but does not eliminate adversarial brittleness
+    \item Jailbreak research (Zou et al., 2023; Wei et al., 2024) demonstrates that RLHF-aligned models remain vulnerable
+    \item Pulse's approach: \textit{assume the model is adversarial} and design the system accordingly
+\end{itemize}
+
+\textbf{Future Integration}: RLHF could improve Pulse's Sanitization Agent (fewer false positives in Escalation Protocol), but security guarantees must remain architectural, not behavioral.
+
+\section{Data Sharing and Collaboration Platforms}
+
+\subsection{Notion, Confluence, Google Workspace}
+
+\textbf{Core Contribution}: Collaborative document editing with permission management.
+
+\textbf{Permission Models}:
+\begin{itemize}
+    \item \textbf{File-Level ACLs}: Grant read/write access per document
+    \item \textbf{Sharing Links}: Time-limited, password-protected URLs
+    \item \textbf{Team Workspaces}: Organization-wide visibility with role-based access
+\end{itemize}
+
+\textbf{Limitations}:
+\begin{itemize}
+    \item Static—documents don't answer questions or execute actions
+    \item Manual—users must explicitly share each resource
+    \item No intelligence—no understanding of relationship context or precedents
+\end{itemize}
+
+\textbf{Pulse's Advancement}: Context Cells bring file ACLs to the agent execution layer. Sharing a Pulse "link" grants access not just to static files but to an intelligent agent scoped to those files.
+
+\subsection{Dropbox, Google Drive}
+
+\textbf{Core Contribution}: Secure file storage and sharing at scale.
+
+\textbf{Security Features}:
+\begin{itemize}
+    \item Encryption at rest and in transit
+    \item Granular permissions (view/comment/edit)
+    \item Audit logs for access tracking
+\end{itemize}
+
+\textbf{Pulse's Conceptual Parallel}:
+\begin{itemize}
+    \item Dropbox shares \textit{files}
+    \item Pulse shares \textit{agentic access} to files
+\end{itemize}
+
+\textbf{Future Vision}: Pulse as a "Dropbox for Agents"—a file system where access is mediated not by direct downloads but by AI proxies operating within Context Cells.
+
+\section{Conversational AI and Personalization}
+
+\subsection{Replika, Character.AI}
+
+\textbf{Core Contribution}: Long-term conversational companions with personality and memory.
+
+\textbf{Personalization Mechanisms}:
+\begin{itemize}
+    \item \textbf{Profile-Based}: User explicitly defines persona (gender, interests, communication style)
+    \item \textbf{Memory-Based}: Agent recalls past conversations to maintain continuity
+    \item \textbf{Emotion Modeling}: Agents respond to user emotional state
+\end{itemize}
+
+\textbf{Limitations}:
+\begin{itemize}
+    \item Synthetic relationships—no grounding in real-world operational state
+    \item No tool use—agents cannot execute actions
+    \item Single-tenant—designed for 1:1 user-agent interaction, no multi-party scenarios
+\end{itemize}
+
+\textbf{Pulse's Advancement}: Combines the personalization depth of Replika (Relationship Shards) with real-world grounding (calendar, email, files) and multi-party security (Context Cells).
+
+\section{Enterprise AI Assistants}
+
+\subsection{Microsoft Copilot, Google Duet AI}
+
+\textbf{Core Contribution}: AI assistance integrated into productivity suites.
+
+\textbf{Capabilities}:
+\begin{itemize}
+    \item Summarize emails, draft responses
+    \item Generate presentation slides from documents
+    \item Analyze spreadsheets and suggest insights
+\end{itemize}
+
+\textbf{Security Model}:
+\begin{itemize}
+    \item Tenant isolation—each organization's data is firewalled
+    \item Role-based access—Copilot respects existing permissions (e.g., cannot read emails user doesn't have access to)
+\end{itemize}
+
+\textbf{Limitations for Cross-Org Coordination}:
+\begin{itemize}
+    \item Siloed—Microsoft Copilot for Company A cannot interact with Google Duet AI for Company B
+    \item No federated identity—cross-organizational collaboration still requires manual email/calendar coordination
+\end{itemize}
+
+\textbf{Pulse's Advancement}: Network-native design enables cross-organizational agent interactions with cryptographic delegation protocols (Transitive Delegation).
+
+\section{Theoretical Frameworks}
+
+\subsection{Capability-Based Security (Dennis and Van Horn, 1966)}
+
+\textbf{Core Principle}: Objects are accessible only through unforgeable tokens (capabilities).
+
+\textbf{Classic Example}: UNIX file descriptors
+\begin{itemize}
+    \item Process receives file descriptor (integer token) after successful \texttt{open()}
+    \item Descriptor grants access—no need to re-authenticate on each \texttt{read()}
+    \item Kernel enforces that processes cannot forge or steal descriptors
+\end{itemize}
+
+\textbf{Pulse's Application}:
+\begin{itemize}
+    \item Context Cells are capabilities for agent execution
+    \item External guests receive \texttt{agenticLink} tokens that encode allowed resources
+    \item PDP enforces capability validity at runtime—agents cannot escalate privileges
+\end{itemize}
+
+\subsection{Information Flow Control (Denning, 1976)}
+
+\textbf{Core Principle}: Track data provenance to prevent unauthorized leakage.
+
+\textbf{Security Lattice}:
+\[
+L = (S, \leq, \sqcup, \sqcap)
+\]
+
+where $S$ is a set of security labels, $\leq$ is the dominance relation, and $\sqcup$, $\sqcap$ are join/meet operations.
+
+\textbf{Application to Pulse}:
+\begin{itemize}
+    \item Each file/state has a security label (e.g., \texttt{confidential\_financials})
+    \item Tool outputs inherit labels from inputs (taint propagation)
+    \item Responses to external guests are checked against allowed labels before sending
+\end{itemize}
+
+\textbf{Future Work}: Implement formal IFC tracking to detect multi-query inference attacks (Section~\ref{chapter:evaluation}).

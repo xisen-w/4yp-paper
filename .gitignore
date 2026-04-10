@@ -1,0 +1,27 @@
+# LaTeX auxiliary files
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.ist
+*.glo
+*.gls
+*.glg
+*.glo-abr
+*.gls-abr
+*.glg-abr
+
+# Compiled PDF (uncomment if you want to track the final PDF)
+# *.pdf
+
+# Sample output
+sample_dphil_thesis-sample_output.pdf
+
+# OS files
+.DS_Store

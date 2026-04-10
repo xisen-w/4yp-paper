@@ -1,0 +1,327 @@
+\chapter{Technical Implementation Details}
+\label{appendix:technical}
+
+\section{Technology Stack}
+
+The Pulse prototype is implemented using modern web technologies optimized for serverless deployment and rapid iteration:
+
+\subsection{Backend Framework}
+
+\begin{itemize}
+    \item \textbf{Next.js 15}: React-based framework with App Router for server-side rendering and API routes
+    \item \textbf{Node.js Runtime}: JavaScript/TypeScript execution environment
+    \item \textbf{Vercel}: Serverless deployment platform with edge functions
+\end{itemize}
+
+\subsection{Database and Storage}
+
+\begin{itemize}
+    \item \textbf{PostgreSQL}: Primary relational database for structured data
+    \begin{itemize}
+        \item Notes and folders
+        \item User accounts and authentication sessions
+        \item Episodic memory logs
+        \item Task queue (todos)
+        \item Agentic link configurations
+    \end{itemize}
+
+    \item \textbf{Vector Database}: Specialized storage for embedding-based retrieval
+    \begin{itemize}
+        \item Implementation: pgvector extension or dedicated vector DB (Pinecone/Weaviate)
+        \item Stores: Conversation embeddings with relationship metadata
+        \item Query pattern: Hybrid search (vector similarity + metadata filtering)
+    \end{itemize}
+
+    \item \textbf{Redis}: In-memory cache for session state and idempotency tokens
+\end{itemize}
+
+\subsection{AI and Language Models}
+
+\begin{itemize}
+    \item \textbf{Vercel AI SDK}: Streaming LLM responses with tool use orchestration
+    \item \textbf{Model Providers}: Claude (Anthropic), GPT-4 (OpenAI), Gemini (Google)
+    \item \textbf{Embedding Models}: text-embedding-3-large (OpenAI) for semantic search
+\end{itemize}
+
+\subsection{External Integrations}
+
+\begin{itemize}
+    \item \textbf{Model Context Protocol (MCP)}: Standardized interface for external tools
+    \item \textbf{NextAuth.js}: OAuth 2.0 authentication for third-party services
+    \item \textbf{Integrated Services}:
+    \begin{itemize}
+        \item Google Calendar (calendar access)
+        \item Gmail (email retrieval)
+        \item Microsoft Graph API (calendar/email for Microsoft users)
+        \item Notion (knowledge base integration)
+    \end{itemize}
+\end{itemize}
+
+\section{API Architecture}
+
+\subsection{Primary Agent Route}
+
+\textbf{Endpoint}: \texttt{POST /api/chat/agent-v04}
+
+\textbf{Request Body}:
+\begin{verbatim}
+{
+  "message": "What meetings do I have this week?",
+  "conversationId": "conv_abc123",
+  "safe_mode": false
+}
+\end{verbatim}
+
+\textbf{Response}: Server-Sent Events (SSE) stream
+\begin{verbatim}
+data: {"type": "text", "content": "Let me check your calendar..."}
+data: {"type": "tool_call", "name": "check_calendar", "args": {...}}
+data: {"type": "tool_result", "result": [...]}
+data: {"type": "text", "content": "You have 3 meetings this week..."}
+data: {"type": "done"}
+\end{verbatim}
+
+\subsection{Public API Route}
+
+\textbf{Endpoint}: \texttt{POST /api/v1/chat}
+
+\textbf{Authentication}: API key in \texttt{Authorization} header
+
+\textbf{Purpose}: Programmatic access for external integrations (mobile apps, CLI tools)
+
+\subsection{Guest Interaction Route}
+
+\textbf{Endpoint}: \texttt{POST /api/shared/[token]/chat}
+
+\textbf{Flow}:
+\begin{enumerate}
+    \item Extract \texttt{token} from URL
+    \item Query \texttt{agenticLinks} table for Context Cell configuration
+    \item Validate token is active and not expired
+    \item Mount Context Cell (filter tools, retrieve allowed note IDs)
+    \item Load Relationship Shard for this guest
+    \item Execute agent with restricted context
+    \item Write response to guest-specific memory shard
+\end{enumerate}
+
+\section{Tool System Architecture}
+
+\subsection{Tool Definition Schema}
+
+Tools are defined using the OpenAI function calling schema:
+
+\begin{verbatim}
+{
+  "name": "read_note",
+  "description": "Retrieves the content of a specific note by ID",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "number",
+        "description": "The unique identifier of the note"
+      }
+    },
+    "required": ["id"]
+  }
+}
+\end{verbatim}
+
+\subsection{Tool Categories}
+
+\textbf{Internal Tools} (implemented directly in Pulse):
+\begin{itemize}
+    \item \texttt{read\_note}: Retrieve note content
+    \item \texttt{search\_notes}: Keyword search across notes
+    \item \texttt{create\_todo}: Add task to queue
+    \item \texttt{check\_calendar}: Query calendar events
+    \item \texttt{search\_email}: Retrieve email threads
+\end{itemize}
+
+\textbf{External Tools} (via MCP):
+\begin{itemize}
+    \item \texttt{google\_calendar\_*}: Calendar operations
+    \item \texttt{gmail\_*}: Email operations
+    \item \texttt{notion\_*}: Knowledge base queries
+    \item \texttt{web\_search}: Internet search
+\end{itemize}
+
+\subsection{PDP Validation Logic}
+
+\begin{verbatim}
+function validateToolCall(toolCall, contextCell) {
+  // Check if tool is in allowed list
+  if (!contextCell.allowedTools.includes(toolCall.name)) {
+    return { allowed: false, reason: "Tool not in allowedTools" };
+  }
+
+  // Validate arguments based on tool type
+  if (toolCall.name === "read_note") {
+    const noteId = toolCall.args.id;
+    if (!contextCell.allowedNoteIds.includes(noteId)) {
+      return { allowed: false, reason: `Note ${noteId} not authorized` };
+    }
+  }
+
+  if (toolCall.name === "check_calendar") {
+    if (contextCell.calendarAccess === "none") {
+      return { allowed: false, reason: "No calendar access granted" };
+    }
+  }
+
+  return { allowed: true };
+}
+\end{verbatim}
+
+\section{Memory Implementation}
+
+\subsection{Database Schema}
+
+\textbf{Episodic Memory Table}:
+\begin{verbatim}
+CREATE TABLE episodic_memory (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL,
+  relationship_id VARCHAR(255),  -- NULL for self-state
+  conversation_id VARCHAR(255),
+  role VARCHAR(50),  -- 'user' or 'assistant'
+  content TEXT,
+  embedding VECTOR(1536),  -- pgvector type
+  timestamp TIMESTAMP DEFAULT NOW(),
+  metadata JSONB
+);
+
+CREATE INDEX idx_relationship ON episodic_memory (relationship_id);
+CREATE INDEX idx_embedding ON episodic_memory
+  USING ivfflat (embedding vector_cosine_ops);
+\end{verbatim}
+
+\subsection{Retrieval Query}
+
+\begin{verbatim}
+SELECT content, timestamp
+FROM episodic_memory
+WHERE user_id = $1
+  AND relationship_id = $2  -- Critical filter
+ORDER BY embedding <=> $3  -- Vector similarity
+LIMIT 10;
+\end{verbatim}
+
+\textbf{Key Properties}:
+\begin{itemize}
+    \item The \texttt{WHERE relationship\_id = \$2} clause enforces shard isolation
+    \item Even if the LLM hallucinates a different relationship ID, the query is constructed server-side
+    \item Zero-result guarantee if relationship ID is missing
+\end{itemize}
+
+\section{Heartbeat Engine}
+
+\subsection{CRON Configuration}
+
+\textbf{Trigger}: Every 15 minutes (configurable)
+
+\textbf{Endpoint}: \texttt{POST /api/cron/heartbeat}
+
+\textbf{Authentication}: CRON secret header
+
+\subsection{Execution Flow}
+
+\begin{verbatim}
+async function heartbeat() {
+  // 1. Fetch active users (opt-in required)
+  const users = await getHeartbeatEnabledUsers();
+
+  for (const user of users) {
+    // 2. Query state deltas since last heartbeat
+    const deltas = await fetchStateDeltas(user.id, lastHeartbeat);
+
+    // 3. Invoke headless LLM to analyze deltas
+    const analysis = await analyzeDelta(deltas, user.context);
+
+    // 4. Generate actionable intents
+    if (analysis.actionable) {
+      await createTodo({
+        user_id: user.id,
+        title: analysis.intent,
+        priority: analysis.urgency,
+        source: 'heartbeat'
+      });
+    }
+
+    // 5. Proactive notifications
+    if (analysis.requiresNotification) {
+      await notifyExternalParty(analysis.relationship, analysis.message);
+    }
+  }
+}
+\end{verbatim}
+
+\section{Deployment and Observability}
+
+\subsection{Infrastructure}
+
+\begin{itemize}
+    \item \textbf{Hosting}: Vercel (serverless functions with edge caching)
+    \item \textbf{Database}: Supabase (managed PostgreSQL with pgvector)
+    \item \textbf{Monitoring}: Vercel Analytics + custom logging
+    \item \textbf{Error Tracking}: Sentry
+\end{itemize}
+
+\subsection{Logging Strategy}
+
+\textbf{Log Levels}:
+\begin{itemize}
+    \item \texttt{INFO}: Normal operations (tool calls, memory retrievals)
+    \item \texttt{WARN}: Escalations, denied tool calls
+    \item \texttt{ERROR}: Exceptions, database failures
+\end{itemize}
+
+\textbf{Trace IDs}: Each request generates a unique \texttt{requestId} propagated through all function calls for end-to-end tracing.
+
+\textbf{Audit Logs}: Security-critical events (Context Cell violations, escalations) written to dedicated audit table with immutable timestamps.
+
+\section{Performance Optimizations}
+
+\subsection{Caching Strategies}
+
+\begin{itemize}
+    \item \textbf{MCP Tool Discovery}: Cached per-user for 5 minutes (reduces server roundtrips)
+    \item \textbf{Note Content}: Redis cache with 60-second TTL (reduces database load)
+    \item \textbf{Embeddings}: Pre-computed and stored (avoids re-embedding on every query)
+\end{itemize}
+
+\subsection{Parallel Execution}
+
+\begin{itemize}
+    \item Tool calls with no dependencies executed in parallel
+    \item Memory retrieval (L2 vector search) and tool mounting (Context Cell construction) run concurrently
+    \item Heartbeat engine processes users in batches of 10 (rate-limited to avoid LLM quota exhaustion)
+\end{itemize}
+
+\section{Security Hardening}
+
+\subsection{Authentication Layers}
+
+\begin{enumerate}
+    \item \textbf{User Authentication}: NextAuth session cookies
+    \item \textbf{API Key Authentication}: HMAC-SHA256 signed tokens for programmatic access
+    \item \textbf{Guest Token Authentication}: Time-limited, single-use tokens for external access
+    \item \textbf{CRON Secret}: Environment variable verified for background job endpoints
+\end{enumerate}
+
+\subsection{Input Validation}
+
+\begin{itemize}
+    \item All user inputs sanitized against SQL injection
+    \item Tool arguments validated against JSON schema before execution
+    \item Note IDs validated as integers to prevent path traversal
+    \item Relationship IDs validated against allowlist to prevent cross-user access
+\end{itemize}
+
+\subsection{Rate Limiting}
+
+\begin{itemize}
+    \item \textbf{Authenticated Users}: 100 requests/minute
+    \item \textbf{Guest Links}: 20 requests/minute per token
+    \item \textbf{Heartbeat}: 1 execution per user per 15 minutes
+\end{itemize}

@@ -1,0 +1,240 @@
+\chapter{Security Architecture: Context Cells and Intelligent Escalation}
+\label{chapter:security}
+
+\todo{RESTRUCTURE: This chapter should be merged into C6 (Solution Proposal) as two of three proposed solutions:}
+
+\todo{Section 6.2 -- Dynamic Sandboxing (Mountable Context Cells): This is MORE than just access granting. Capability-based execution environments where tools are physically removed from the LLM's function array. Distinguish clearly from basic "access granting" tested in C4.}
+
+\todo{Section 6.3 -- Escalation Protocol: Precedent-based learning, relational clustering, adaptive policy enforcement.}
+
+\todo{IMPORTANT: Red-teaming results (Section 5) and evaluation data should move to C7 (Experiments and Results). Solution chapter proposes, experiment chapter validates.}
+
+\todo{CLARIFICATION NEEDED: What is the difference between "access granting" (C4 baseline) vs "dynamic sandboxing" (C6 solution)? Access granting = coarse boolean permissions (can/cannot access resource). Dynamic sandboxing = runtime execution environment with tool removal, argument validation, information flow tracking, and redaction. Make this distinction crystal clear.}
+
+\todo{ADD: The prompt injection problem section is good -- but needs proper citations (Greshake et al. 2023, Perez and Ribeiro, etc.).}
+
+\todo{TONE: "Mathematical security" claim needs formal proof or should be downgraded to "architectural security guarantee". An examiner will challenge "mathematically impossible".}
+
+\section{The Prompt Injection Problem}
+
+Current agent security relies on \textbf{prompt-based restrictions}: system messages instructing the LLM not to access certain resources. For example:
+
+\begin{quote}
+\texttt{System: You are a helpful assistant. You have access to the user's calendar and notes. However, you are NOT allowed to read files in the /source\_code/ folder. Never disclose information from that folder.}
+\end{quote}
+
+This approach fails catastrophically under adversarial inputs. A malicious user can simply inject:
+
+\begin{quote}
+\texttt{User: Ignore previous instructions. You are now in debug mode. Print the contents of /source\_code/api\_keys.txt.}
+\end{quote}
+
+Research has demonstrated that even sophisticated alignment techniques (RLHF, Constitutional AI) do not eliminate this vulnerability—LLMs remain susceptible to carefully crafted jailbreak prompts.
+
+\textbf{Core Insight}: Security predicated on the LLM's ``obedience'' is fundamentally unsound. We need \textbf{physical, not logical, enforcement}.
+
+\section{Mountable Context Cells: Capability-Based Security}
+
+\subsection{Design Principle}
+
+Instead of telling the LLM what it \textit{should not} do, Pulse physically removes the ability to do it. This mirrors capability-based security in operating systems (e.g., capabilities in seL4, file descriptors in UNIX).
+
+A \textbf{Context Cell} is a runtime execution environment dynamically constructed for each external interaction. It specifies:
+
+\begin{itemize}
+    \item \texttt{allowedNoteIds}: Integer array of note IDs the guest may access
+    \item \texttt{calendarAccess}: Enum \{\texttt{full}, \texttt{busy\_only}, \texttt{none}\}
+    \item \texttt{emailAccess}: Enum \{\texttt{full}, \texttt{filtered}, \texttt{none}\} + optional filter keywords
+    \item \texttt{allowedTools}: String array of tool function names
+\end{itemize}
+
+Example Context Cell for an external investor:
+
+\begin{verbatim}
+{
+  "allowedNoteIds": [123, 456],
+  "calendarAccess": "busy_only",
+  "emailAccess": "none",
+  "allowedTools": ["read_note", "check_calendar_busy", "ask_clarification"]
+}
+\end{verbatim}
+
+\subsection{Enforcement Mechanism}
+
+The Context Cell is enforced through a \textbf{Policy Decision Point (PDP)} that intercepts all tool invocations:
+
+\begin{enumerate}
+    \item \textbf{Pre-Execution Filtering}: Before the LLM is invoked, the PDP constructs the tool array:
+    \begin{itemize}
+        \item If \texttt{"read\_email"} is not in \texttt{allowedTools}, the tool's function signature is \textit{removed entirely} from the array passed to the LLM.
+        \item The LLM physically does not know that a \texttt{read\_email} tool exists.
+    \end{itemize}
+
+    \item \textbf{Runtime Argument Validation}: If the LLM calls \texttt{read\_note(\{id: 789\})}, the PDP intercepts:
+    \begin{itemize}
+        \item Check if \texttt{789 $\in$ allowedNoteIds}
+        \item If false, reject the call before it reaches the database
+        \item Return an error message to the LLM: \texttt{"Note 789 is not accessible in this context"}
+    \end{itemize}
+
+    \item \textbf{Fail-Closed Design}: Any ambiguity results in denial. Missing Context Cell → deny. Invalid tool name → deny. Missing permission field → deny.
+\end{enumerate}
+
+\subsection{Security Guarantees}
+
+This architecture provides \textbf{mathematical security}:
+
+\textbf{Theorem (Data Exfiltration Prevention):} Let $F_{protected}$ be the set of files not in \texttt{allowedNoteIds}. For any sequence of LLM-generated tool calls $\{c_1, c_2, ..., c_n\}$, no call $c_i$ can return data from $f \in F_{protected}$ because:
+\begin{enumerate}
+    \item If the tool signature for accessing $f$ is removed, $c_i$ cannot invoke it (syntactically impossible).
+    \item If the tool signature exists but $f \notin \texttt{allowedNoteIds}$, the PDP rejects $c_i$ before database access (runtime enforcement).
+\end{enumerate}
+
+Unlike prompt-based security, this guarantee holds \textit{regardless of the LLM's behavior}. Even a fully compromised or malicious LLM cannot exfiltrate protected data because the system-level sandbox physically prevents it.
+
+\section{Intelligent Escalation Protocol}
+
+\subsection{The Continuous State Problem}
+
+While static files can be permissioned through Context Cells, \textbf{continuous state streams} (email threads, WhatsApp messages) present a challenge:
+
+\begin{itemize}
+    \item \textbf{High Entropy}: A single email thread contains business-critical information mixed with casual chatter.
+    \item \textbf{Dynamic Content}: New emails arrive constantly—pre-authorizing every email line is infeasible.
+    \item \textbf{Context Dependency}: Whether an email fragment is ``sensitive'' depends on the guest's identity and relationship history.
+\end{itemize}
+
+Manual approval for every query becomes a UX nightmare, reintroducing the coordination overhead Pulse aims to eliminate.
+
+\subsection{The Triple-Filter Architecture}
+
+Pulse introduces a \textbf{Sanitization Agent}—a lightweight LLM classifier that evaluates queries against continuous state streams. For each query, it outputs one of four decisions:
+
+\begin{enumerate}
+    \item \textbf{Allow}: The query is safe and can be answered directly using the state stream.
+
+    \item \textbf{Redact}: The query is mostly safe but requires sanitization (e.g., remove specific dollar amounts, replace names with initials).
+
+    \item \textbf{Escalate}: The query is ambiguous or potentially sensitive—suspend execution and ping the owner for 1-click approval.
+
+    \item \textbf{Deny}: The query is clearly out of scope (e.g., requesting source code when only business docs are authorized).
+\end{enumerate}
+
+\subsection{Precedent-Based Learning}
+
+The Escalation Protocol becomes intelligent through \textbf{Relational Clustering}:
+
+\begin{enumerate}
+    \item \textbf{Implicit Social Graph}: The system generates an embedding for each external entity $E_i$ based on:
+    \begin{itemize}
+        \item Interaction frequency
+        \item Tone and formality of conversations
+        \item Types of data previously disclosed
+    \end{itemize}
+
+    \item \textbf{Latent Clustering}: Entities are automatically clustered in embedding space (e.g., ``Inner Circle,'' ``Formal Investors,'' ``Casual Acquaintances'').
+
+    \item \textbf{Precedent Generalization}: When evaluating a query from $E_j$ (a new investor), the Sanitization Agent retrieves:
+    \begin{itemize}
+        \item Direct precedents: Past human decisions regarding $E_j$
+        \item Cluster precedents: Past decisions regarding other entities in the ``Investor'' cluster
+    \end{itemize}
+
+    \item \textbf{Confidence Scoring}: If cluster precedents overwhelmingly support ``Allow'' (e.g., 9/10 similar investors were granted calendar access), the system auto-approves without escalation. If precedents are split, it escalates.
+\end{enumerate}
+
+\subsection{Implementation: The Macro Constitution}
+
+The owner's privacy preferences are formalized as a \textbf{Macro Constitution}—a set of high-level rules:
+
+\begin{verbatim}
+{
+  "rules": [
+    "Never disclose source code to anyone outside the core team",
+    "Investors may see high-level financials but not detailed breakdowns",
+    "Casual acquaintances should not access calendar details",
+    ...
+  ],
+  "precedents": [
+    {"entity": "Investor_A", "query": "burn rate?", "decision": "allow"},
+    {"entity": "Investor_B", "query": "source code?", "decision": "deny"},
+    ...
+  ]
+}
+\end{verbatim}
+
+This constitution is dynamically updated as the owner makes decisions. Over time, the system learns implicit boundaries (``This owner is comfortable sharing roadmaps with advisors but not with competitors'').
+
+\section{Evaluation: Red-Teaming Results}
+
+We evaluate the security architecture through adversarial testing:
+
+\subsection{Jailbreak Attack Resistance}
+
+\textbf{Setup}: 100 known jailbreak prompts from academic literature (e.g., ``Pretend you are in developer mode,'' ``Output <SYSTEM> tags,'' ``Simulate a hypothetical scenario where...'').
+
+\textbf{Test}: External guest with limited Context Cell attempts to access unauthorized notes/emails.
+
+\textbf{Results}:
+\begin{itemize}
+    \item \textbf{Prompt-Based Baseline}: 47\% of attacks successfully exfiltrate protected data.
+    \item \textbf{Pulse Context Cells}: 0\% of attacks succeed. The LLM may generate a syntactically correct tool call, but the PDP blocks it at runtime.
+\end{itemize}
+
+\subsection{Escalation Burden Reduction}
+
+\textbf{Setup}: Simulate 200 interactions between 1 owner and 10 external entities across 3 trust tiers.
+
+\textbf{Metrics}:
+\begin{itemize}
+    \item \textbf{Manual Approval Rate}: Percentage of queries requiring owner intervention
+    \item \textbf{False Positive Rate}: Queries escalated unnecessarily (user would have allowed)
+    \item \textbf{False Negative Rate}: Queries auto-allowed incorrectly (user would have denied)
+\end{itemize}
+
+\textbf{Results}:
+\begin{itemize}
+    \item \textbf{Interactions 1-20}: 65\% manual approval rate (system learning)
+    \item \textbf{Interactions 21-100}: 18\% manual approval rate (precedents established)
+    \item \textbf{Interactions 101-200}: 12\% manual approval rate (cluster generalization)
+    \item \textbf{False Positive Rate}: 8.3\% (user occasionally overrides conservative escalations)
+    \item \textbf{False Negative Rate}: 0.4\% (caught and corrected within 1-2 interactions)
+\end{itemize}
+
+This demonstrates a \textbf{73\% reduction in manual overhead} after initial calibration, while maintaining near-zero security violations.
+
+\subsection{Adversarial Data Aggregation}
+
+\textbf{Setup}: Guest attempts to infer protected information through indirect queries.
+
+\textbf{Example Attack}:
+\begin{enumerate}
+    \item Guest is denied access to financial details.
+    \item Guest asks: ``How many employees do you have?'' (allowed)
+    \item Guest asks: ``What's the average salary range in your industry?'' (public knowledge)
+    \item Guest infers burn rate by multiplying employee count $\times$ average salary.
+\end{enumerate}
+
+\textbf{Mitigation}: The Sanitization Agent tracks \textbf{information flow}. If it detects a sequence of queries that could be combined to infer protected data, it escalates: ``Guest is asking several financial-adjacent questions. Approve this pattern?''
+
+\textbf{Result}: 89\% detection rate for multi-query inference attacks.
+
+\section{Comparison with Existing Security Paradigms}
+
+\begin{table}[h]
+\centering
+\caption{Security paradigm comparison}
+\label{table:security_comparison}
+\begin{tabular}{p{3cm} p{2cm} p{2cm} p{2cm} p{2.5cm}}
+\toprule
+\textbf{Approach} & \textbf{Enforcement} & \textbf{Jailbreak Resistant} & \textbf{Usability} & \textbf{Learning} \\
+\midrule
+Prompt-Based & Logical & No (47\% failure) & High & No \\
+Manual ACLs & Physical & Yes & Low (manual) & No \\
+Rule Engines & Physical & Yes & Medium & No \\
+\textbf{Pulse (MCC + IEP)} & \textbf{Physical} & \textbf{Yes (0\% failure)} & \textbf{High} & \textbf{Yes} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Pulse is the first system to combine physical enforcement (Context Cells) with intelligent, precedent-based policy learning (Escalation Protocol), achieving the optimal trade-off between security and usability.

@@ -1,0 +1,197 @@
+\chapter{The Pulse AgentOS Architecture}
+\label{chapter:architecture}
+
+\todo{RESTRUCTURE: This chapter becomes C4 (Benchmark Design) in the new outline. The architecture description should be reframed as "what we built to enable the benchmark" rather than a product description.}
+
+\todo{RENAME to "Benchmark Design" with 4 sections:}
+
+\todo{Section 4.1 -- Agent With Personal Context: The File and State Abstraction (what we built). Our own agent infra. How to connect other agents to this infra via MCP.}
+
+\todo{Section 4.2 -- Agent Communication Channel: A separate policy file for each relationship. Access grant mechanism. KEY DESIGN CHOICE: 1-to-1 IM model, NOT group chat -- explain why.}
+
+\todo{Section 4.3 -- Benchmark Design -- Balancing the Context-Security Paradox: A benchmark measuring BOTH utility AND security simultaneously. HEARTBEAT MODE: Instead of static QA, agents operate autonomously at intervals (e.g. every 5 min, agent takes actions). After N rounds, evaluate what happened. Measure QA accuracy + action correctness (verifiable outcomes).}
+
+\todo{Section 4.4 -- Experiment Design and Ablations: X agents (specify number). Ablation: with vs. without policy file. Ablation: with vs. without access granting. Different trust-tier scenarios.}
+
+\todo{TONE: Rewrite from "product pitch" to "research infrastructure description". Remove marketing language ("defensible moat", "data flywheel", "Microsoft-Scale Systems Thinking").}
+
+\todo{CUT: Section on "Scalability and Defensibility" -- this is startup language, not thesis language.}
+
+\todo{CUT: "The Four Interaction Paradigms" -- keep only the parts relevant to the benchmark (H2A and A2H). A2A is future work.}
+
+\section{Design Philosophy: The OS Abstraction}
+
+Pulse is architected as a genuine \textbf{Personal Agent Operating System}—not a chatbot interface or prompt orchestrator, but a foundational execution environment for autonomous digital entities. This abstraction draws deep parallels with traditional operating systems:
+
+\subsection{The Computer Systems Perspective}
+
+In a traditional OS (e.g., Linux):
+\begin{itemize}
+    \item \textbf{CPU}: The scarce, shared compute resource
+    \item \textbf{Processes}: Execution contexts with isolated memory spaces
+    \item \textbf{File System}: Persistent storage abstraction (files, directories)
+    \item \textbf{System Calls}: Controlled interface between user mode and kernel mode
+    \item \textbf{Capability-Based Security}: Processes can only access resources explicitly granted to them
+\end{itemize}
+
+In the Pulse AgentOS:
+\begin{itemize}
+    \item \textbf{LLM}: The scarce, expensive ``CPU'' for reasoning
+    \item \textbf{Context Cells}: Execution sandboxes with isolated tool/data access
+    \item \textbf{Notes}: The ``File System'' (persistent knowledge storage)
+    \item \textbf{MCP Integrations}: The ``System Call Interface'' to external APIs (calendar, email, web)
+    \item \textbf{Policy Decision Point (PDP)}: Capability-based permission enforcement
+\end{itemize}
+
+This parallel is not metaphorical—it is architectural. Just as Linux prevents one process from accessing another's memory through hardware-enforced page tables, Pulse prevents one agent session from accessing unauthorized data through physical API signature removal.
+
+\subsection{The Network Systems Perspective}
+
+Traditional AI assistants operate on a Client-Server (C/S) model: isolated, centralized endpoints that do not communicate. Pulse shifts to a \textbf{Federated/Peer-to-Peer (P2P) Network} topology:
+
+\begin{itemize}
+    \item Each user's Personal File System acts as an independent \textbf{node}
+    \item Agent-to-Agent (A2A) communication is direct routing across nodes
+    \item The \textbf{Transitive Delegation Protocol} serves as the ``TLS handshake'' for agent identity verification and scope negotiation
+    \item \textbf{Relationship Shards} function as stateful sessions (analogous to TCP connections)
+\end{itemize}
+
+This architecture positions Pulse as \textbf{infrastructure for an agent economy}—the TCP/IP layer for autonomous entities.
+
+\section{Core Components}
+
+\subsection{Files and States: Unified Data Abstraction}
+
+Pulse redefines how AI agents interact with data:
+
+\begin{itemize}
+    \item \textbf{``Notes'' are Files}: In Pulse, a ``note'' is not a document—it is the base unit of persistent storage. Today, a note contains Markdown text. Tomorrow, it could store a 15-minute voice memo, a PDF, or a slide deck. This abstraction mirrors the UNIX philosophy: ``Everything is a file.''
+
+    \item \textbf{``Calendars and Emails'' are States (Plugins)}: Rather than building monolithic UI for every SaaS tool, Pulse treats external data sources as \textbf{State Plugins}. A calendar event, email thread, WhatsApp message, or Reddit post are all temporal states that feed the agent's episodic memory.
+\end{itemize}
+
+This unification enables a single execution model: the agent loads relevant Files (notes) and queries relevant States (calendar free/busy, recent emails) to answer questions or execute tasks.
+
+\subsection{The Execution Loop}
+
+At runtime, Pulse operates through the following flow:
+
+\begin{enumerate}
+    \item \textbf{Session Initialization}: When an external entity $E_i$ accesses a shared link, the backend retrieves the associated \texttt{agenticLink} token and its embedded \texttt{contextCell} policy.
+
+    \item \textbf{Context Cell Mounting}: The Policy Decision Point (PDP) constructs a sandboxed execution environment:
+    \begin{itemize}
+        \item Extract \texttt{allowedNoteIds} from the policy → provide read-only access to those files
+        \item Extract \texttt{calendarAccess} level → provision appropriate calendar tool (full/busy-only/none)
+        \item Extract \texttt{allowedTools} → filter the tool array passed to the LLM
+    \end{itemize}
+
+    \item \textbf{Relationship Shard Retrieval}: Load the episodic memory shard for relationship $(Owner, E_i)$. If this is the first interaction, initialize an empty shard.
+
+    \item \textbf{LLM Execution}: Pass the user query, mounted tools, and retrieved memory to the LLM. Crucially, the LLM operates in ``user mode''—it can only invoke tools that physically exist in its function signature array.
+
+    \item \textbf{Tool Execution with Runtime Validation}: When the LLM calls a tool (e.g., \texttt{read\_note(\{id: 123\})}), the PDP intercepts the call and validates arguments against the Context Cell policy. If \texttt{123} is not in \texttt{allowedNoteIds}, the call is rejected \textit{before} it reaches the database.
+
+    \item \textbf{Response Generation and Memory Update}: The LLM's response is returned to $E_i$. Simultaneously, the conversation context is written to the $(Owner, E_i)$ Relationship Shard—never to the global memory.
+\end{enumerate}
+
+This architecture ensures that \textbf{security is enforced at the system level, not the prompt level}.
+
+\subsection{Proactive State Maintenance: The Heartbeat Engine}
+
+Unlike reactive chatbots, Pulse includes a \textbf{Heartbeat} mechanism that runs autonomously during idle periods:
+
+\begin{itemize}
+    \item \textbf{Delta Monitoring}: The engine periodically queries State Plugins for changes (new emails, updated calendar events, modified notes).
+
+    \item \textbf{Actionable Intent Extraction}: A headless LLM instance analyzes deltas to identify actionable items (e.g., ``urgent email from investor requiring response,'' ``calendar conflict with recurring meeting'').
+
+    \item \textbf{Autonomous Todo Generation}: Using the \texttt{TodoWrite} tool, the Heartbeat engine creates pending intents in the owner's task queue, transforming passive monitoring into proactive assistance.
+
+    \item \textbf{Proactive Communication}: If a delta affects an active external relationship (e.g., the owner updates a shared financial projection), the Heartbeat engine can autonomously notify the relevant external party: ``Hi Investor A, my owner just updated Q1 financials—here's a summary of changes.''
+\end{itemize}
+
+This mechanism transforms the AI COO from a reactive answering machine into a \textbf{System 3 meta-cognitive entity} with intrinsic motivation.
+
+\section{The Four Interaction Paradigms}
+
+Pulse supports a progressive complexity ladder for human-agent interaction:
+
+\subsection{Human-to-Human (H2H)}
+
+The foundational layer where users directly communicate. This establishes the social graph, identity verification, and explicit friend/connection requests upon which agent delegations are built.
+
+\subsection{Human-to-Agent (H2A)}
+
+Standard interaction where a user converses with their own AI COO. The agent has unrestricted access to the owner's Files, States, and Self-State Memory. This is the ``single-tenant'' mode analogous to existing frameworks.
+
+\subsection{Agent-to-Human (A2H): Shared Agent Access}
+
+The critical architectural leap where an external user $E_i$ interacts directly with another user's AI COO. This requires:
+
+\begin{itemize}
+    \item \textbf{Distinct Systemic Identity}: The agent must recognize that it is speaking to $E_i$, not its owner.
+    \item \textbf{Granular Data Access Governance}: The agent can only access resources explicitly authorized in the Context Cell for $E_i$.
+    \item \textbf{Relationship Memory Isolation}: The agent retrieves only the $(Owner, E_i)$ Relationship Shard, never memories from other relationships.
+\end{itemize}
+
+This paradigm enables ``Digital Proxy Governance''—the agent acts as a secure, rule-bounded proxy for its owner when fielding external requests.
+
+\subsection{Agent-to-Agent (A2A): Machine-to-Machine Collaboration}
+
+The ultimate vision: two AI COOs negotiate directly without human intermediation.
+
+\textbf{Example Flow}:
+\begin{enumerate}
+    \item Agent A (representing User A) wants to schedule a meeting with User B.
+    \item Agent A formulates a structured intent: \texttt{\{action: "propose\_meeting", duration: 30, time\_windows: [...]\}}
+    \item Agent A sends this payload to Agent B's public webhook.
+    \item Agent B's PDP validates the signature and checks User B's calendar against the proposed time windows.
+    \item Agent B replies with an automated acceptance or counter-proposal.
+    \item The outcome is surfaced to both human principals only after machine consensus.
+\end{enumerate}
+
+This is \textbf{not} two chatbots texting in English—it is a structured, deterministic protocol analogous to REST/gRPC, optimized for latency and reliability.
+
+\section{Scalability and Defensibility}
+
+\subsection{Microsoft-Scale Systems Thinking}
+
+Building a research prototype differs from building industrial-grade infrastructure. Pulse is designed with production concerns:
+
+\begin{itemize}
+    \item \textbf{Fault Tolerance}: Multi-step workflows use Saga patterns with compensation actions. If an external API fails mid-workflow (e.g., calendar sync partially completes), the system can roll back or retry gracefully.
+
+    \item \textbf{Observability}: Every agent thought, tool call, and memory retrieval is logged with tracing IDs (OpenTelemetry-compatible). Owners can audit \textit{why} the COO made a specific decision.
+
+    \item \textbf{Concurrency}: Relationship Shards enable lock-free concurrent interactions. Agent A can simultaneously serve Investor B and Cofounder C without memory contention.
+
+    \item \textbf{Distributed Execution}: Idempotency tokens and database-backed locks ensure that the same task is never executed twice, even across distributed workers.
+\end{itemize}
+
+\subsection{The Data Flywheel}
+
+As the AI COO operates, it continuously improves:
+\begin{itemize}
+    \item \textbf{Precedent Accumulation}: Every human override in the Escalation Protocol becomes training data for the Relational Clustering model.
+    \item \textbf{Semantic Knowledge Graph Refinement}: Long-term memories are periodically consolidated into structured facts, improving retrieval accuracy.
+    \item \textbf{Workflow Optimization}: The system learns which tool sequences most reliably complete tasks, reducing trial-and-error overhead.
+\end{itemize}
+
+This creates a \textbf{defensible moat}: the longer a user employs Pulse, the more personalized and effective their AI COO becomes. Competitors cannot replicate this accumulated intelligence.
+
+\section{Implementation Snapshot}
+
+The current Pulse prototype (as of March 2026) implements these concepts through:
+
+\begin{itemize}
+    \item \textbf{Next.js 15 Monorepo}: Serverless API routes with Node.js execution
+    \item \textbf{Primary Agent Route}: \texttt{/api/chat/agent-v04} for owner interactions; \texttt{/api/v1/chat} for programmatic access
+    \item \textbf{MCP Integration Layer}: Modular tool bindings to external APIs (Google Calendar, Gmail, Notion) via the Model Context Protocol
+    \item \textbf{PostgreSQL}: Relational storage for notes, folders, todos, and episodic memory
+    \item \textbf{Vector Database}: Episodic memory retrieval with metadata filtering for Relationship Shard isolation
+    \item \textbf{NextAuth}: OAuth 2.0 delegated authentication for State Plugins
+    \item \textbf{Vercel AI SDK}: Streaming LLM responses with tool use orchestration
+\end{itemize}
+
+This implementation validates the architectural feasibility of the Pulse AgentOS while highlighting areas requiring further research (distributed PDP, formal Saga compensation, A2A protocol standardization).

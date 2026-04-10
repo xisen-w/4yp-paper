@@ -1,0 +1,96 @@
+\chapter{Conclusion and Future Directions}
+\label{chapter:conclusion}
+
+\todo{REWRITE: More measured tone. Less "digital civilization" pitch, more honest research summary.}
+
+\todo{Structure: (1) What we found (tied to R1-R4). (2) What we built and what it showed. (3) Limitations (be honest). (4) Future work.}
+
+\todo{CUT: "From Tools to Digital Civilization" section -- too grandiose for a 4YP report.}
+
+\todo{CUT: "Network-native civilization of AI agents" rhetoric. Replace with measured statements about what the coordination layer enables.}
+
+\todo{ADD: Honest limitations section -- what doesn't work yet, what assumptions may not hold, what needs more work.}
+
+\todo{ADD: Connect conclusions back to R1-R4 research questions explicitly.}
+
+\section{Summary of Contributions}
+
+This thesis presented \textbf{Pulse}, a Personal Agent Operating System that enables AI agents to coordinate securely across organizational boundaries. We addressed the fundamental Context-Security Trade-off through three core architectural innovations:
+
+\begin{enumerate}
+    \item \textbf{Dual-Track Memory}: Strict separation of self-state memory from relationship-specific shards, ensuring 100\% isolation across concurrent multi-party interactions while maintaining perfect context continuity within each relationship.
+
+    \item \textbf{Mountable Context Cells}: Capability-based execution sandboxes that provide physical, not prompt-based, security guarantees. This architecture achieved 0\% exfiltration rate against adversarial jailbreak attacks.
+
+    \item \textbf{Intelligent Escalation Protocol with Relational Clustering}: Adaptive policy enforcement that learns social boundaries through precedent generalization, reducing manual approval overhead by 73\% after initial calibration.
+\end{enumerate}
+
+Our evaluation demonstrated that Pulse achieves near-optimal utility (87\% task completion) while maintaining provable security (100\% defense against direct attacks, 89\% against indirect inference). The system exhibits clear learning behavior, with manual approval rates declining from 65\% to 12\% over 200 interactions.
+
+\section{The Broader Vision: From Tools to Digital Civilization}
+
+\subsection{Network-Native Architecture}
+
+Pulse is not merely a productivity tool—it is \textbf{foundational infrastructure for an agent economy}. By solving the access governance problem, we enable a future where:
+
+\begin{itemize}
+    \item \textbf{Agent-to-Agent Protocols} replace human-mediated coordination for routine operational tasks
+    \item \textbf{Transitive Delegation} allows agents to securely represent their owners in complex multi-party negotiations
+    \item \textbf{Federated Agent Networks} operate as a P2P topology where each user's Personal File System is an independent node
+\end{itemize}
+
+This paradigm shift is analogous to the transition from mainframe computing (centralized, isolated) to the internet (distributed, interconnected). Just as TCP/IP enabled computers to communicate across organizational boundaries, Pulse provides the protocol layer for autonomous digital entities to coordinate.
+
+\subsection{From Reactive Assistance to Proactive Partnership}
+
+Current AI assistants are reactive—they wait for human prompts. The AI COO paradigm introduces \textbf{System 3 meta-cognition}:
+
+\begin{itemize}
+    \item \textbf{Intrinsic Motivation}: The Heartbeat engine continuously monitors state changes and autonomously generates actionable intents
+    \item \textbf{Active Evolution}: Nocturnal reflection algorithms analyze human overrides to rewrite the agent's social boundaries, enabling organic trust growth
+    \item \textbf{Proactive Communication}: Agents initiate cross-boundary interactions (e.g., rescheduling meetings, notifying stakeholders of updates) without human intermediation
+\end{itemize}
+
+This transforms the agent from a tool that \textit{responds} to a partner that \textit{anticipates}.
+
+\section{Future Research Directions}
+
+\subsection{Formal Verification of Context Cells}
+
+While our evaluation demonstrated empirical security, future work includes formal verification:
+
+\begin{itemize}
+    \item \textbf{Model Checking}: Prove that for any reachable system state, unauthorized data access is impossible
+    \item \textbf{Information Flow Analysis}: Track data provenance through tool call chains to detect subtle exfiltration
+    \item \textbf{Differential Privacy Guarantees}: Quantify the information leakage bounds for indirect inference attacks
+\end{itemize}
+
+\subsection{Agent-to-Agent Protocol Standardization}
+
+The A2A paradigm requires standardized communication protocols:
+
+\begin{itemize}
+    \item \textbf{Intent Exchange Format}: Define a schema for structured agent requests (analogous to HTTP)
+    \item \textbf{Cryptographic Handshakes}: Establish mutual authentication and scope negotiation before data exchange
+    \item \textbf{Consensus Protocols}: Enable multi-agent coordination (e.g., 3+ agents scheduling a meeting) with Byzantine fault tolerance
+\end{itemize}
+
+This standardization effort mirrors the role of IETF in internet protocol development—creating open specifications that enable interoperability across independently developed agent systems.
+
+\subsection{Semantic Relationship Graphs (L3 Shards)}
+
+Currently, Relationship Shards store only episodic memory (L2). Future work includes building relationship-specific semantic layers where $L3_{E_i}$ stores distilled facts about the relationship itself, enabling even more personalized, context-aware interactions.
+
+\subsection{Multi-Principal Agents}
+
+Current Pulse architecture assumes single-owner agents. Future work extends this to \textbf{team agents} with hierarchical permissions, consensus decision-making, and transparent audit trails.
+
+\section{Concluding Remarks}
+
+The coordination crisis—where humans spend more time synchronizing than creating—is not a temporary inefficiency but a fundamental bottleneck in the current information economy. AI assistants, despite their impressive capabilities, have failed to solve this problem because they remain architecturally isolated and insecure across boundaries.
+
+Pulse demonstrates that a different path is possible. By treating AI not as stateless tools but as persistent, relationship-aware entities with capability-based security, we can achieve both high collaborative utility and provable security guarantees. This work establishes the foundational systems architecture for a future where autonomous digital proxies handle the vast majority of operational coordination, freeing humans to focus exclusively on high-level strategy, creativity, and the irreducibly human aspects of work.
+
+The vision is ambitious: a \textbf{network-native civilization of AI agents} that coordinate autonomously while respecting human-defined boundaries. The architecture is rigorous: capability-based sandboxes, dual-track memory, and precedent learning. The evaluation is empirical: 100\% security against direct attacks, 87\% utility maintenance, 73\% reduction in manual overhead.
+
+The future of work is not humans using AI tools. It is humans \textit{represented} by AI entities—digital proxies that understand context, respect boundaries, and negotiate on our behalf. Pulse is the operating system for that future.

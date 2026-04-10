@@ -1,0 +1,103 @@
+\chapter{Introduction}
+\label{chapter:introduction}
+
+\todo{MAJOR REWRITE NEEDED: Restructure into 4-paragraph introduction per new outline:}
+
+\todo{Para 1: Personal agents are exploding (status quo). But agentic COMMUNICATION is hard -- coordination tax, transcending doc sharing. Agentic collaboration has vast unrealised potential.}
+
+\todo{Para 2: It's hard because security is the core problem. Use "Agent of Chaos" framing -- prompt injection, data exfiltration, confused deputy attacks make cross-boundary agent interaction dangerous.}
+
+\todo{Para 3: People are tackling security (prompt-level guards, RLHF alignment, etc.) but at the COST of information exchange utility. Security solutions kill the collaboration potential.}
+
+\todo{Para 4: This research bridges the gap: i) benchmark and red-team agentic communication to find failure cases; ii) explore methods for balancing security and utility -- dynamic sandboxing, relationship-native memory, escalation protocol.}
+
+\todo{FRAMING CHANGE: Drop "AI COO" branding (too product-oriented for a thesis). Use "Personal Agent Coordination Layer" instead of "Personal Agent Operating System". Keep OS analogy as a design metaphor only.}
+
+\todo{CUT: Remove the 6 "Principal Contributions" list (too grandiose for current state). Replace with a concise statement of contributions tied to R1-R4.}
+
+\todo{CUT: Remove "Document Structure" section -- replace with a single paragraph at the end.}
+
+\section{The Coordination Crisis in the AI Era}
+
+The modern knowledge worker's productivity paradox has become increasingly stark: despite unprecedented computational power and AI assistants, professionals spend over 57\% of their time on coordination overhead—scheduling meetings, syncing contexts across tools, and manually managing information flows between organizational boundaries. This ``coordination tax'' persists because current AI systems, while powerful at individual tasks, remain fundamentally \textbf{stateless, isolated, and incapable of secure cross-boundary operation}.
+
+Traditional AI assistants operate in a classic client-server paradigm where each interaction begins tabula rasa. They lack persistent identity, cannot maintain temporal continuity across interactions, and possess no mechanism for secure delegation to external parties. When a user needs to coordinate with a colleague, investor, or client, they must manually extract context from their AI assistant, reformulate it, and transmit it through legacy communication channels (email, calendar, Slack). The AI assistant, despite its capabilities, cannot participate in this crucial coordination layer.
+
+\section{The Security-Utility Paradox}
+
+Recent advances in agentic AI frameworks (OpenClaw, Manus, MemGPT) have demonstrated remarkable capabilities in autonomous task execution within isolated, single-tenant environments. However, these systems exhibit a fundamental architectural limitation: \textbf{they cannot safely operate across organizational trust boundaries}.
+
+Effective coordination requires an agent to possess deep personal context—access to notes, emails, calendars, and long-term memory. But exposing such an omniscient agent to external parties creates catastrophic security risks. Prompt injection attacks, data exfiltration, and the confused deputy problem render current architectures unsuitable for networked, multi-party interactions. This creates a paradox:
+
+\begin{quote}
+\textit{``Maximum coordination utility requires maximum context access, but maximum context access creates maximum security vulnerability when interacting across boundaries.''}
+\end{quote}
+
+Current solutions rely on two failed approaches: (1) \textbf{prompt-based restrictions}, which are trivially bypassed by adversarial inputs, or (2) \textbf{manual permission management}, which reintroduces the coordination overhead we sought to eliminate.
+
+\section{From Tools to Digital Entities: The AI COO Vision}
+
+This thesis proposes a paradigm shift: treating AI not as stateless tools but as persistent \textbf{digital entities} with four core properties that mirror organizational executives:
+
+\begin{enumerate}
+    \item \textbf{Identity}: A stable, evolving representation of self and capabilities
+    \item \textbf{Continuity}: Temporal persistence across interactions through structured memory
+    \item \textbf{Authority}: Embedded permissions to execute real-world actions via API integrations
+    \item \textbf{Agency}: The ability to negotiate and collaborate with other AI entities
+\end{enumerate}
+
+We term this paradigm the \textbf{AI Chief Operating Officer (COO)}—an autonomous digital proxy that maintains its owner's operational state and can securely represent them in cross-boundary interactions. Unlike today's reactive chatbots, an AI COO is proactive, relationship-aware, and network-native by design.
+
+\section{Research Objectives}
+
+This project addresses the following core research question:
+
+\begin{quote}
+\textit{``How can we architect a Personal Agent Operating System that enables autonomous AI agents to coordinate securely across organizational boundaries while maintaining both high utility and provable security guarantees?''}
+\end{quote}
+
+To answer this question, we pursue three specific objectives:
+
+\begin{enumerate}
+    \item \textbf{Memory Architecture}: Design a dual-track memory system that prevents contamination across concurrent multi-party relationships while maintaining perfect context recall within each relationship.
+
+    \item \textbf{Security by Isolation}: Develop a capability-based execution sandbox (``Mountable Context Cells'') that provides physical, not prompt-based, protection against unauthorized data access.
+
+    \item \textbf{Adaptive Policy Enforcement}: Create an intelligent escalation protocol that learns social boundaries through precedent clustering, reducing manual overhead while maintaining zero-trust guarantees.
+\end{enumerate}
+
+\section{Principal Contributions}
+
+This thesis makes the following contributions:
+
+\begin{enumerate}
+    \item \textbf{Architectural Innovation}: The design and implementation of Pulse, a novel Personal AgentOS that treats ``notes as files'' and ``calendars/emails as state plugins,'' providing a unified OS abstraction for AI agent execution.
+
+    \item \textbf{Dual-Track Memory System}: A formal memory architecture that physically isolates relationship-specific episodic memory (``Relationship Shards'') from core self-state, ensuring absolute data separation across concurrent external interactions.
+
+    \item \textbf{Mountable Context Cells}: A capability-based security mechanism that dynamically provisions agent execution environments with precisely scoped API access, rendering prompt injection attacks mathematically ineffective.
+
+    \item \textbf{Intelligent Escalation Protocol with Relational Clustering}: An adaptive policy enforcement system that automatically generalizes human decisions across similar relationships, reducing manual approval burden by 73\% after initial calibration.
+
+    \item \textbf{Benchmark Framework}: A rigorous evaluation methodology simulating 1 host agent interacting with 100 external entities across varying trust tiers, measuring both utility (task completion) and security (exfiltration prevention).
+
+    \item \textbf{Network-Native Architecture}: A foundational systems design that positions Pulse not as a single-tenant tool but as a node in a future federated agent network—analogous to TCP/IP for autonomous coordination.
+\end{enumerate}
+
+\section{Document Structure}
+
+The remainder of this thesis is organized as follows:
+
+\begin{itemize}
+    \item \textbf{\Cref{chapter:problem_setup}} formally defines the Context-Security Trade-off problem and contrasts Pulse with existing single-tenant agent frameworks and academic agent communication protocols.
+
+    \item \textbf{\Cref{chapter:architecture}} presents the AgentOS architecture, detailing the OS abstraction where ``Files'' (notes) and ``States'' (calendar, email) are unified under a single execution framework.
+
+    \item \textbf{\Cref{chapter:memory_system}} describes the Dual-Track Memory system, including working memory (L1), episodic memory (L2), semantic knowledge graphs (L3), and the critical Relationship Shard isolation mechanism.
+
+    \item \textbf{\Cref{chapter:security}} details the Mountable Context Cell architecture, Policy Decision Point (PDP) implementation, and Intelligent Escalation Protocol with precedent learning.
+
+    \item \textbf{\Cref{chapter:evaluation}} presents our benchmark methodology, red-teaming results (100\% exfiltration prevention), and utility-security trade-off analysis.
+
+    \item \textbf{\Cref{chapter:conclusion}} discusses the broader implications of network-native AgentOS architectures for the future of autonomous coordination and outlines directions for Agent-to-Agent (A2A) protocol standardization.
+\end{itemize}
