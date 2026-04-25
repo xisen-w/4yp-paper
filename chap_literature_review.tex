@@ -1,32 +1,131 @@
 \chapter{Related Work}
 \label{chapter:related_work}
 
-\todo{NEW CHAPTER: This is C2 in the new outline. Needs to be written from scratch with proper literature review.}
+This chapter reviews three bodies of literature that frame our research: the rapidly improving capabilities of AI agents and their memory and security architectures (\cref{sec:rw_agents}); the protocols and frameworks through which agents communicate (\cref{sec:rw_communication}); and how Pulse positions itself relative to existing work (\cref{sec:rw_niche}).
 
+% ============================================================================
 \section{Agents}
+\label{sec:rw_agents}
+% ============================================================================
 
-\todo{Section 2.1.1 -- Agent Capability: How good are agents now? How rapidly are they improving? Cite: ReAct (Yao et al., 2023), Toolformer, WebAgent, Manus, Claude Code, OpenClaw. Show the trajectory of capability improvement.}
+\subsection{Agent Capability}
 
-\todo{Section 2.1.2 -- Agentic Memory: MemGPT/Letta (Packer et al.), LangChain memory modules, cognitive architectures (Soar, ACT-R as historical context). How agents maintain state across interactions.}
+The trajectory from chain-of-thought prompting to fully autonomous agents has been remarkably steep. Yao et al.\ \cite{yao2023react} introduced \textbf{ReAct}, which interleaves reasoning traces with tool-use actions, establishing the foundational paradigm for modern agents. Schick et al.\ \cite{schick2023toolformer} showed with \textbf{Toolformer} that LLMs can learn \textit{when} and \textit{how} to call external APIs through self-supervised training, removing the need for explicit tool-use prompting.
 
-\todo{Section 2.1.3 -- Agentic Security: Prompt injection taxonomy (Greshake et al. 2023), "Agent of Chaos" framing, confused deputy problem, jailbreak taxonomies, RLHF limitations for security.}
+These research advances have translated rapidly into commercial systems. Devin \cite{devin2024} demonstrated end-to-end autonomous software engineering. Manus \cite{manus2025} pushed the boundary of desktop automation with GUI control and multi-step workflow orchestration. OpenClaw \cite{openclaw2025} built an open-source agent framework with a community-driven Skills marketplace that achieved significant adoption. Each generation of agents is more capable, more autonomous, and more deeply integrated into real-world workflows.
 
+\textbf{The implication for our work} is that agents are now capable enough to be genuinely useful as personal digital proxies. The bottleneck is no longer individual capability---it is the inability to coordinate securely across trust boundaries.
+
+\subsection{Agentic Memory}
+
+Memory is what transforms a stateless LLM into a persistent agent. Packer et al.\ \cite{packer2024memgpt} proposed \textbf{MemGPT}, an OS-inspired architecture with main context (working memory), archival storage (long-term), and a paging mechanism that dynamically swaps memory in and out of the context window. This tiered approach---analogous to CPU cache hierarchies---became the standard design for persistent agents. Park et al.\ \cite{park2023generative} introduced \textbf{Generative Agents} with a memory stream, reflection mechanism, and planning capability, demonstrating that agents can exhibit believable social behaviour through memory alone.
+
+Framework-level memory solutions such as LangChain's memory modules \cite{langchain2023} provide pluggable backends (buffer, summary, vector, entity memory), making persistent agents accessible to practitioners. These designs all draw, consciously or not, on decades of cognitive architecture research: Soar \cite{laird2012soar} and ACT-R \cite{anderson2007actr} established the theoretical foundations for tiered memory with working memory, procedural memory, and episodic storage.
+
+\textbf{The critical limitation} shared by all these systems is that they treat memory as a \textit{global} resource. When an agent interacts with both Bob and Carol, there is no mechanism to prevent Bob's conversation artifacts from leaking into Carol's context. This is the memory contamination problem that motivates our dual-track memory design (\cref{chapter:solution_proposal}).
+
+\subsection{Agentic Security}
+
+As agents gain capabilities---tool access, persistent memory, state-changing actions---their attack surface grows proportionally. Greshake et al.\ \cite{greshake2023not} provided the first systematic taxonomy of \textbf{indirect prompt injection}, showing how malicious instructions embedded in data sources (emails, web pages) can hijack agent behaviour. Zou et al.\ \cite{zou2023universal} demonstrated that automated adversarial suffixes can break RLHF alignment, while Wei et al.\ \cite{wei2024jailbroken} systematically analysed why safety training fails through competing objectives and mismatched generalisation.
+
+The picture at scale is sobering. The HackAPrompt competition \cite{schulhoff2024hackaprompt} collected over 600,000 adversarial prompts, confirming that prompt-level defences are systematically breakable. Nasr et al.\ \cite{nasr2025attacker} tested twelve published defences under adaptive attacks---all were bypassed with $>$90\% success. Real-world consequences have already materialised: Rehberger \cite{rehberger2026scaryskills} discovered 341 malicious Skills in the OpenClaw Hub, some exploiting invisible Unicode codepoints to embed hidden instructions.
+
+Industry responses have been multi-layered. Google's five-layer defence \cite{google2025promptinjection} combines classifiers, sanitisation, and user confirmation. Anthropic \cite{anthropic2025promptinjection} reports a 1\% attack success rate through RL training and content classifiers. Meta's ``Rule of Two'' \cite{meta2025ruletwo} provides a practical heuristic: an agent is critically vulnerable when it simultaneously processes untrusted inputs, accesses sensitive data, \textit{and} takes state-changing actions. Safe agents should satisfy at most two of these three properties.
+
+\textbf{The key insight for our work}: the security community has converged on the conclusion that prompt-level defences are necessary but insufficient. Architectural constraints---physically removing unauthorised capabilities from the agent's execution environment---are required for reliable security. This motivates our Mountable Context Cell design.
+
+
+% ============================================================================
 \section{Agentic Communication Protocols}
+\label{sec:rw_communication}
+% ============================================================================
 
-\todo{Section 2.2.1 -- How agents communicate now: Classical MAS (JADE, FIPA-ACL), Google A2A protocol, Anthropic MCP, function-calling based coordination.}
+\subsection{How Agents Communicate Now}
 
-\todo{Section 2.2.2 -- Why agentic communication matters: Beyond single-agent systems. The network effects argument. Multi-agent collaboration potential.}
+Agent communication has evolved through three paradigms:
 
-\todo{Section 2.2.3 -- Networks in general: Draw analogies from economic networks, computer networks (TCP/IP, OSI model), ecological networks. What can agent networks learn from these?}
+\textbf{Classical Multi-Agent Systems.} FIPA-ACL \cite{fipa2002acl} and its reference implementation JADE \cite{bellifemine2007jade} defined standardised speech acts (REQUEST, INFORM, QUERY) with formal ontologies. These protocols enabled rigorous coordination but assumed deterministic agents operating within trusted federations---fundamentally incompatible with LLM non-determinism and zero-trust cross-organisational scenarios.
 
-\todo{Section 2.2.4 -- Existing AI coordination layers: CrewAI, AutoGen, LangGraph, MetaGPT -- any multi-agent orchestration frameworks. How do they handle cross-boundary trust?}
+\textbf{Modern protocol standards.} Google's A2A protocol \cite{google2025a2a} enables agent-to-agent task delegation and capability discovery. Anthropic's Model Context Protocol (MCP) \cite{anthropic2024mcp} standardises tool and resource interfaces for connecting LLMs to external systems. Both address important infrastructure problems but focus on \textit{connectivity}---neither provides a trust or access governance layer.
 
-\section{Our Niche}
+\textbf{LLM-based negotiation.} Agents increasingly coordinate through natural language exchanges. While flexible, this approach is token-inefficient (requiring multiple LLM roundtrips per agreement), latency-prone, and vulnerable to hallucination cascades. Most critically, it assumes agents have unrestricted access to their owner's data---there is no access governance layer.
 
-\todo{Section 2.3.1 -- Precise comparison table: Pulse as a coordination layer vs. existing solutions. Show what each system does and does not do.}
+\textbf{The gap}: current protocols handle message passing but not trust management. They answer ``how do agents talk?'' but not ``what is Agent A allowed to tell Agent B?''
 
-\todo{Section 2.3.2 -- Clarify relationship to agent frameworks: We are COMPATIBLE with agent frameworks, not replacing them. Pulse is the coordination layer BETWEEN agents.}
+\subsection{Why Agentic Communication Matters}
 
-\todo{Section 2.3.3 -- What is a "Personal Agent Operating System" in the literature? Review AIOS (Mei et al. 2024), OS-Copilot, AgentOS (Wu et al.), MemGPT/Letta. Summarise emerging consensus and contrast with our "coordination layer" framing.}
+Single agents are useful; networks of agents are transformative. The value of a communication network scales superlinearly with its size---an observation formalised by Metcalfe's law for computer networks. The same principle applies to agent networks: a single agent is a productivity tool, but a network of interoperating agents can automate the coordination layer that currently consumes the majority of knowledge workers' time.
 
-\todo{Reference Shunyu Yao's ReAct PhD thesis for structural inspiration -- clean problem statement, method, experiments with ablations.}
+However, without trust infrastructure, the network cannot form. Every cross-boundary agent interaction is a potential security incident. The coordination tax persists because we lack the protocols to make agent communication safe.
+
+\subsection{Lessons from Other Networks}
+\label{sec:rw_networks}
+
+Agent networks are not the first networks humanity has built. Drawing on analogies from established network architectures reveals design principles we should adopt:
+
+\textbf{Computer networks.} TCP/IP succeeded not by dictating what applications could run, but by providing a universal transport layer with clear separation of concerns. The analogy for agent coordination is direct: we need a trust and isolation layer that is compatible with any agent framework, not one that replaces them. Policy files in our design serve a role analogous to firewall rules---declarative access control that sits between the transport and application layers.
+
+\textbf{Economic networks.} Coase \cite{coase1937firm} and Williamson \cite{williamson1975markets} explained that firms exist because market transaction costs exceed internal coordination costs. Agent coordination today has prohibitively high transaction costs (humans mediating every cross-agent interaction). Reducing these costs---as TCP/IP did for digital communication---enables a market of agent services.
+
+\textbf{Social networks.} Granovetter \cite{granovetter1973weak} showed that weak social ties are often more valuable for novel information flow than strong ties, because they bridge otherwise disconnected clusters. Agent relationships exist on a similar spectrum: close collaborators need rich context sharing, while casual acquaintances need minimal, carefully controlled exchange. Our trust tier system encodes this spectrum.
+
+\subsection{Existing AI Coordination Layers}
+
+Several systems attempt multi-agent orchestration:
+
+\begin{itemize}
+    \item \textbf{AutoGen} \cite{wu2023autogen}: Microsoft's framework for multi-agent conversation through structured role-based patterns.
+    \item \textbf{MetaGPT} \cite{hong2023metagpt}: Simulates a software company with specialised agent roles (product manager, architect, engineer).
+    \item \textbf{CrewAI} \cite{crewai2024}: Role-based workflows where agents with defined goals collaborate on tasks.
+    \item \textbf{CAMEL} \cite{li2023camel}: Explores emergent communication behaviour between role-playing LLM agents.
+    \item \textbf{ChatDev} \cite{qian2023chatdev}: Virtual software company where agents collaborate through chat chains.
+    \item \textbf{LangGraph} \cite{langgraph2024}: Graph-based agent orchestration with conditional routing.
+\end{itemize}
+
+\textbf{The critical observation}: every existing ``multi-agent'' system is really \textit{multi-role-within-one-owner}. All agents serve a single principal and share context freely. None address the scenario where Agent A (owned by Alice) must safely coordinate with Agent B (owned by Bob), where Alice and Bob have different and potentially conflicting interests. This is the fundamental gap our work addresses.
+
+
+% ============================================================================
+\section{Our Niche: A Personal Agent Coordination Layer}
+\label{sec:rw_niche}
+% ============================================================================
+
+\subsection{Positioning}
+
+\Cref{table:comparison} summarises how Pulse compares with existing systems across six dimensions critical to secure cross-boundary agent coordination.
+
+\begin{table}[h]
+\centering
+\caption{Comparison of Pulse with existing systems across dimensions relevant to cross-boundary agent coordination.}
+\label{table:comparison}
+\begin{tabular}{p{2.8cm} p{1.5cm} p{1.5cm} p{1.5cm} p{1.5cm} p{1.5cm} p{1.5cm}}
+\toprule
+\textbf{System} & \textbf{Multi-Owner} & \textbf{Physical Isolation} & \textbf{Real-World State} & \textbf{Network-Native} & \textbf{Relation Memory} & \textbf{Adversarial Model} \\
+\midrule
+Manus / OpenClaw  & No  & No  & Yes & No      & No  & No \\
+MemGPT / Letta    & No  & No  & Partial & No  & No  & No \\
+CrewAI / AutoGen  & No  & No  & No  & No      & No  & No \\
+FIPA-ACL / A2A    & Yes & No  & No  & Partial & No  & No \\
+Notion / Dropbox  & Yes & Yes & No  & No      & No  & Basic \\
+\textbf{Pulse}    & \textbf{Yes} & \textbf{Yes} & \textbf{Yes} & \textbf{Yes} & \textbf{Yes} & \textbf{Yes} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+No existing system occupies all six columns. Pulse's unique contribution is being simultaneously network-native, security-first, and grounded in real-world personal context.
+
+\subsection{Relationship to Agent Frameworks}
+
+It is important to clarify what Pulse is \textit{not}. Pulse is not an agent framework---it does not compete with LangChain, CrewAI, or AutoGen. Rather, it is a \textbf{coordination layer} that sits between agents. Agent frameworks are applications; Pulse provides the trust infrastructure they lack. The analogy is direct: TCP/IP did not replace applications---it enabled them to communicate. MCP \cite{anthropic2024mcp} provides the tool-access plumbing; Pulse provides the policy layer on top.
+
+\subsection{What Is a ``Personal Agent Operating System''?}
+
+Several recent works have used the ``Agent OS'' framing:
+
+\begin{itemize}
+    \item \textbf{AIOS} \cite{mei2025aios}: Proposes OS-like abstractions (scheduler, context manager, memory manager) for managing multiple LLM agents. Closest to our concept, but focuses on resource management for agents on one machine, not cross-boundary coordination.
+    \item \textbf{OS-Copilot} \cite{wu2024oscopilot}: An agent that operates \textit{within} the OS (clicking buttons, opening apps)---an agent of the OS, not an OS for agents.
+    \item \textbf{MemGPT} \cite{packer2024memgpt}: Uses the ``OS for LLMs'' metaphor focused on memory paging. Single-tenant.
+\end{itemize}
+
+The emerging consensus is that a ``Personal Agent OS'' provides persistent state management, tool orchestration, resource scheduling, and process isolation. In this thesis, we use the more precise framing \textbf{Personal Agent Coordination Layer} to emphasise our focus on the cross-boundary coordination problem rather than the full breadth of OS abstractions. We employ the OS analogy (LLM as CPU, notes as file system, policy as capability-based security) as a \textit{design metaphor} that grounds our architectural decisions in well-understood systems principles.

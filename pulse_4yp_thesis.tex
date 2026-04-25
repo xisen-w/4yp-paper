@@ -6,8 +6,7 @@
 %
 % DESCRIPTION :
 %
-% 4th Year Project Report: Pulse - A Secure AgentOS for Cross-Boundary
-% Coordination
+% 4th Year Project Report: Pulse - Secure Cross-Boundary Agent Coordination
 % ____________________________________________________________________________
 
 
@@ -18,7 +17,7 @@
 % Document metadata
 %
 
-\title       {Pulse: A Secure AgentOS for Cross-Boundary AI Coordination}
+\title       {Pulse: A Personal Agent Coordination Layer for Secure Cross-Boundary AI Communication}
 \author      {Xisen Wang}
 \degree      { {\huge 4$^{th}$-Year Project Report} }
 \college     {Keble College}
@@ -39,24 +38,28 @@
 
 \mainmatter
 
-
-% TODO: Final chapter order should be:
-% C1: Introduction (chap_introduction)
-% C2: Related Work (chap_literature_review) -- NEW
-% C3: Problem Formulation (chap_problem_setup, stripped of landscape analysis)
-% C4: Benchmark Design (chap_architecture, reframed)
-% C5: Failure Cases & Results (NEW, split from chap_evaluation)
-% C6: Solution Proposal (MERGE chap_memory_system + chap_security)
-% C7: Experiments & Results (split from chap_evaluation)
-% C8: Conclusions (chap_conclusion)
-%
+% C1: Introduction
 \include{chap_introduction}
+
+% C2: Related Work
 \include{chap_literature_review}
+
+% C3: Problem Formulation
 \include{chap_problem_setup}
+
+% C4: Benchmark Design
 \include{chap_architecture}
-\include{chap_memory_system}
-\include{chap_security}
-\include{chap_evaluation}
+
+% C5: Failure Cases, Insights, and Baseline Results
+\include{chap_failure_cases}
+
+% C6: Solution Proposal
+\include{chap_solution_proposal}
+
+% C7: Experiments and Results
+\include{chap_experiments}
+
+% C8: Conclusion
 \include{chap_conclusion}
 
 \appendix

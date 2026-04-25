@@ -1,0 +1,143 @@
+\chapter{Experiments and Results}
+\label{chapter:experiments}
+
+This chapter evaluates the solutions proposed in \cref{chapter:solution_proposal} against the benchmark described in \cref{chapter:benchmark_design}. Our experimental design follows an \textit{incremental ablation} approach: rather than comparing against external baselines (which do not exist for our benchmark, since no prior work measures utility and security simultaneously across trust tiers), we build configurations that add one architectural layer at a time. Each transition isolates the contribution of a specific component, and the full spectrum from ``no protection'' to ``full system'' reveals the Pareto frontier of the context--security trade-off.
+
+
+\section{Experimental Setup}
+
+\subsection{Configurations as Incremental Ablations}
+
+We evaluate four configurations. Each adds one layer of architectural protection to the previous:
+
+\begin{enumerate}
+    \item \textbf{Baseline 1 (M0)}: Naive prompting---the agent has full access to all tools, data, and memory. Security relies entirely on the LLM's instruction-following. (From \cref{chapter:failure_cases}.)
+    \item \textbf{Baseline 2 (M1)}: Policy file with basic tool filtering---unauthorised tools are removed from the function array, and tool arguments are validated. (From \cref{chapter:failure_cases}.)
+    \item \textbf{Pulse Partial (M2)}: Mountable Context Cells + Dual-Track Memory. The full execution sandbox is constructed per-interaction, and memory is isolated per-relationship. Ambiguous queries are denied (no escalation learning).
+    \item \textbf{Pulse Full (M3)}: M2 + Intelligent Escalation Protocol. Precedent-based learning automates approval for routine boundary queries, recovering utility that M2 sacrifices.
+\end{enumerate}
+
+This design means every transition (M0$\to$M1, M1$\to$M2, M2$\to$M3) is itself an ablation that isolates the contribution of one component: basic access control, architectural sandboxing + memory isolation, and adaptive escalation, respectively.
+
+\subsection{Benchmark Scope}
+
+Each configuration is evaluated on the same benchmark: 1 host agent, external entities across multiple trust tiers, legitimate utility queries, adversarial security probes, and heartbeat rounds for autonomous behaviour evaluation.
+
+\subsection{Human Ceiling}
+
+To calibrate expectations, we include a \textbf{human ceiling}: a human evaluator manually decides what to share for each query, given the guest's identity and the host's data. This provides an upper bound on utility (how well can a human answer?) and a reference point for overhead (how long does manual management take?). The gap between the human ceiling and M3's performance quantifies the room for improvement.
+
+
+\section{Main Results}
+
+\subsection{Utility--Security Trade-off}
+
+\begin{table}[h]
+\centering
+\caption{Main results across four configurations. $U$ = Utility (task completion), $S$ = Security (attacks blocked), $M$ = Manual Overhead (escalation rate).}
+\label{table:main_results}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Configuration} & \textbf{$\mathcal{U}$ (\%)} & \textbf{$\mathcal{S}$ (\%)} & \textbf{$\mathcal{O}$ (\%)} \\
+\midrule
+M0: Baseline (Naive)            & ---  & ---  & 0  \\
+M1: + Policy File               & ---  & ---  & --- \\
+M2: + MCC + Dual-Track Memory   & ---  & ---  & --- \\
+M3: + Intelligent Escalation    & ---  & ---  & --- \\
+\midrule
+Human Ceiling                   & ---  & ---  & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textit{Note: Results cells marked --- are to be populated with actual experimental measurements. We report the experimental protocol and expected analysis framework here; quantitative results will be filled as experiments complete.}
+
+\subsection{Expected Analysis}
+
+Based on the architectural properties of each solution and the failure cases observed in \cref{chapter:failure_cases}, we expect the following trends:
+
+\begin{itemize}
+    \item \textbf{M0 $\rightarrow$ M1} (effect of basic access control): Significant security improvement for tool-level attacks (Classes 1, 2, 4). Minimal improvement for inference attacks (Class 3) and memory contamination (Class 5). Small utility reduction due to over-restrictive tool filtering.
+
+    \item \textbf{M1 $\rightarrow$ M2} (effect of architectural sandboxing + memory isolation): Major improvement in memory contamination prevention (Class 5) through Dual-Track Memory. Improved security for Classes 1 and 2 through MCC's stricter sandboxing. Higher escalation overhead (all ambiguous queries denied).
+
+    \item \textbf{M2 $\rightarrow$ M3} (effect of adaptive escalation): Maintained security with dramatically reduced overhead through precedent-based learning. Utility recovery as the escalation protocol auto-approves queries that M2 would deny.
+\end{itemize}
+
+
+\section{Security Analysis by Attack Class}
+
+For each attack class identified in \cref{chapter:failure_cases}, we evaluate defence effectiveness:
+
+\begin{table}[h]
+\centering
+\caption{Defence success rate (\%) by attack class and configuration.}
+\label{table:attack_class}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Attack Class} & \textbf{M0} & \textbf{M1} & \textbf{M2} & \textbf{M3} \\
+\midrule
+1. Direct Injection    & --- & --- & --- & --- \\
+2. Social Engineering  & --- & --- & --- & --- \\
+3. Multi-Query Infer.  & --- & --- & --- & --- \\
+4. Tool Abuse          & --- & --- & --- & --- \\
+5. Memory Contamination & --- & --- & --- & --- \\
+\midrule
+\textbf{Overall}       & --- & --- & --- & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+\section{Escalation Learning Curve}
+
+A key prediction of the Intelligent Escalation Protocol (RQ4) is that manual approval rates should decrease over time as precedents accumulate. We measure the escalation rate in three phases:
+
+\begin{itemize}
+    \item \textbf{Phase 1 (Interactions 1--20)}: System establishing baseline precedents. Expected high escalation rate.
+    \item \textbf{Phase 2 (Interactions 21--100)}: Direct precedent matching. Expected significant reduction.
+    \item \textbf{Phase 3 (Interactions 101+)}: Cluster generalisation. Expected convergence to steady-state.
+\end{itemize}
+
+
+\section{Ablation Studies}
+
+\subsection{Impact of Dual-Track Memory}
+
+\textbf{Experiment}: Disable Relationship Shard isolation---all episodic memory is global.
+
+\textbf{Expected result}: Significant increase in Class 5 (memory contamination) attacks succeeding. Utility may actually increase slightly (the agent has richer context) but at catastrophic security cost.
+
+\subsection{Impact of MCC vs.\ Basic Access Granting}
+
+\textbf{Experiment}: Replace MCCs with basic tool filtering (Baseline 2's mechanism).
+
+\textbf{Expected result}: Increased attack success for Classes 1 and 2 (social engineering can still exploit system prompt context). MCC's stricter sandboxing removes even the awareness of unavailable tools.
+
+\subsection{Impact of Precedent Learning}
+
+\textbf{Experiment}: Disable relational clustering---escalation decisions are made per-entity without cluster generalisation.
+
+\textbf{Expected result}: Higher manual overhead and longer time to steady-state. The system must learn each entity's boundaries independently rather than generalising from similar entities.
+
+
+\section{Heartbeat Mode Results}
+
+The heartbeat evaluation mode (\cref{sec:heartbeat}) reveals emergent risks not captured by static QA:
+
+\begin{itemize}
+    \item \textbf{Proactive disclosure}: Does the heartbeat engine inadvertently share protected information when notifying external parties of state changes?
+    \item \textbf{Cumulative leakage}: Over 20 heartbeat rounds, does the combination of autonomous actions and guest queries result in more information disclosure than either channel alone?
+    \item \textbf{Cross-relationship contamination}: Do heartbeat-generated todos or notifications create memory artefacts that leak across relationship shards?
+\end{itemize}
+
+\section{Limitations}
+
+Several limitations of our experimental evaluation should be noted:
+
+\begin{enumerate}
+    \item \textbf{Simulated entities}: External entities are LLM-simulated, not real humans. Real adversaries may employ more creative attack strategies.
+    \item \textbf{Scale}: Our benchmark uses 30 entities and 300 scenarios. Production deployment would involve orders of magnitude more interactions.
+    \item \textbf{Model dependence}: Results may vary across LLM providers and model versions. We mitigate this through cross-model comparison but cannot test every model.
+    \item \textbf{Indirect inference detection}: Multi-query inference attacks (Class 3) remain the hardest to defend against. Our current detection relies on the Sanitisation Agent's pattern recognition, which has inherent false positive/negative trade-offs.
+\end{enumerate}

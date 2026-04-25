@@ -1,0 +1,161 @@
+\chapter{Solution Proposal}
+\label{chapter:solution_proposal}
+
+The previous chapter established the diagnosis: baseline access control blocks direct attacks but leaves three critical gaps---memory contamination, insufficient runtime isolation, and unsustainable manual overhead for continuous state. This chapter proposes the treatment: three architectural solutions, each targeting a specific gap. Together, they form a layered defence that transforms agent security from a \textit{behavioural} property (dependent on whether the LLM follows instructions) into a \textit{structural} property (enforced by the execution environment regardless of LLM behaviour).
+
+
+% ============================================================================
+\section{Dual-Track Memory Architecture}
+\label{sec:dual_track_memory}
+% ============================================================================
+
+\subsection{Motivation}
+
+In \cref{chapter:failure_cases}, we observed that agents with global memory frequently leak information across relationships (Class 5 attacks). When the agent talks to both Investor A and Investor B, fragments from one conversation contaminate the other's context through the shared vector database. Existing memory systems---including MemGPT \cite{packer2024memgpt} and LangChain \cite{langchain2023}---treat memory as a global resource with no concept of relationship-specific isolation.
+
+\subsection{Design}
+
+We propose \textbf{Dual-Track Memory}: a strict separation between self-state memory (belonging to the owner) and per-relationship memory shards.
+
+\textbf{Track 1: Self-State Memory.} This is the agent's ``core OS state''---the owner's preferences, constraints, identity facts, and private conversation history. Self-State Memory is never directly exposed to external entities. When a guest asks a question, the agent may \textit{consult} self-state to understand the owner's policies (``never share financials with competitors''), but the actual facts are processed internally, not inserted into the guest's context window.
+
+\textbf{Track 2: Relationship Shards.} For each unique external entity $E_i$, the system maintains an isolated shard:
+\[
+\text{Shard}(U, E_i) = \{ L2_{E_i}, \text{Metadata}_{E_i} \}
+\]
+
+where $L2_{E_i}$ contains all episodic memory from interactions between the agent and $E_i$ (questions asked, answers given, files disclosed, commitments made), and $\text{Metadata}_{E_i}$ stores relationship context (first interaction timestamp, relationship category, trust level).
+
+\subsection{Isolation Mechanism}
+
+Shard isolation is enforced through the database layer, not the prompt:
+
+\begin{enumerate}
+    \item \textbf{Tagging at write time}: Every conversation fragment written to the vector database includes a \texttt{relationship\_id} metadata field.
+    \item \textbf{Filtering at read time}: Semantic search queries include a hard \texttt{WHERE relationship\_id = $E_i$} filter, physically preventing retrieval of fragments from other relationships.
+    \item \textbf{Fail-closed design}: If the relationship ID is missing or ambiguous, the query returns zero results rather than falling back to global search.
+\end{enumerate}
+
+This mechanism is \textit{independent of LLM behaviour}. Even if the model hallucinates a query attempting to access another shard, the database cannot return unauthorised fragments.
+
+\subsection{Tiered Memory Hierarchy}
+
+Within each track, memory follows a three-tier hierarchy inspired by CPU cache architecture and MemGPT's \cite{packer2024memgpt} virtual context management:
+
+\begin{itemize}
+    \item \textbf{L1 (Working Memory)}: The LLM's active context window (128K--200K tokens). Zero latency. FIFO eviction.
+    \item \textbf{L2 (Episodic Memory)}: Vector database of timestamped conversation fragments. 50--200ms latency. Embedding-based retrieval with metadata filtering.
+    \item \textbf{L3 (Semantic Memory)}: Structured facts distilled from L2 through periodic consolidation. 10--50ms latency. Graph traversal or SQL queries.
+\end{itemize}
+
+The dual-track separation applies across all tiers: self-state has its own L1/L2/L3, and each relationship shard has its own L2 (with L3 as future work).
+
+
+% ============================================================================
+\section{Dynamic Sandboxing: Mountable Context Cells}
+\label{sec:dynamic_sandboxing}
+% ============================================================================
+
+\subsection{Motivation}
+
+The baseline access granting mechanism (\cref{chapter:benchmark_design}) filters tools and validates arguments at the API level. While this blocks direct tool abuse (Class 4), it has three limitations: (i) the LLM still ``knows'' about the existence of the broader system through its system prompt; (ii) continuous state streams (emails, calendar) cannot be cleanly partitioned by file-level ACLs; and (iii) there is no information flow tracking across tool calls.
+
+\subsection{Design: From Access Grants to Context Cells}
+
+A \textbf{Mountable Context Cell} (MCC) extends basic access granting into a full capability-based execution sandbox \cite{dennis1966programming}. The key difference:
+
+\begin{itemize}
+    \item \textbf{Access granting} (Baseline 2): Tools are filtered; arguments are validated. The LLM's system prompt still references the full system.
+    \item \textbf{Dynamic sandboxing} (MCC): The entire execution environment is constructed \textit{de novo} for each interaction. The LLM receives \textit{only} the tools, data references, and system context relevant to this specific guest. Unauthorised capabilities do not exist in the sandbox---they are not hidden or restricted, they are \textit{absent}.
+\end{itemize}
+
+The analogy is the difference between file permissions (\texttt{chmod}) and process containers (Docker/SELinux). Permissions restrict what a process \textit{should} do; containers restrict what a process \textit{can} do.
+
+\subsection{MCC Specification}
+
+An MCC is a runtime configuration dynamically constructed from the relationship's policy file:
+
+\begin{verbatim}
+{
+  "allowedNoteIds": [123, 456],
+  "calendarAccess": "busy_only",
+  "emailAccess": "filtered",
+  "emailFilter": ["stripe", "billing"],
+  "allowedTools": ["read_note", "check_calendar_busy"],
+  "systemPromptScope": "guest_investor"
+}
+\end{verbatim}
+
+\subsection{Enforcement: The Policy Decision Point}
+
+The \textbf{Policy Decision Point (PDP)} enforces the MCC through three mechanisms:
+
+\begin{enumerate}
+    \item \textbf{Pre-execution tool removal}: Before the LLM is invoked, the PDP constructs the tool array from the MCC. Tools not in \texttt{allowedTools} are excluded entirely from the function signature array. The LLM does not know they exist.
+
+    \item \textbf{Runtime argument validation}: When the LLM calls a permitted tool, the PDP validates arguments against the MCC. \texttt{read\_note(\{id: 789\})} is rejected if $789 \notin \texttt{allowedNoteIds}$, before the call reaches the database.
+
+    \item \textbf{Continuous-state filtering}: For email and calendar access, the PDP applies keyword filters and access-level restrictions. If \texttt{emailAccess = "filtered"} with filter \texttt{["stripe"]}, only email threads matching the filter are returned.
+\end{enumerate}
+
+\subsection{Security Properties}
+
+The MCC architecture provides a strong security guarantee: for any sequence of LLM-generated tool calls, no call can return data outside the MCC's scope. This holds regardless of LLM behaviour---even a fully adversarial model cannot exfiltrate data that the sandbox physically does not contain.
+
+This is \textit{not} ``mathematically'' proven in the formal verification sense (which we identify as future work), but it is an architectural guarantee analogous to process isolation in operating systems: the security boundary is enforced by the runtime, not by the process's cooperation.
+
+
+% ============================================================================
+\section{Intelligent Escalation Protocol}
+\label{sec:escalation_protocol}
+% ============================================================================
+
+\subsection{Motivation}
+
+MCCs handle static files and tool access effectively. But continuous state streams (emails, calendar details) present a harder problem: new content arrives constantly, and whether a specific piece of information is ``sensitive'' depends on the guest's identity and relationship history. Pre-authorising every piece of content is infeasible. Manual approval for every query reintroduces the coordination overhead we aim to eliminate.
+
+\subsection{Design: Triple-Filter Classification}
+
+We introduce a \textbf{Sanitisation Agent}---a lightweight LLM classifier that evaluates queries against continuous state streams. For each query, it outputs one of four decisions:
+
+\begin{enumerate}
+    \item \textbf{Allow}: The query is safe and can be answered directly.
+    \item \textbf{Redact}: The query is mostly safe but requires sanitisation (remove specific amounts, replace names with initials).
+    \item \textbf{Escalate}: The query is ambiguous---suspend execution and ask the owner for approval.
+    \item \textbf{Deny}: The query is clearly out of scope.
+\end{enumerate}
+
+\subsection{Precedent-Based Learning}
+
+The escalation protocol becomes intelligent through \textbf{relational clustering}:
+
+\begin{enumerate}
+    \item \textbf{Implicit social graph}: The system generates an embedding for each external entity based on interaction frequency, conversational tone, and types of data previously disclosed.
+    \item \textbf{Latent clustering}: Entities are automatically clustered in embedding space (e.g., ``Inner Circle,'' ``Formal Investors,'' ``Casual Acquaintances'').
+    \item \textbf{Precedent generalisation}: When evaluating a query from a new investor, the system retrieves both direct precedents (past decisions for this specific entity) and cluster precedents (past decisions for similar entities).
+    \item \textbf{Confidence scoring}: If cluster precedents overwhelmingly support ``Allow'' (e.g., 9/10 similar investors were granted calendar access), the system auto-approves without escalation. Split precedents trigger escalation.
+\end{enumerate}
+
+\subsection{The Macro Constitution}
+
+The owner's privacy preferences are formalised as a \textbf{Macro Constitution}---a set of high-level rules:
+
+\begin{verbatim}
+{
+  "rules": [
+    "Never disclose source code to anyone outside the core team",
+    "Investors may see high-level financials but not breakdowns",
+    "Casual acquaintances should not access calendar details"
+  ],
+  "precedents": [
+    {"entity": "investor_a", "query": "burn rate?", "decision": "allow"},
+    {"entity": "investor_b", "query": "source code?", "decision": "deny"}
+  ]
+}
+\end{verbatim}
+
+This constitution is dynamically updated as the owner makes decisions. Over time, the system learns implicit boundaries---which types of information are shared with which types of relationships---reducing the escalation rate.
+
+\subsection{Addressing RQ4}
+
+The escalation protocol directly addresses RQ4: can adaptive escalation learn social boundaries? The key hypothesis is that the escalation rate should decrease over time as precedents accumulate and cluster generalisations become reliable. We evaluate this in \cref{chapter:experiments}.

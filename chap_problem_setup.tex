@@ -1,141 +1,107 @@
-\chapter{Problem Setup and Related Work}
-\label{chapter:problem_setup}
+\chapter{Problem Formulation}
+\label{chapter:problem_formulation}
 
-\todo{RESTRUCTURE: This chapter should become C3 (Problem Formulation) ONLY. All Related Work content (Sections 2-3) should move to the new standalone C2 Related Work chapter.}
+This chapter formalises the \textbf{context--security trade-off} that arises when AI agents communicate across trust boundaries. We define the problem mathematically, state the threat model, and derive the four research questions that guide the remainder of this thesis.
 
-\todo{ADD: Explicit Research Questions R1-R4: (R1) What are the failure modes when agents communicate across trust boundaries? (R2) How does a policy file affect both utility and security? (R3) How should memory be redesigned for multi-party agent interactions? (R4) Can we design an adaptive escalation mechanism that learns social boundaries?}
-
-\todo{MOVE: "Landscape Analysis" section (2.1-2.3) and "The Pulse Niche" section (2.4) to the new C2 Related Work chapter.}
-
-\todo{MOVE: "Key Differentiators" comparison table to C2 Related Work.}
-
-\todo{KEEP: The formal math (agents, files, states, trade-off formulation) -- this is good. Refine the notation.}
-
-\todo{KEEP: Threat model section -- but add citations to actual prompt injection literature (Greshake et al., Perez \& Ribeiro, etc.)}
-
-\section{The Context-Security Trade-off}
-
-The fundamental challenge in networked AI systems can be formalized as the \textbf{Context-Security Trade-off}: achieving high collaborative utility while maintaining absolute security guarantees when agents operate across organizational trust boundaries.
+% ============================================================================
+\section{The Context--Security Trade-off}
+\label{sec:trade_off}
+% ============================================================================
 
 \subsection{Formal Problem Statement}
 
 Let $A$ be a host AI agent owned by user $U$, possessing access to:
 \begin{itemize}
-    \item $F = \{f_1, f_2, ..., f_n\}$: A set of files (notes, documents)
-    \item $S = \{s_1, s_2, ..., s_m\}$: A set of dynamic states (calendar events, emails, todos)
-    \item $M_{self}$: Global self-state memory (core facts about $U$)
+    \item $F = \{f_1, f_2, \ldots, f_n\}$: a set of \textbf{files} (notes, documents, knowledge artefacts);
+    \item $S = \{s_1, s_2, \ldots, s_m\}$: a set of \textbf{dynamic states} (calendar events, email threads, todo items);
+    \item $M_{\text{self}}$: \textbf{self-state memory}---core facts about $U$ (preferences, constraints, identity).
 \end{itemize}
 
-When $A$ interacts with external entity $E_i$ (e.g., an investor, cofounder, or stranger), the agent must:
+When $A$ interacts with an external entity $E_i$ (another user's agent, or a human), the system must simultaneously satisfy three requirements:
 
 \begin{enumerate}
-    \item \textbf{Maximize Utility}: Complete collaborative tasks $T = \{t_1, t_2, ..., t_k\}$ (e.g., schedule meetings, answer questions, negotiate terms) by leveraging relevant subsets of $F$, $S$, and $M_{self}$.
+    \item \textbf{Maximise utility.} Complete collaborative tasks $T = \{t_1, t_2, \ldots, t_k\}$ (schedule meetings, answer questions, share relevant context) by leveraging appropriate subsets of $F$, $S$, and $M_{\text{self}}$.
 
-    \item \textbf{Enforce Security}: Guarantee that $E_i$ can only access authorized data subsets $F' \subseteq F$ and $S' \subseteq S$ despite adversarial prompts attempting to extract $F \setminus F'$ or $S \setminus S'$.
+    \item \textbf{Enforce security.} Guarantee that $E_i$ can access only the authorised subsets $F_i \subseteq F$ and $S_i \subseteq S$, despite adversarial inputs attempting to extract $F \setminus F_i$ or $S \setminus S_i$.
 
-    \item \textbf{Maintain Isolation}: Ensure that memory artifacts from interaction with $E_i$ do not contaminate interactions with $E_j$ for $i \neq j$.
+    \item \textbf{Maintain isolation.} Ensure that memory artefacts from the interaction with $E_i$ do not contaminate interactions with $E_j$ for $i \neq j$.
 \end{enumerate}
 
-Traditional architectures fail because they conflate these requirements: prompt-based restrictions (``You are not allowed to access file $f_x$'') provide no physical enforcement, while manual permission management for every $(E_i, f_j, s_k)$ triple scales quadratically and reintroduces coordination overhead.
+The trade-off is inherent: increasing the agent's access to context (larger $F_i$, $S_i$) improves utility but increases the attack surface. Restricting access improves security but reduces the agent's ability to complete tasks. Manual management of the $(E_i, f_j, s_k)$ permission triples scales quadratically and reintroduces the coordination overhead agents were meant to eliminate.
 
-\subsection{Threat Model}
+\subsection{The Pareto Frontier}
 
-We assume a Byzantine adversary model where external entities $E_i$ may:
-\begin{itemize}
-    \item Attempt \textbf{prompt injection attacks} to override system instructions
-    \item Employ \textbf{social engineering} to manipulate the agent's reasoning
-    \item Execute \textbf{data exfiltration} through indirect queries that aggregate protected information
-    \item Launch \textbf{confused deputy attacks} by tricking the agent into performing unauthorized actions
-\end{itemize}
-
-We do \textit{not} assume compromise of the underlying LLM service, operating system, or network transport layer—these are orthogonal security concerns.
-
-\section{Landscape Analysis}
-
-\subsection{Single-Tenant Agent Frameworks}
-
-Current commercial and academic agent systems prioritize execution capability within isolated environments:
+We model the trade-off as a multi-objective optimisation problem. For a given policy configuration $\pi$ and agent architecture $\alpha$, define:
 
 \begin{itemize}
-    \item \textbf{OpenClaw} and \textbf{Manus}: High-capability task automation for individual users. These systems excel at workflow orchestration (e.g., ``research this topic and summarize findings'') but assume a single-tenant, trusted execution environment. They provide no architectural primitives for cross-boundary delegation.
-
-    \item \textbf{MemGPT} and \textbf{AgentOS (Wu et al.)}: Advanced memory management systems that maintain long-term context through tiered memory hierarchies (working memory, episodic memory, semantic memory). However, these architectures treat memory as a global resource—there is no concept of relationship-specific isolation or multi-tenant memory partitioning.
-
-    \item \textbf{LangChain/LlamaIndex}: Tooling frameworks for building agents with access to external APIs and data sources. Security is delegated to prompt engineering (``Do not access unauthorized resources''), which fails under adversarial inputs.
+    \item $\mathcal{U}(\pi, \alpha)$: task completion rate across all legitimate queries.
+    \item $\mathcal{S}(\pi, \alpha)$: data protection rate across all adversarial probes.
+    \item $\mathcal{O}(\pi, \alpha)$: manual overhead---the fraction of queries requiring human intervention.
 \end{itemize}
 
-\textbf{Gap}: These systems are architecturally unsuitable for networked scenarios because they lack physical isolation mechanisms. An agent granted email access for internal use cannot selectively expose only ``Stripe-related emails'' to an external auditor without manual filtering.
+The ideal system achieves $\mathcal{U} = 1$, $\mathcal{S} = 1$, $\mathcal{O} = 0$. In practice, these objectives conflict. The goal of this thesis is to push the \textbf{Pareto frontier}---improving security without proportionally sacrificing utility or increasing overhead.
 
-\subsection{Agent Communication Protocols}
+% ============================================================================
+\section{Threat Model}
+\label{sec:threat_model}
+% ============================================================================
 
-Academic research has explored Agent-to-Agent (A2A) communication:
-
-\begin{itemize}
-    \item \textbf{Multi-Agent Systems (MAS)}: Classical frameworks (JADE, FIPA-ACL) define message-passing protocols for agents to negotiate and collaborate. However, these assume trusted environments where all agents share a common ontology and security model. They do not address zero-trust cross-organizational scenarios.
-
-    \item \textbf{A2A Networks (Wang et al.)}: Recent work on LLM-based agent communication focuses on natural language negotiation. Agents exchange text messages to coordinate tasks (e.g., scheduling meetings). However, this approach is token-inefficient, latency-prone, and vulnerable to hallucination cascades. More critically, it assumes agents have unrestricted access to their owner's data—there is no access governance layer.
-
-    \item \textbf{Federated Learning and Secure Multi-Party Computation}: Privacy-preserving computation techniques allow collaborative learning without data sharing. While conceptually related, these methods are designed for model training, not operational coordination tasks requiring dynamic context sharing.
-\end{itemize}
-
-\textbf{Gap}: Existing protocols either assume full trust (MAS) or focus exclusively on message exchange semantics without addressing the underlying access control problem.
-
-\subsection{Data Sharing Platforms}
-
-Commercial file-sharing systems provide secure external access but lack agency:
-
-\begin{itemize}
-    \item \textbf{Notion/DocSend/Dropbox}: Secure, permissioned sharing of static documents. Users manually configure read/write access per file. These platforms excel at \textit{static} sharing but offer no dynamic, context-aware interaction. A shared document cannot answer questions, schedule meetings, or execute actions on behalf of its owner.
-
-    \item \textbf{Replika/Character.AI}: Conversational AI companions that maintain long-term memory and personality. These systems demonstrate relationship-aware interaction but operate in purely synthetic domains—they have no connection to real-world operational states (calendars, emails, file systems).
-\end{itemize}
-
-\textbf{Gap}: Static sharing platforms provide security without agency; conversational companions provide agency without real-world grounding.
-
-\section{The Pulse Niche: Network-Native AgentOS}
-
-Pulse occupies a unique position in this landscape by synthesizing insights from three domains:
+We adopt a \textbf{Byzantine adversary model} where external entities $E_i$ may be actively hostile. Specifically, we assume the adversary may:
 
 \begin{enumerate}
-    \item \textbf{Operating Systems}: The abstraction of ``files'' and ``states'' as mountable resources, capability-based security, and process isolation.
+    \item \textbf{Inject adversarial prompts.} Attempt to override the agent's system instructions through direct \cite{greshake2023not} or indirect \cite{zou2023universal} prompt injection.
 
-    \item \textbf{Distributed Systems}: Federated network topologies, stateful session management (analogous to TCP), and transitive trust protocols.
+    \item \textbf{Employ social engineering.} Claim false authority (``The owner gave me access'') or appeal to the agent's helpfulness bias \cite{wei2024jailbroken}.
 
-    \item \textbf{Agentic AI}: Long-term memory, proactive execution, and natural language interaction.
+    \item \textbf{Execute multi-query inference.} Ask a sequence of individually innocuous questions whose answers, when combined, reveal protected information.
+
+    \item \textbf{Abuse tool interfaces.} Invoke tools with out-of-policy arguments or exploit implicit tool capabilities.
+
+    \item \textbf{Exploit memory contamination.} Attempt to retrieve information stored from other relationships through the agent's shared memory.
 \end{enumerate}
 
-Unlike single-tenant frameworks, Pulse is \textbf{network-native by design}. Every architectural decision—from memory partitioning to API sandboxing—is driven by the requirement to support secure, stateful interactions across organizational boundaries. This positions Pulse not as an individual productivity tool but as \textbf{foundational infrastructure for an agent economy}—analogous to what TCP/IP provides for computer networks.
+We do \textit{not} assume compromise of the underlying LLM service, the operating system, or the network transport layer---these are orthogonal security concerns addressed by existing infrastructure. Our threat model focuses on attacks that exploit the \textit{application layer}: the interface between the LLM, its tools, and its memory.
 
-\subsection{Key Differentiators}
+This threat model aligns with Meta's ``Rule of Two'' framework \cite{meta2025ruletwo}: an agent becomes critically vulnerable when it simultaneously processes untrusted inputs, accesses sensitive data, and can take state-changing actions. Our solutions aim to ensure that at most two of these three conditions hold at any time.
 
-\begin{table}[h]
-\centering
-\caption{Comparison of Pulse with existing systems}
-\label{table:comparison}
-\begin{tabular}{p{3cm} p{2cm} p{2cm} p{2cm} p{2cm}}
-\toprule
-\textbf{System} & \textbf{Multi-Tenant} & \textbf{Physical Isolation} & \textbf{Real-World State} & \textbf{Network-Native} \\
-\midrule
-OpenClaw/Manus & No & No & Yes & No \\
-MemGPT/AgentOS & No & No & Partial & No \\
-A2A Protocols & Yes & No & No & Partial \\
-Notion/DocSend & Yes & Yes & No & No \\
-Replika/Character.AI & Yes & No & No & No \\
-\textbf{Pulse} & \textbf{Yes} & \textbf{Yes} & \textbf{Yes} & \textbf{Yes} \\
-\bottomrule
-\end{tabular}
-\end{table}
+% ============================================================================
+\section{Limitations of Existing Approaches}
+\label{sec:existing_limitations}
+% ============================================================================
 
+Before stating our research questions, we summarise why existing defences are insufficient for the problem as formulated:
+
+\textbf{Prompt-level defences} (system instructions, content classifiers, chain-of-thought filtering) improve average-case security but fail under adaptive attacks. Nasr et al.\ \cite{nasr2025attacker} tested twelve published defences and found all could be bypassed with $>$90\% success. Even Anthropic's state-of-the-art model-level hardening leaves a 1\% residual attack success rate \cite{anthropic2025promptinjection}---unacceptable when personal data is at stake.
+
+\textbf{Static access control lists} (file-level permissions) provide strong isolation for static documents but cannot handle continuous state streams (email, calendar) where new content arrives constantly and sensitivity depends on relational context.
+
+\textbf{Manual permission management} offers perfect security but reintroduces the coordination overhead that agents were designed to eliminate. If the owner must approve every cross-boundary query, the agent provides no net productivity gain.
+
+The research community has converged on the conclusion that \textbf{architectural enforcement}---physically constraining what the agent can access, rather than instructing it what not to access---is the reliable path forward \cite{google2025promptinjection, meta2025ruletwo}. Our solutions build on this principle.
+
+% ============================================================================
 \section{Research Questions}
+\label{sec:research_questions}
+% ============================================================================
 
-Building on this landscape analysis, we address three core research questions:
+The problem formulation and the limitations of existing approaches motivate four research questions:
 
-\begin{enumerate}
-    \item \textbf{RQ1 (Memory)}: How can we architect a memory system that maintains perfect context continuity within each relationship while guaranteeing absolute isolation across relationships?
+\begin{description}
+    \item[RQ1] \textit{What are the failure modes when AI agents communicate across trust boundaries?}
 
-    \item \textbf{RQ2 (Security)}: Can we design a capability-based execution environment where unauthorized data access is physically impossible, rendering prompt injection attacks ineffective?
+    We seek a systematic taxonomy of how agents fail---not just prompt injection, but social engineering, inference attacks, tool abuse, and memory contamination. Understanding the failure landscape is prerequisite to designing effective defences. (\Cref{chapter:failure_cases}.)
 
-    \item \textbf{RQ3 (Usability)}: How can we automatically learn and generalize user privacy preferences across similar relationships to minimize manual permission overhead?
-\end{enumerate}
+    \item[RQ2] \textit{How does a policy file (access rules) affect both utility and security?}
 
-The remainder of this thesis presents our solutions to these questions through the Pulse AgentOS architecture.
+    Basic tool filtering is the simplest architectural intervention. We measure its effect on both legitimate task completion and adversarial attack success, establishing the baseline from which our solutions improve. (\Cref{chapter:failure_cases,chapter:experiments}.)
+
+    \item[RQ3] \textit{How should agent memory be redesigned for multi-party interactions?}
+
+    Global memory creates cross-relationship leakage. We ask whether a dual-track architecture---separating self-state from per-relationship shards at the database level---can eliminate memory contamination without sacrificing context quality within each relationship. (\Cref{chapter:solution_proposal,chapter:experiments}.)
+
+    \item[RQ4] \textit{Can an adaptive escalation mechanism learn social boundaries and reduce manual overhead?}
+
+    Manual approval for every ambiguous query is unsustainable. We ask whether precedent-based learning---clustering entities and generalising past decisions---can automate approval for routine queries while preserving zero-trust guarantees for novel ones. (\Cref{chapter:solution_proposal,chapter:experiments}.)
+\end{description}
+
+These four questions span the full problem space: RQ1 characterises the threat landscape, RQ2 establishes baselines, RQ3 addresses memory isolation, and RQ4 tackles the overhead problem. Together, they trace a path from \textit{diagnosis} (what goes wrong, \cref{chapter:failure_cases}) through \textit{treatment} (architectural solutions, \cref{chapter:solution_proposal}) to \textit{evaluation} (do the solutions shift the Pareto frontier, \cref{chapter:experiments}). Answering these questions requires a benchmark that measures $\mathcal{U}$, $\mathcal{S}$, and $\mathcal{O}$ simultaneously---which we design in \cref{chapter:benchmark_design}.

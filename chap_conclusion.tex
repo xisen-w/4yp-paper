@@ -1,96 +1,77 @@
-\chapter{Conclusion and Future Directions}
+\chapter{Conclusion}
 \label{chapter:conclusion}
 
-\todo{REWRITE: More measured tone. Less "digital civilization" pitch, more honest research summary.}
+% ============================================================================
+\section{Summary of Findings}
+\label{sec:summary}
+% ============================================================================
 
-\todo{Structure: (1) What we found (tied to R1-R4). (2) What we built and what it showed. (3) Limitations (be honest). (4) Future work.}
+This thesis investigated the context--security trade-off in agentic communication: how can AI agents coordinate across trust boundaries without catastrophic security failures or unsustainable manual overhead? We addressed this question through four research threads.
 
-\todo{CUT: "From Tools to Digital Civilization" section -- too grandiose for a 4YP report.}
+\textbf{RQ1: What are the failure modes?} Our benchmark revealed five distinct attack classes (\cref{chapter:failure_cases}): direct prompt injection, social engineering, multi-query inference, tool abuse, and memory contamination. Crucially, these classes differ in their amenability to architectural defence. Tool-level filtering eliminates Classes 1 and 4 but is ineffective against inference attacks (Class 3) and memory contamination (Class 5). This taxonomy provides a structured framework for evaluating any future defence mechanism.
 
-\todo{CUT: "Network-native civilization of AI agents" rhetoric. Replace with measured statements about what the coordination layer enables.}
+\textbf{RQ2: How does a policy file affect utility and security?} Basic tool filtering (Baseline 2) provides substantial security improvements for direct attacks while only modestly reducing utility. However, it leaves significant gaps: continuous state streams cannot be cleanly partitioned, and memory contamination persists. The policy file is a necessary but insufficient building block.
 
-\todo{ADD: Honest limitations section -- what doesn't work yet, what assumptions may not hold, what needs more work.}
+\textbf{RQ3: How should memory be redesigned?} Dual-Track Memory---separating self-state from per-relationship shards at the database level---eliminates cross-relationship leakage without sacrificing context quality within each relationship. The isolation is enforced by metadata filtering in the vector database, making it independent of LLM behaviour. This addresses the ``memory is the weakest link'' finding from our baseline experiments.
 
-\todo{ADD: Connect conclusions back to R1-R4 research questions explicitly.}
+\textbf{RQ4: Can adaptive escalation learn social boundaries?} The Intelligent Escalation Protocol demonstrates that precedent-based learning can reduce manual approval overhead over time. By clustering entities and generalising past decisions, the system automates routine approvals while preserving zero-trust guarantees for novel or ambiguous queries.
 
-\section{Summary of Contributions}
+% ============================================================================
+\section{Contributions}
+\label{sec:contributions}
+% ============================================================================
 
-This thesis presented \textbf{Pulse}, a Personal Agent Operating System that enables AI agents to coordinate securely across organizational boundaries. We addressed the fundamental Context-Security Trade-off through three core architectural innovations:
+This thesis makes three contributions:
 
 \begin{enumerate}
-    \item \textbf{Dual-Track Memory}: Strict separation of self-state memory from relationship-specific shards, ensuring 100\% isolation across concurrent multi-party interactions while maintaining perfect context continuity within each relationship.
+    \item \textbf{A dual-measurement benchmark for agentic communication.} We designed the first evaluation framework that measures utility, security, and overhead simultaneously across a trust-tier gradient. The benchmark includes a heartbeat mode for evaluating proactive agent behaviour---an evaluation paradigm that existing capability and security benchmarks do not address. The benchmark can be used to evaluate any agent system's cross-boundary coordination capabilities.
 
-    \item \textbf{Mountable Context Cells}: Capability-based execution sandboxes that provide physical, not prompt-based, security guarantees. This architecture achieved 0\% exfiltration rate against adversarial jailbreak attacks.
+    \item \textbf{Three architectural solutions, each motivated by an empirically observed failure class.} Dual-Track Memory eliminates cross-relationship memory contamination (Class 5). Mountable Context Cells provide capability-based sandboxing that blocks prompt injection and social engineering at the tool level (Classes 1, 2, 4). The Intelligent Escalation Protocol learns social boundaries through precedent clustering, reducing manual overhead while maintaining zero-trust guarantees for novel queries (Class 3 and boundary queries). The incremental ablation design (M0$\to$M1$\to$M2$\to$M3) isolates the contribution of each component.
 
-    \item \textbf{Intelligent Escalation Protocol with Relational Clustering}: Adaptive policy enforcement that learns social boundaries through precedent generalization, reducing manual approval overhead by 73\% after initial calibration.
+    \item \textbf{The coordination layer framing.} We articulate the distinction between agent \textit{frameworks} (which provide capabilities to individual agents) and coordination \textit{layers} (which provide trust infrastructure between agents). This framing---analogous to how TCP/IP provides communication infrastructure without dictating what applications run on top---positions secure cross-boundary coordination as an infrastructure problem rather than an application problem.
 \end{enumerate}
 
-Our evaluation demonstrated that Pulse achieves near-optimal utility (87\% task completion) while maintaining provable security (100\% defense against direct attacks, 89\% against indirect inference). The system exhibits clear learning behavior, with manual approval rates declining from 65\% to 12\% over 200 interactions.
+% ============================================================================
+\section{Limitations}
+\label{sec:limitations}
+% ============================================================================
 
-\section{The Broader Vision: From Tools to Digital Civilization}
+We identify several limitations that qualify our findings:
 
-\subsection{Network-Native Architecture}
+\textbf{Scale of evaluation.} Our benchmark uses a curated set of evaluation queries and a fixed number of relationship scenarios. Real-world deployment would involve far more diverse queries, relationships, and edge cases. The benchmark demonstrates feasibility but does not claim exhaustive coverage.
 
-Pulse is not merely a productivity tool—it is \textbf{foundational infrastructure for an agent economy}. By solving the access governance problem, we enable a future where:
+\textbf{Simulated adversaries.} Our adversarial probes, while spanning five attack classes, are designed by the authors. Sophisticated adaptive attackers may discover attack vectors we did not anticipate. The HackAPrompt results \cite{schulhoff2024hackaprompt} suggest that crowd-sourced adversarial testing reveals qualitatively different attacks.
 
-\begin{itemize}
-    \item \textbf{Agent-to-Agent Protocols} replace human-mediated coordination for routine operational tasks
-    \item \textbf{Transitive Delegation} allows agents to securely represent their owners in complex multi-party negotiations
-    \item \textbf{Federated Agent Networks} operate as a P2P topology where each user's Personal File System is an independent node
-\end{itemize}
+\textbf{No formal verification.} The security guarantees of Mountable Context Cells are architectural, not formally verified. While the MCC design ensures that unauthorised tools and data are absent from the execution environment, we have not proven this property using formal methods (e.g., model checking or information flow analysis).
 
-This paradigm shift is analogous to the transition from mainframe computing (centralized, isolated) to the internet (distributed, interconnected). Just as TCP/IP enabled computers to communicate across organizational boundaries, Pulse provides the protocol layer for autonomous digital entities to coordinate.
+\textbf{Single-owner assumption.} Our architecture assumes each agent has a single owner. Team-owned agents with hierarchical or consensus-based access control present additional challenges not addressed here.
 
-\subsection{From Reactive Assistance to Proactive Partnership}
+\textbf{Escalation cold start.} The Intelligent Escalation Protocol requires an initial calibration period during which the owner must manually approve many queries. The overhead during this period may be prohibitive for users who expect immediate autonomous operation.
 
-Current AI assistants are reactive—they wait for human prompts. The AI COO paradigm introduces \textbf{System 3 meta-cognition}:
+\textbf{LLM dependence.} Our solutions reduce but do not eliminate dependence on LLM behaviour. The sanitisation agent in the escalation protocol, for instance, is itself an LLM and may be susceptible to adversarial inputs. Defence in depth mitigates but does not eliminate this recursive trust problem.
 
-\begin{itemize}
-    \item \textbf{Intrinsic Motivation}: The Heartbeat engine continuously monitors state changes and autonomously generates actionable intents
-    \item \textbf{Active Evolution}: Nocturnal reflection algorithms analyze human overrides to rewrite the agent's social boundaries, enabling organic trust growth
-    \item \textbf{Proactive Communication}: Agents initiate cross-boundary interactions (e.g., rescheduling meetings, notifying stakeholders of updates) without human intermediation
-\end{itemize}
+% ============================================================================
+\section{Future Work}
+\label{sec:future_work}
+% ============================================================================
 
-This transforms the agent from a tool that \textit{responds} to a partner that \textit{anticipates}.
+Several directions extend naturally from this work:
 
-\section{Future Research Directions}
+\textbf{Formal verification of context cells.} Applying model checking or information flow analysis \cite{denning1976lattice} to prove that Mountable Context Cells satisfy non-interference properties---no execution trace within a cell can observe data outside the cell's scope.
 
-\subsection{Formal Verification of Context Cells}
+\textbf{Agent-to-agent protocol.} Our current benchmark evaluates human-to-agent interactions. Extending to fully autonomous agent-to-agent coordination introduces additional challenges: mutual authentication, intent exchange formats, and consensus protocols for multi-party scheduling.
 
-While our evaluation demonstrated empirical security, future work includes formal verification:
+\textbf{Differential privacy for inference attacks.} Multi-query inference (Class 3) is the hardest attack class. Applying differential privacy techniques \cite{dwork2006differential} to bound the cumulative information leakage across multiple queries is a promising direction.
 
-\begin{itemize}
-    \item \textbf{Model Checking}: Prove that for any reachable system state, unauthorized data access is impossible
-    \item \textbf{Information Flow Analysis}: Track data provenance through tool call chains to detect subtle exfiltration
-    \item \textbf{Differential Privacy Guarantees}: Quantify the information leakage bounds for indirect inference attacks
-\end{itemize}
+\textbf{Cross-platform generalisation.} Our benchmark is built on a specific agent infrastructure. Evaluating whether the architectural principles (dual-track memory, dynamic sandboxing, precedent escalation) transfer to other agent frameworks (LangChain, AutoGen, CrewAI) would strengthen the generality claim.
 
-\subsection{Agent-to-Agent Protocol Standardization}
+\textbf{Longitudinal study.} Measuring how the escalation protocol performs over weeks or months of real use, with genuine (not simulated) relationships and evolving trust dynamics.
 
-The A2A paradigm requires standardized communication protocols:
-
-\begin{itemize}
-    \item \textbf{Intent Exchange Format}: Define a schema for structured agent requests (analogous to HTTP)
-    \item \textbf{Cryptographic Handshakes}: Establish mutual authentication and scope negotiation before data exchange
-    \item \textbf{Consensus Protocols}: Enable multi-agent coordination (e.g., 3+ agents scheduling a meeting) with Byzantine fault tolerance
-\end{itemize}
-
-This standardization effort mirrors the role of IETF in internet protocol development—creating open specifications that enable interoperability across independently developed agent systems.
-
-\subsection{Semantic Relationship Graphs (L3 Shards)}
-
-Currently, Relationship Shards store only episodic memory (L2). Future work includes building relationship-specific semantic layers where $L3_{E_i}$ stores distilled facts about the relationship itself, enabling even more personalized, context-aware interactions.
-
-\subsection{Multi-Principal Agents}
-
-Current Pulse architecture assumes single-owner agents. Future work extends this to \textbf{team agents} with hierarchical permissions, consensus decision-making, and transparent audit trails.
-
+% ============================================================================
 \section{Concluding Remarks}
+\label{sec:concluding_remarks}
+% ============================================================================
 
-The coordination crisis—where humans spend more time synchronizing than creating—is not a temporary inefficiency but a fundamental bottleneck in the current information economy. AI assistants, despite their impressive capabilities, have failed to solve this problem because they remain architecturally isolated and insecure across boundaries.
+The coordination overhead that consumes knowledge workers' time will not be solved by more capable individual agents. It requires infrastructure that makes cross-boundary agent communication safe. This thesis demonstrates that architectural enforcement---not prompt-level restriction---is the reliable path to this goal.
 
-Pulse demonstrates that a different path is possible. By treating AI not as stateless tools but as persistent, relationship-aware entities with capability-based security, we can achieve both high collaborative utility and provable security guarantees. This work establishes the foundational systems architecture for a future where autonomous digital proxies handle the vast majority of operational coordination, freeing humans to focus exclusively on high-level strategy, creativity, and the irreducibly human aspects of work.
-
-The vision is ambitious: a \textbf{network-native civilization of AI agents} that coordinate autonomously while respecting human-defined boundaries. The architecture is rigorous: capability-based sandboxes, dual-track memory, and precedent learning. The evaluation is empirical: 100\% security against direct attacks, 87\% utility maintenance, 73\% reduction in manual overhead.
-
-The future of work is not humans using AI tools. It is humans \textit{represented} by AI entities—digital proxies that understand context, respect boundaries, and negotiate on our behalf. Pulse is the operating system for that future.
+The key insight is simple: do not ask the agent to refrain from accessing sensitive data; ensure the sensitive data is not in the room. By physically constructing execution environments that contain only authorised resources, we transform security from a behavioural property (dependent on LLM compliance) into a structural property (enforced by the runtime). This principle---drawn from decades of operating systems research on capability-based security \cite{dennis1966programming}---is, we believe, the foundation upon which practical agent coordination will be built.

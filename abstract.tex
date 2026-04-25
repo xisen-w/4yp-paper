@@ -1,23 +1,13 @@
 \begin{abstract}
 
-\todo{REWRITE ABSTRACT: Should reflect the new C1-C8 structure. Key changes: (1) Frame around agentic communication being hard, not just "coordination tax". (2) Emphasise the benchmark as a first-class contribution (red-teaming agentic communication). (3) Present solutions (memory, sandboxing, escalation) as proposals validated by experiments, not as finished products. (4) Use "Personal Agent Coordination Layer" framing instead of "AgentOS". (5) Tone down absolute claims.}
+AI agents can now autonomously browse the web, manage calendars, write code, and orchestrate complex workflows. Yet they remain fundamentally siloed: no infrastructure exists for agents to communicate securely across trust boundaries. This creates a paradox---effective coordination requires deep personal context, but exposing context-rich agents to external parties creates catastrophic security risks. Prompt-level defences have been shown to fail under adaptive attacks, and manual permission management reintroduces the coordination overhead agents were designed to eliminate.
 
-Modern knowledge workers spend over 50\% of their time on coordination tasks—scheduling meetings, syncing contexts, and manually managing information flows across organizational boundaries. While AI assistants have made significant strides in productivity, they remain fundamentally isolated, stateless systems incapable of operating securely across trust boundaries. This creates a fundamental bottleneck: effective coordination requires deep personal context, but exposing omniscient agents to external parties creates catastrophic data exfiltration risks.
+This thesis investigates the \textbf{context--security trade-off} in agentic communication. We make three contributions. First, we design a \textbf{benchmark} that measures both collaborative utility and security simultaneously, including a heartbeat mode for evaluating proactive agent behaviour. Red-teaming reveals five classes of failure: direct prompt injection, social engineering, multi-query inference, tool abuse, and memory contamination.
 
-This thesis presents \textbf{Pulse}, a novel \textbf{Personal Agent Operating System (AgentOS)} that enables secure, stateful AI agents to coordinate autonomously across organizational boundaries. We introduce three core architectural innovations:
+Second, motivated by these failure cases, we propose three \textbf{architectural solutions}: (i)~\textit{Dual-Track Memory}, which isolates episodic memory per relationship at the database level, preventing cross-contamination; (ii)~\textit{Mountable Context Cells}, capability-based execution sandboxes that physically remove unauthorised tools and data from the agent's context; and (iii)~an \textit{Intelligent Escalation Protocol} that learns social boundaries through precedent clustering, reducing manual approval overhead over time.
 
-\begin{enumerate}
-    \item \textbf{Dual-Track Memory}: A memory architecture that strictly separates global self-state from relationship-specific shards, preventing memory contamination across concurrent multi-party interactions.
+Third, we articulate the distinction between agent frameworks and \textbf{coordination layers}---positioning our work as trust infrastructure that is compatible with any agent system, analogous to how TCP/IP enables communication between heterogeneous applications.
 
-    \item \textbf{Mountable Context Cells}: A capability-based security mechanism that physically sandboxes agent execution, making prompt injection attacks mathematically ineffective by removing unauthorized API signatures at the system level.
-
-    \item \textbf{Intelligent Escalation Protocol}: An adaptive policy enforcement system that automatically learns social boundaries through relational clustering, reducing manual permission overhead while maintaining zero-trust security guarantees.
-\end{enumerate}
-
-Unlike existing single-tenant agent frameworks (OpenClaw, Manus) designed for isolated workspaces, Pulse is architected as a \textbf{network-native system}—analogous to TCP/IP for the agent economy. We demonstrate that through OS-level isolation and relationship-aware memory partitioning, agents can maintain both high collaborative utility and provable security guarantees simultaneously.
-
-We evaluate Pulse through a rigorous benchmark where one host agent interacts with 100 simulated external entities across varying trust tiers. Our system achieves 100\% data exfiltration prevention against jailbreak attacks while maintaining collaborative task completion rates comparable to unrestricted baseline agents. The intelligent escalation protocol reduces manual approval burden by 73\% after the first 20 interactions through precedent learning.
-
-This work establishes the foundational systems architecture for a future where autonomous digital proxies handle cross-boundary coordination, freeing humans to focus exclusively on high-level strategy and creativity.
+We evaluate these solutions on our benchmark with multiple LLM backends, measuring the Pareto frontier between utility, security, and manual overhead. Our results demonstrate that architectural enforcement---not prompt-level restriction---is the reliable path to secure agentic communication.
 
 \end{abstract}
