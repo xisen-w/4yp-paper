@@ -1,7 +1,7 @@
 \chapter{Related Work}
 \label{chapter:related_work}
 
-This chapter reviews three bodies of literature that frame our research: the rapidly improving capabilities of AI agents and their memory and security architectures (\cref{sec:rw_agents}); the protocols and frameworks through which agents communicate (\cref{sec:rw_communication}); and how Pulse positions itself relative to existing work (\cref{sec:rw_niche}).
+This chapter reviews four bodies of literature that frame our research: the rapidly improving capabilities of AI agents and their memory architectures (\cref{sec:rw_agents}); the attack and defense landscape for LLM-based systems (\cref{sec:rw_security}); existing benchmarks for agent security and privacy (\cref{sec:rw_benchmarks}); and the protocols and frameworks through which agents communicate (\cref{sec:rw_communication}).
 
 % ============================================================================
 \section{Agents}
@@ -24,15 +24,95 @@ Framework-level memory solutions such as LangChain's memory modules \cite{langch
 
 \textbf{The critical limitation} shared by all these systems is that they treat memory as a \textit{global} resource. When an agent interacts with both Bob and Carol, there is no mechanism to prevent Bob's conversation artifacts from leaking into Carol's context. This is the memory contamination problem that motivates our dual-track memory design (\cref{chapter:solution_proposal}).
 
-\subsection{Agentic Security}
+% ============================================================================
+\section{LLM Security: Attacks and Defences}
+\label{sec:rw_security}
+% ============================================================================
 
-As agents gain capabilities---tool access, persistent memory, state-changing actions---their attack surface grows proportionally. Greshake et al.\ \cite{greshake2023not} provided the first systematic taxonomy of \textbf{indirect prompt injection}, showing how malicious instructions embedded in data sources (emails, web pages) can hijack agent behaviour. Zou et al.\ \cite{zou2023universal} demonstrated that automated adversarial suffixes can break RLHF alignment, while Wei et al.\ \cite{wei2024jailbroken} systematically analysed why safety training fails through competing objectives and mismatched generalisation.
+As agents gain capabilities---tool access, persistent memory, state-changing actions---their attack surface grows proportionally. We review the attack landscape and the defence mechanisms that have emerged in response, as both directly inform our benchmark design and the defence gradient we evaluate.
 
-The picture at scale is sobering. The HackAPrompt competition \cite{schulhoff2024hackaprompt} collected over 600,000 adversarial prompts, confirming that prompt-level defences are systematically breakable. Nasr et al.\ \cite{nasr2025attacker} tested twelve published defences under adaptive attacks---all were bypassed with $>$90\% success. Real-world consequences have already materialised: Rehberger \cite{rehberger2026scaryskills} discovered 341 malicious Skills in the OpenClaw Hub, some exploiting invisible Unicode codepoints to embed hidden instructions.
+\subsection{Attack Methodologies}
+\label{sec:rw_attacks}
 
-Industry responses have been multi-layered. Google's five-layer defence \cite{google2025promptinjection} combines classifiers, sanitisation, and user confirmation. Anthropic \cite{anthropic2025promptinjection} reports a 1\% attack success rate through RL training and content classifiers. Meta's ``Rule of Two'' \cite{meta2025ruletwo} provides a practical heuristic: an agent is critically vulnerable when it simultaneously processes untrusted inputs, accesses sensitive data, \textit{and} takes state-changing actions. Safe agents should satisfy at most two of these three properties.
+Attack methods against LLM-based systems span a spectrum from manual prompt crafting to fully automated multi-turn strategies.
 
-\textbf{The key insight for our work}: the security community has converged on the conclusion that prompt-level defences are necessary but insufficient. Architectural constraints---physically removing unauthorised capabilities from the agent's execution environment---are required for reliable security. This motivates our Mountable Context Cell design.
+\textbf{Direct injection and adversarial suffixes.} Greshake et al.\ \cite{greshake2023not} provided the first systematic taxonomy of \textbf{indirect prompt injection}, showing how malicious instructions embedded in data sources can hijack agent behaviour. Zou et al.\ \cite{zou2023universal} demonstrated with \textbf{GCG} that automated gradient-based adversarial suffixes can break RLHF alignment; these suffixes are transferable across models but produce non-natural-language tokens that are detectable in conversational settings.
+
+\textbf{Automated jailbreak generation.} Chao et al.\ \cite{chao2025pair} introduced \textbf{PAIR}, which uses an attacker LLM to iteratively refine jailbreak prompts against a black-box target in $\leq$20 queries, requiring no gradient access. Mehrotra et al.\ \cite{mehrotra2024tap} extended this with \textbf{TAP}, a tree-based search over the attack space. Liu et al.\ \cite{liu2024autodan} proposed \textbf{AutoDAN}, using a hierarchical genetic algorithm to generate stealthy, fluent jailbreak prompts. These automated methods are directly relevant to our work: they can generate adversarial variants of our benchmark questions.
+
+\textbf{Persuasion and social engineering.} Zeng et al.\ \cite{zeng2024pap} demonstrated with \textbf{PAP} that applying 40 persuasion techniques from social science achieves $>$90\% attack success on GPT-4. This is particularly relevant to cross-boundary agent communication, where the interaction is conversational and social norms apply.
+
+\textbf{Multi-turn and adaptive attacks.} Russinovich et al.\ \cite{russinovich2025crescendo} introduced \textbf{Crescendo}, a multi-turn escalation attack that starts with benign topics and gradually steers toward sensitive information. Anil et al.\ \cite{anil2024manyshot} showed that \textbf{many-shot jailbreaking}---stuffing the context with examples of target behaviour---can override safety training. Wei et al.\ \cite{wei2024jailbroken} analysed why safety training fails through competing objectives and mismatched generalisation. Most critically, Nasr et al.\ \cite{nasr2025attacker} tested twelve published defences under adaptive attacks and found that \textit{every defence} could be bypassed with $>$90\% success; human red-teaming achieved 100\%. The HackAPrompt competition \cite{schulhoff2024hackaprompt} confirmed this at scale with over 600,000 adversarial prompts.
+
+\textbf{Agent-specific attacks.} Liu et al.\ \cite{liu2023houyi} tested structured prompt injection against 36 real-world LLM-integrated applications with \textbf{HouYi}. Rehberger \cite{rehberger2026scaryskills} discovered 341 malicious Skills in the OpenClaw Hub, demonstrating that the agent ecosystem is already under attack in the wild.
+
+\subsection{Defence Mechanisms}
+\label{sec:rw_defenses}
+
+Defence mechanisms span two paradigms: \textit{prompt-level} defences that instruct the model to resist attacks, and \textit{architectural} defences that structurally limit what the model can access.
+
+\textbf{Prompt-level defences.} Wallace et al.\ \cite{wallace2024instruction} proposed \textbf{Instruction Hierarchy}, training LLMs to hierarchically prioritise instructions (system prompt $>$ user message $>$ tool output). Hines et al.\ \cite{hines2024spotlighting} introduced \textbf{Spotlighting}, which transforms untrusted content through data marking and encoding to reduce the model's tendency to follow embedded instructions.
+
+\textbf{Classifier-based filtering.} Inan et al.\ \cite{inan2023llamaguard} introduced \textbf{Llama Guard}, a fine-tuned LLM classifier for detecting unsafe inputs and outputs. Rebedea et al.\ \cite{rebedea2023nemo} developed \textbf{NeMo Guardrails}, a toolkit for defining programmable conversation constraints.
+
+\textbf{Structural separation.} Chen et al.\ \cite{chen2025struq} proposed \textbf{StruQ}, which separates user instructions from data using structured queries with special delimiters, achieving near-zero injection success. StruQ's separation principle is conceptually related to our Mountable Context Cell design, with a key difference: StruQ separates at the prompt level (delimiters), while MCC separates at the architectural level (physically removing data from the agent's context).
+
+\textbf{Industry frameworks.} Google's five-layer defence \cite{google2025promptinjection} combines classifiers, sanitisation, and user confirmation. Anthropic \cite{anthropic2025promptinjection} reports a 1\% attack success rate through RL training. Meta's ``Rule of Two'' \cite{meta2025ruletwo} formalises the danger: an agent is critically vulnerable when it simultaneously processes untrusted inputs, accesses sensitive data, \textit{and} takes state-changing actions. The OWASP Top 10 for LLMs \cite{owasp2025llm} codifies the most critical vulnerabilities, with Prompt Injection, Sensitive Information Disclosure, and Excessive Agency most relevant to our setting.
+
+\textbf{The key insight}: the security community has converged on the conclusion that prompt-level defences are necessary but insufficient under adaptive attack \cite{nasr2025attacker}. Architectural constraints---physically removing unauthorised capabilities from the agent's execution environment---are required for reliable security. This motivates both our defence gradient evaluation and our Mountable Context Cell design.
+
+
+% ============================================================================
+\section{Agent Security and Privacy Benchmarks}
+\label{sec:rw_benchmarks}
+% ============================================================================
+
+A growing number of benchmarks evaluate agent security and privacy. We review them along the dimensions most relevant to our work: whether they measure across trust boundaries, whether they capture both utility and security, and whether they evaluate defence mechanisms.
+
+\subsection{Single-Agent Security Benchmarks}
+
+\textbf{InjecAgent} \cite{zhan2024injecagent} benchmarks indirect prompt injection in tool-integrated agents with 1,054 test cases, but evaluates single agents against injected payloads, not agent-to-agent communication, and does not measure utility cost. \textbf{AgentDojo} \cite{debenedetti2024agentdojo} provides a dynamic sandbox with 97 tasks and 629 security tests but operates within a single task context with no cross-boundary interaction. \textbf{TensorTrust} \cite{toyer2024tensortrust} gamified prompt injection through an online game with 126,000 attack/defence pairs but does not model agent-to-agent settings. \textbf{R-Judge} \cite{yuan2024rjudge} and \textbf{AgentBench} \cite{liu2024agentbench} evaluate risk awareness and general capabilities respectively but do not focus on cross-boundary privacy.
+
+\subsection{Multi-Agent and Cross-Boundary Benchmarks}
+
+\textbf{ConVerse} \cite{gomaa2025converse} is the most directly comparable setup: personal assistants interacting with external service providers, with 864+ attacks finding privacy attack success up to 88\%. However, it measures attack success only---it does not measure utility and does not evaluate any defence mechanisms.
+
+\textbf{AgentSocialBench} \cite{wang2026agentsocialbench} evaluates privacy risks in agentic social networks. It provides static scenarios but does not evaluate defences, measure utility, or support multi-turn adaptive interaction.
+
+\textbf{PAC-BENCH} \cite{park2026pacbench} evaluates multi-agent collaboration under privacy constraints, treating privacy as a constraint on utility. This is the inverse of our question: we measure how much security a defence achieves at what utility cost. \textbf{MAGPIE} \cite{juneja2025magpie} provides 200 collaborative tasks but agents share a single principal---there is no trust boundary.
+
+\textbf{``The Sum Leaks More''} \cite{patil2025sumleaks} comes closest to dual measurement, with an explicit ``privacy-utility trade-off'' metric and defence evaluation. However, its threat model is compositional leakage (individually innocuous responses combining to reveal sensitive data) rather than direct cross-boundary sharing. \textbf{AgentLeak} \cite{yagoubi2026agentleak} provides a full-stack benchmark with 1,000 scenarios but is diagnostic only---no utility measurement, no defence evaluation.
+
+\subsection{What Is Missing}
+
+\Cref{table:benchmark_comparison} summarises existing benchmarks across six dimensions critical to evaluating cross-boundary agent privacy.
+
+\begin{table}[h]
+\centering
+\caption{Comparison of agent security benchmarks. $\checkmark$\ = fully supported, $\sim$ = partially supported, -- = not supported.}
+\label{table:benchmark_comparison}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Benchmark} & \textbf{Cross-boundary} & \textbf{Dual metric} & \textbf{Defence gradient} & \textbf{Multi-turn} & \textbf{Persistent memory} & \textbf{Relationship} \\
+\midrule
+InjecAgent         & --         & --         & --         & --         & --         & --         \\
+AgentDojo          & --         & $\sim$     & --         & --         & --         & --         \\
+TensorTrust        & --         & --         & --         & --         & --         & --         \\
+TAMAS              & --         & --         & $\sim$     & --         & --         & --         \\
+AgentSocialBench   & $\checkmark$ & --         & --         & --         & --         & --         \\
+ConVerse           & $\checkmark$ & --         & --         & $\checkmark$ & --         & --         \\
+PAC-BENCH          & $\sim$     & $\checkmark$ & --         & --         & --         & --         \\
+Sum Leaks          & $\sim$     & $\checkmark$ & $\checkmark$ & --         & --         & --         \\
+AgentLeak          & $\checkmark$ & --         & --         & --         & --         & --         \\
+\midrule
+\textbf{Ours}      & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+The central gap is that \textbf{no existing benchmark can answer the question ``is this defence worth deploying?''} To answer that, one needs: (a) dual utility and security measurement, so that the cost of a defence is visible; (b) a defence gradient with multiple levels, so that defences can be compared; and (c) multi-turn evaluation, because single-turn benchmarks dramatically underestimate real-world leakage. Our benchmark is designed to fill this gap.
 
 
 % ============================================================================
@@ -86,13 +166,11 @@ Several systems attempt multi-agent orchestration:
 
 
 % ============================================================================
-\section{Our Niche: A Personal Agent Coordination Layer}
+\section{Pulse as a Coordination Layer}
 \label{sec:rw_niche}
 % ============================================================================
 
-\subsection{Positioning}
-
-\Cref{table:comparison} summarises how Pulse compares with existing systems across six dimensions critical to secure cross-boundary agent coordination.
+Where the previous section compared \textit{benchmarks}, this section compares \textit{systems}. \Cref{table:comparison} summarises how Pulse compares with existing agent systems and coordination frameworks.
 
 \begin{table}[h]
 \centering

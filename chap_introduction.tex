@@ -1,13 +1,17 @@
 \chapter{Introduction}
 \label{chapter:introduction}
 
-\section{The Rise of Personal Agents---and the Communication Gap}
+\section{Personal Agents Are Capable---but Siloed}
 
-The past two years have witnessed an explosion in AI agent capability. Systems such as ReAct \cite{yao2023react}, Toolformer \cite{schick2023toolformer}, and commercial products like Manus \cite{manus2025} and Devin \cite{devin2024} can now autonomously browse the web, write and debug code, manage calendars, and orchestrate multi-step workflows on behalf of a single user. These agents are rapidly evolving from reactive chatbots into persistent digital proxies with real-world authority.
+The past two years have witnessed an explosion in AI agent capability. Systems such as ReAct \cite{yao2023react}, Toolformer \cite{schick2023toolformer}, and commercial products like Manus \cite{manus2025} and Devin \cite{devin2024} can now autonomously browse the web, write and debug code, manage calendars, and orchestrate multi-step workflows. These agents are rapidly evolving from reactive chatbots into persistent digital proxies with real-world authority.
 
-Yet a critical gap remains: \textbf{agents cannot safely communicate across trust boundaries}. When a founder's agent needs to share a financial summary with an investor's agent, or when a researcher's agent must coordinate schedules with a collaborator's, there is no infrastructure for this interaction. The result is a ``coordination tax''---professionals still spend the majority of their time manually extracting context from AI assistants, reformulating it, and transmitting it through legacy channels such as email and Slack. The vast potential of agentic collaboration remains unrealised because agents are architecturally siloed.
+Yet each agent operates in isolation. Your agent does not talk to my agent. When a founder's agent needs to share a project update with a colleague's agent, or when a researcher's agent must coordinate schedules with a collaborator's, the interaction does not happen autonomously---the human must extract the information, reformulate it, and transmit it through legacy channels. The result is a ``coordination tax'' that persists despite each individual agent being highly capable.
 
-This gap is not merely an engineering oversight---it reflects a missing layer in the emerging agent stack. Frameworks like LangChain \cite{langchain2023}, AutoGen \cite{wu2023autogen}, and CrewAI provide capabilities \textit{within} an agent; communication protocols like MCP \cite{anthropic2024mcp} standardise how agents connect to tools. But neither addresses the fundamental question: \textit{what should one agent be allowed to know about another agent's owner?} This thesis tackles that question.
+\textbf{Connecting personal agents would be transformative.} A network of interoperating agents can automate the coordination layer that currently consumes the majority of knowledge workers' time: scheduling meetings, sharing context, requesting information, negotiating commitments. This is what Pulse, the system described in this thesis, sets out to build---infrastructure for cross-boundary agent communication.
+
+But the moment you connect two personal agents, you create a new problem. Each agent has deep access to its owner's data---notes, calendar, emails, health records, financial details. An external agent can ask yours anything. And there is no reliable mechanism to ensure your agent only shares what it should. This gap---between ``agents can talk'' and ``agents can talk safely''---is the subject of this thesis.
+
+This gap is not merely an engineering oversight---it reflects a missing layer in the emerging agent stack. Frameworks like LangChain \cite{langchain2023}, AutoGen \cite{wu2023autogen}, and CrewAI provide capabilities \textit{within} an agent; communication protocols like MCP \cite{anthropic2024mcp} standardise how agents connect to tools. But neither addresses the fundamental question: \textit{what should one agent be allowed to know about another agent's owner?}
 
 \section{The Security Problem: Why Agents Remain Siloed}
 
@@ -29,28 +33,21 @@ Current solutions cluster at the extremes of this trade-off. Prompt-based guards
 
 \section{Research Approach and Contributions}
 
-Our approach follows a \textit{benchmark-first} methodology: we first build the evaluation infrastructure that reveals where agents fail, then design solutions motivated by those specific failures. This structure---shared with recent agent research such as Yao's work on WebShop and ReAct \cite{yao2022webshop, yao2023react}---ensures that our solutions address empirically observed problems rather than hypothetical ones.
-
-Concretely, the thesis makes contributions along two threads:
+This thesis has two halves, mirroring the two problems that arise when connecting personal agents:
 
 \begin{enumerate}
-    \item \textbf{A benchmark for cross-boundary agent communication.} We design a benchmark in which a personal agent, equipped with realistic context (notes, calendar, email), interacts with external entities across varying trust tiers. We red-team these interactions to systematically catalogue failure modes---from direct prompt injection to multi-query inference attacks---and measure both the \textit{utility} of legitimate task completion and the \textit{security} of data protection simultaneously. We introduce a \textbf{heartbeat mode} in which agents operate autonomously at regular intervals, enabling evaluation of proactive (not just reactive) agent behaviour. No prior benchmark captures this dual measurement across a trust-tier gradient.
+    \item \textbf{Making agents talk: a coordination layer.} We design and implement Pulse, a personal agent coordination layer that enables cross-boundary agent communication. Pulse provides the infrastructure---share links, tool orchestration, per-relationship context scoping---that allows one person's agent to interact with another's. This is a systems contribution: we describe how to abstract a ``personal agent,'' what the communication layer looks like, and what architectural patterns make cross-boundary interaction possible.
 
-    \item \textbf{Architectural solutions motivated by benchmark failures.} Each failure class discovered in the benchmark motivates a specific architectural intervention:
-    \begin{itemize}
-        \item \textbf{Dynamic Sandboxing}: Capability-based execution environments (``Mountable Context Cells'') that physically remove unauthorised tools and data from the agent's context, providing architectural rather than prompt-level security \cite{dennis1966programming}.
-        \item \textbf{Relationship-Native Memory}: A dual-track memory architecture that isolates episodic memory per relationship, preventing cross-contamination while maintaining perfect context recall within each relationship.
-        \item \textbf{Adaptive Escalation}: An intelligent escalation protocol that learns social boundaries through precedent clustering, reducing manual permission overhead over time while maintaining zero-trust guarantees.
-    \end{itemize}
+    \item \textbf{Making agents talk safely: measuring and addressing the security--utility tradeoff.} The moment agents connect, a privacy problem emerges. We design a benchmark of 200 questions across 5 sensitivity categories, evaluated under multiple defence levels, relationship conditions, and attack modalities, with a dual-metric protocol that simultaneously measures task-completion utility and data-protection security. No prior benchmark captures this dual measurement across a defence gradient (\cref{sec:rw_benchmarks}). We then propose architectural solutions---Mountable Context Cells, Dual-Track Memory, and an Intelligent Escalation Protocol---motivated by the specific failure patterns the benchmark reveals.
 \end{enumerate}
 
 We address four research questions:
 
 \begin{itemize}
     \item \textbf{RQ1}: What are the failure modes when AI agents communicate across trust boundaries?
-    \item \textbf{RQ2}: How does a policy file (access rules) affect both utility and security?
+    \item \textbf{RQ2}: How does the specificity of a defence policy affect both utility and security?
     \item \textbf{RQ3}: How should agent memory be redesigned for multi-party interactions?
-    \item \textbf{RQ4}: Can an adaptive escalation mechanism learn social boundaries and reduce manual overhead?
+    \item \textbf{RQ4}: Can architectural isolation (removing data from context) fundamentally outperform prompt-level defence (instructing the agent not to share)?
 \end{itemize}
 
-The remainder of this thesis is organised as follows. \Cref{chapter:related_work} reviews related work on agent capabilities, agentic security, and communication protocols. \Cref{chapter:problem_formulation} formally defines the context--security trade-off and states our research questions. \Cref{chapter:benchmark_design} presents the benchmark design, including our agent infrastructure and heartbeat evaluation mode. \Cref{chapter:failure_cases} reports the failure cases and insights from baseline experiments. \Cref{chapter:solution_proposal} proposes our three architectural solutions. \Cref{chapter:experiments} evaluates these solutions against the benchmark. \Cref{chapter:conclusion} concludes with a discussion of limitations and future directions.
+The remainder of this thesis is organised as follows. \Cref{chapter:related_work} reviews related work on agent capabilities, security, communication protocols, and existing benchmarks. \Cref{chapter:problem_formulation} formally defines the security--utility trade-off. \Cref{chapter:benchmark_design} presents the Pulse coordination layer and the benchmark design. \Cref{chapter:failure_cases} reports failure cases and baseline analysis. \Cref{chapter:solution_proposal} proposes architectural solutions. \Cref{chapter:experiments} evaluates these solutions. \Cref{chapter:conclusion} discusses limitations and future directions.
