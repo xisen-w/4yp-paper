@@ -45,12 +45,79 @@ product setting, but they are not part of the v1 benchmark dependency. The paper
 can describe them as production-supported provider actions while keeping the
 benchmark itself local, reproducible, and inspectable.
 
-## 3. Benchmark Scale
+### 2.1 Benchmark Suite Structure
 
-PART-Bench v1 contains 600 benchmark items:
+PART-Bench should be framed as a suite of boundary-topology benchmarks, not as a
+single benchmark that merely scales the number of agents. The important
+distinction is the shape of the trust boundary:
+
+- whether a request crosses one owner/requester boundary, or
+- whether information and actions can move through a network of agents,
+  relationships, permissions, memories, and precedents.
+
+This gives PART-Bench two primary sub-benchmarks.
+
+#### PART-Dyad: Dyadic Boundary Suite
+
+PART-Dyad is the current 600-item benchmark. It evaluates one requester-side
+agent asking one owner-side agent to retrieve information, refuse disclosure, or
+mutate state across a single protected boundary.
+
+Canonical question:
 
 ```text
-PART-Bench v1
+Can one personal agent safely serve one external requester across a privacy boundary?
+```
+
+PART-Dyad is the right place to measure the core local behaviors:
+
+- Notes QA,
+- Todo QA,
+- state-changing actions,
+- policy modes,
+- relationship-memory modes,
+- answer/refuse/execute/no-change judgments.
+
+In other words, PART-Dyad is the benchmark's unit test for personal-agent
+boundary behavior.
+
+#### PART-Net: Networked Delegation Suite
+
+PART-Net is the planned network benchmark. It evaluates many users and many
+personal agents connected by a relationship graph. In this setting, a requester
+agent may contact another agent to obtain information, ask for a delegated
+action, or route a request through an intermediate relationship.
+
+Canonical question:
+
+```text
+Can a network of personal agents collaborate without laundering private information across trust boundaries?
+```
+
+PART-Net is not just PART-Dyad with more agents. It introduces a different risk
+class:
+
+- multi-hop delegation,
+- transitive permission failures,
+- confused-deputy behavior,
+- relationship-specific memory effects,
+- escalation precedent,
+- permission propagation,
+- wrong-context or wrong-principal access,
+- utility/security Pareto tradeoffs in a social graph.
+
+PART-Net is therefore the benchmark's integration test for agent society.
+
+This terminology should replace vague descriptions such as "scaling the number
+of agents." Agent count is only one implementation parameter. The scientific
+axis is boundary topology.
+
+## 3. Benchmark Scale
+
+PART-Dyad v1 contains 600 benchmark items:
+
+```text
+PART-Dyad v1
   Information Boundary Track: 400 QA items
     - 200 Notes QA items
     - 200 Todo QA items
@@ -67,6 +134,18 @@ policies, and repetitions.
 The benchmark is organized by evaluation target, not by implementation file.
 QA items and action tasks may be loaded separately, but they are part of the
 same benchmark because they test the same personal-agent boundary problem.
+
+The full PART-Dyad evaluation grid can be larger than the item count. The
+current intended grid is:
+
+```text
+600 base tasks x 3 policy modes x 2 relationship-memory modes = 3,600 evaluations
+```
+
+PART-Net should have its own scale definition because its unit of evaluation is
+not only "task x policy." It also includes graph structure: number of users,
+relationship categories, permission tiers, delegation depth, and escalation
+history.
 
 ## 4. Information Boundary Track
 
@@ -193,20 +272,34 @@ PART-Bench uses social access as the policy lens. Requests are not evaluated in
 the abstract; they are made by another agent or user with a relationship to the
 owner.
 
-For the first v1 benchmark run, relationship scaling is intentionally held
-constant. The base setup should use a simple requester-to-owner relationship so
-that model, policy, surface, and action effects are not confounded.
+For PART-Dyad, relationship structure is intentionally constrained. The base
+setup uses a simple requester-to-owner relationship so that policy, surface,
+memory, and action effects are not confounded by network topology.
 
-Relationship variation remains an important later layer:
+PART-Dyad can still vary relationship memory as a controlled condition:
 
-- one requester asking the owner agent,
-- three-agent setup with different relationships to the owner,
-- four-agent network where multiple parties can interact,
-- larger social simulation where many agents have heterogeneous relationships
-  to the owner.
+```text
+R0   no native relationship memory
+R1   native requester-owner relationship memory
+```
 
-These should be treated as scaling experiments after the benchmark's core
-information and action boundaries are stable.
+For PART-Net, relationship structure becomes the benchmark object itself. The
+network setting should include heterogeneous users and relationships, such as:
+
+- family,
+- close friends,
+- work leadership,
+- work peers,
+- direct reports,
+- professional contacts,
+- acquaintances,
+- strangers.
+
+PART-Net should also include permission tiers, delegation depth, and escalation
+precedents. Example network tasks may allow one agent to contact another agent
+in order to obtain information or complete a delegated workflow. This is not a
+larger version of the dyadic setup; it is a different topology that tests
+whether boundaries survive routing through a social graph.
 
 ## 7. Policy Conditions
 
@@ -360,13 +453,15 @@ this document does not implement them:
 
 The current v1 design makes these commitments:
 
-- Main benchmark is mixed-surface, not notes-only.
+- PART-Bench is a suite with at least two boundary topologies: PART-Dyad and
+  PART-Net.
+- Current implemented benchmark data is PART-Dyad v1.
+- Main PART-Dyad benchmark is mixed-surface, not notes-only.
 - Benchmark size is 600 items: 400 QA plus 200 actions.
 - Todo QA includes both correlated and Todo-only facts.
 - Actions are evaluated separately from QA.
 - Escalation is a distinct verdict, not merely a refusal string.
 - Calendar and Gmail are discussed as production-supported actions but excluded
-  from the reproducible v1 benchmark core.
-- Relationship scaling is deferred until the core model, policy, surface, and
-  action evaluations are stable.
-
+  from the reproducible PART-Dyad v1 core.
+- Multi-agent network evaluation should be framed as PART-Net, a separate
+  networked delegation suite, rather than as a simple scaling axis of PART-Dyad.
