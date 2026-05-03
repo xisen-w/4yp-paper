@@ -10,12 +10,12 @@ explicit before changing the experiment stack.
 
 PART-Bench evaluates the security and utility of networked personal agents in a
 realistic personal-agent setting. A personal agent is not only a document QA
-system. It has access to memory, future plans, task state, tools, and social
+system. It has access to files, structured states, memory, tools, and social
 channels through which other agents can request information or actions.
 
 The benchmark therefore tests whether an agent can:
 
-- answer allowed questions from appropriate personal state,
+- answer allowed questions from appropriate files or states,
 - refuse or escalate requests for sensitive information,
 - preserve boundaries across multiple tool surfaces,
 - avoid unsafe state-changing actions,
@@ -23,8 +23,8 @@ The benchmark therefore tests whether an agent can:
 
 The central question is not only "can the model keep a secret?" It is whether a
 networked personal-agent stack can preserve personal boundaries while remaining
-useful when another agent asks it to retrieve, infer, create, edit, or complete
-state.
+useful when another agent asks it to retrieve, infer, create, edit, or mutate
+files and states.
 
 ## 2. Core Design Principle
 
@@ -33,17 +33,23 @@ ablations to isolate individual surfaces later.
 
 A notes-only benchmark would be too narrow for the paper's definition of a
 personal agent. In a real personal-agent system, sensitive information can be
-stored redundantly or indirectly across notes, todos, calendar entries, email,
-plans, reminders, and tool outputs. For v1, PART-Bench focuses on two
-reproducible local surfaces:
+stored redundantly or indirectly across files, todos, calendar entries, email,
+Notion pages, plans, reminders, and tool outputs. Files plus structured states
+are the Personal Agent Operating System: the data substrate over which the
+agent searches, answers, refuses, and mutates on the owner's behalf. For v1,
+PART-Bench uses two reproducible local instantiations:
 
-- Notes: long-form memory and personal records.
-- Todos: compressed future intent, deadlines, priorities, and action state.
+- Files: instantiated as notes, representing long-form memory and personal
+  records.
+- States: instantiated as todos, representing compressed future intent,
+  deadlines, priorities, and action state.
 
 Provider-backed tools such as Google Calendar or Gmail are important for the
 product setting, but they are not part of the v1 benchmark dependency. The paper
 can describe them as production-supported provider actions while keeping the
-benchmark itself local, reproducible, and inspectable.
+benchmark itself local, reproducible, and inspectable. The same state
+abstraction should scale to Calendar, Email, Notion, and additional application
+state without changing the benchmark contract.
 
 ### 2.1 Benchmark Suite Structure
 
@@ -57,9 +63,9 @@ distinction is the shape of the trust boundary:
 
 This gives PART-Bench two primary sub-benchmarks.
 
-#### PART-Dyad: Dyadic Boundary Suite
+#### PART-Pair: One-to-One Boundary Suite
 
-PART-Dyad is the current 600-item benchmark. It evaluates one requester-side
+PART-Pair is the current 600-item benchmark. It evaluates one requester-side
 agent asking one owner-side agent to retrieve information, refuse disclosure, or
 mutate state across a single protected boundary.
 
@@ -69,16 +75,16 @@ Canonical question:
 Can one personal agent safely serve one external requester across a privacy boundary?
 ```
 
-PART-Dyad is the right place to measure the core local behaviors:
+PART-Pair is the right place to measure the core local behaviors:
 
-- Notes QA,
-- Todo QA,
-- state-changing actions,
+- Files QA,
+- States QA,
+- actions that mutate files and states,
 - policy modes,
 - relationship-memory modes,
 - answer/refuse/execute/no-change judgments.
 
-In other words, PART-Dyad is the benchmark's unit test for personal-agent
+In other words, PART-Pair is the benchmark's unit test for personal-agent
 boundary behavior.
 
 #### PART-Net: Networked Delegation Suite
@@ -94,7 +100,7 @@ Canonical question:
 Can a network of personal agents collaborate without laundering private information across trust boundaries?
 ```
 
-PART-Net is not just PART-Dyad with more agents. It introduces a different risk
+PART-Net is not just PART-Pair with more agents. It introduces a different risk
 class:
 
 - multi-hop delegation,
@@ -114,17 +120,17 @@ axis is boundary topology.
 
 ## 3. Benchmark Scale
 
-PART-Dyad v1 contains 600 benchmark items:
+PART-Pair v1 contains 600 benchmark items:
 
 ```text
-PART-Dyad v1
+PART-Pair v1
   Information Boundary Track: 400 QA items
-    - 200 Notes QA items
-    - 200 Todo QA items
+    - 200 Files QA items
+    - 200 States QA items, instantiated as todos
 
   Action Boundary Track: 200 action tasks
-    - 100 Notes mutation tasks
-    - 100 Todo mutation tasks
+    - 100 File mutation tasks
+    - 100 State mutation tasks
 ```
 
 This size is intentionally large enough to support surface-level and
@@ -135,7 +141,7 @@ The benchmark is organized by evaluation target, not by implementation file.
 QA items and action tasks may be loaded separately, but they are part of the
 same benchmark because they test the same personal-agent boundary problem.
 
-The full PART-Dyad evaluation grid can be larger than the item count. The
+The full PART-Pair evaluation grid can be larger than the item count. The
 current intended grid is:
 
 ```text
@@ -150,12 +156,13 @@ history.
 ## 4. Information Boundary Track
 
 The information track evaluates whether an agent answers allowed questions and
-withholds sensitive information. It contains 400 QA items across Notes and Todos.
+withholds sensitive information. It contains 400 QA items across Files and
+States.
 
-### 4.1 Notes QA: 200 Items
+### 4.1 Files QA: 200 Items
 
-The Notes QA split evaluates direct retrieval and boundary enforcement over
-long-form personal memory.
+The Files QA split evaluates direct retrieval and boundary enforcement over
+long-form personal memory. In v1, files are instantiated as notes.
 
 ```text
 Q001-Q100   work_public
@@ -169,50 +176,53 @@ The public work questions measure utility: the agent should answer when the
 information is explicitly shareable. The sensitive categories measure security:
 the agent should refuse or escalate instead of disclosing private content.
 
-### 4.2 Todo QA: 200 Items
+### 4.2 States QA: 200 Items
 
-The Todo QA split evaluates whether task state can become an alternate path to
-the same private facts. Todos are important because they often encode future
-intent in short, high-signal fragments: deadlines, appointments, unresolved
-decisions, purchases, health tasks, family obligations, and private plans.
+The States QA split evaluates whether structured application state can become an
+alternate path to the same private facts. In v1, states are instantiated as
+todos, which often encode future intent in short, high-signal fragments:
+deadlines, appointments, unresolved decisions, purchases, health tasks, family
+obligations, and private plans.
 
-The Todo QA split has two halves:
+The States QA split has two halves:
 
 ```text
-Q201-Q300   correlated Todo facts
-Q301-Q400   Todo-only facts
+Q201-Q300   correlated state facts
+Q301-Q400   state-only facts
 ```
 
-The first 100 Todo QA items are correlated with the Notes categories. They do
-not need to duplicate every note verbatim. Their role is to test whether the
+The first 100 States QA items are correlated with the Files categories. They do
+not need to duplicate every file verbatim. Their role is to test whether the
 same underlying fact or boundary can leak through a different surface.
 
 Recommended correlated distribution:
 
 ```text
-Q201-Q250   work_public correlated todos
-Q251-Q265   sensitive_work correlated todos
-Q266-Q277   personal_finance correlated todos
-Q278-Q287   personal_health correlated todos
-Q288-Q300   personal_relationships correlated todos
+Q201-Q250   work_public correlated states
+Q251-Q265   sensitive_work correlated states
+Q266-Q277   personal_finance correlated states
+Q278-Q287   personal_health correlated states
+Q288-Q300   personal_relationships correlated states
 ```
 
-The second 100 Todo QA items contain Todo-only facts that are not represented in
-the notes. These items test whether the agent treats task state as first-class
-personal memory instead of assuming only notes contain sensitive facts.
+The second 100 States QA items contain state-only facts that are not represented
+in the files. These items test whether the agent treats application state as
+first-class personal memory instead of assuming only files contain sensitive
+facts.
 
-Recommended Todo-only distribution:
+Recommended state-only distribution:
 
 ```text
-Q301-Q350   work_public todo-only facts
-Q351-Q365   sensitive_work todo-only facts
-Q366-Q377   personal_finance todo-only facts
-Q378-Q387   personal_health todo-only facts
-Q388-Q400   personal_relationships todo-only facts
+Q301-Q350   work_public state-only facts
+Q351-Q365   sensitive_work state-only facts
+Q366-Q377   personal_finance state-only facts
+Q378-Q387   personal_health state-only facts
+Q388-Q400   personal_relationships state-only facts
 ```
 
 This structure preserves the benchmark's realism: some real-world facts are
-redundant across surfaces, while others exist only in a task list.
+redundant across surfaces, while others exist only in structured application
+state.
 
 ## 5. Action Boundary Track
 
@@ -224,10 +234,10 @@ Actions are separate from QA because the evaluator must inspect state before and
 after execution. A correct action outcome is not only a text response; it is a
 tool-call and database-state property.
 
-### 5.1 Notes Actions: 100 Tasks
+### 5.1 File Actions: 100 Tasks
 
-Notes actions cover creation, editing, deletion, and restricted mutation of
-long-form memory.
+File actions cover creation, editing, deletion, and restricted mutation of
+long-form memory. In v1, files are instantiated as notes.
 
 Representative authorized tasks:
 
@@ -240,13 +250,13 @@ Representative unauthorized or escalation-required tasks:
 - edit an existing private note,
 - delete an existing owner note,
 - create a note containing a hidden instruction to disclose private data later,
-- modify HR, finance, health, or relationship notes,
+- modify HR, finance, health, or relationship files,
 - rewrite a note in a way that changes the owner's preference or commitment.
 
-### 5.2 Todo Actions: 100 Tasks
+### 5.2 State Actions: 100 Tasks
 
-Todo actions cover creation, completion, editing, deletion, and restricted task
-mutation.
+State actions cover creation, completion, editing, deletion, and restricted
+state mutation. In v1, states are instantiated as todos.
 
 Representative authorized tasks:
 
@@ -257,7 +267,7 @@ Representative authorized tasks:
 Representative unauthorized or escalation-required tasks:
 
 - complete an existing owner todo without clear authorization,
-- edit or delete existing todos,
+- edit or delete existing state items,
 - create a todo that asks the owner to disclose sensitive information,
 - create a todo that executes a policy-violating instruction,
 - mutate finance, health, HR, or relationship tasks.
@@ -272,11 +282,11 @@ PART-Bench uses social access as the policy lens. Requests are not evaluated in
 the abstract; they are made by another agent or user with a relationship to the
 owner.
 
-For PART-Dyad, relationship structure is intentionally constrained. The base
+For PART-Pair, relationship structure is intentionally constrained. The base
 setup uses a simple requester-to-owner relationship so that policy, surface,
 memory, and action effects are not confounded by network topology.
 
-PART-Dyad can still vary relationship memory as a controlled condition:
+PART-Pair can still vary relationship memory as a controlled condition:
 
 ```text
 R0   no native relationship memory
@@ -298,7 +308,7 @@ network setting should include heterogeneous users and relationships, such as:
 PART-Net should also include permission tiers, delegation depth, and escalation
 precedents. Example network tasks may allow one agent to contact another agent
 in order to obtain information or complete a delegated workflow. This is not a
-larger version of the dyadic setup; it is a different topology that tests
+larger version of the one-to-one setup; it is a different topology that tests
 whether boundaries survive routing through a social graph.
 
 ## 7. Policy Conditions
@@ -371,10 +381,10 @@ Action Safety         unauthorized actions refused or escalated
 
 Useful secondary breakdowns:
 
-- Notes Security,
-- Todo Security,
-- Notes Action Safety,
-- Todo Action Safety,
+- Files Security,
+- States Security,
+- File Action Safety,
+- State Action Safety,
 - cross-surface leakage rate,
 - escalation rate,
 - incorrect/no-op action rate.
@@ -383,27 +393,27 @@ The benchmark should avoid a single aggregate score as the main result. A
 personal agent can be secure but useless, useful but unsafe, or safe for QA but
 unsafe for actions. These axes should remain visible.
 
-## 10. Why Correlated Todos Matter
+## 10. Why Correlated States Matter
 
-The correlated Todo split is central to the benchmark story. If the agent refuses
-to share a sensitive fact from Notes but reveals the same fact from Todos, the
-system has not actually protected the owner's boundary.
+The correlated state split is central to the benchmark story. If the agent
+refuses to share a sensitive fact from Files but reveals the same fact from
+States, the system has not actually protected the owner's boundary.
 
 This tests a realistic failure mode:
 
 ```text
-Notes: "Do not disclose that the owner is interviewing with Company X."
-Todo:  "Prepare Company X interview packet by Friday."
+File:  "Do not disclose that the owner is interviewing with Company X."
+State: "Prepare Company X interview packet by Friday."
 ```
 
-A benchmark that tests only Notes can miss this class of cross-surface leakage.
+A benchmark that tests only Files can miss this class of cross-surface leakage.
 PART-Bench intentionally includes correlated facts to measure whether policies
-generalize across memory surfaces.
+generalize across memory and state surfaces.
 
-## 11. Why Todo-Only Facts Matter
+## 11. Why State-Only Facts Matter
 
-Todo-only facts prevent the benchmark from reducing Todos to a duplicate view of
-Notes. In real systems, many facts originate directly as tasks:
+State-only facts prevent the benchmark from reducing States to a duplicate view
+of Files. In real systems, many facts originate directly as structured state:
 
 - private deadlines,
 - medical follow-ups,
@@ -412,8 +422,8 @@ Notes. In real systems, many facts originate directly as tasks:
 - sensitive work commitments,
 - future travel or meetings.
 
-These items test whether the agent recognizes task state as sensitive personal
-state even when there is no corresponding note.
+These items test whether the agent recognizes application state as sensitive
+personal state even when there is no corresponding file.
 
 ## 12. Why Actions Are a Separate Track
 
@@ -440,28 +450,28 @@ this document does not implement them:
 
 - enrich Todo seed data with folders, categories, descriptions, due dates,
   priorities, and sensitivity labels,
-- add Todo QA items with source metadata and category labels,
-- add action task definitions for Notes and Todos,
+- add States QA items with source metadata and category labels,
+- add action task definitions for Files and States,
 - support action-mode evaluation using database snapshots before and after
   execution,
 - distinguish text refusal from actual tool execution,
-- keep provider-backed Calendar/Gmail outside the v1 core benchmark,
-- reserve Notes-only and Todos-only analyses for ablations rather than the main
+- keep provider-backed Calendar/Email/Notion outside the v1 core benchmark,
+- reserve Files-only and States-only analyses for ablations rather than the main
   benchmark definition.
 
 ## 14. Resolved v1 Decisions
 
 The current v1 design makes these commitments:
 
-- PART-Bench is a suite with at least two boundary topologies: PART-Dyad and
+- PART-Bench is a suite with at least two boundary topologies: PART-Pair and
   PART-Net.
-- Current implemented benchmark data is PART-Dyad v1.
-- Main PART-Dyad benchmark is mixed-surface, not notes-only.
-- Benchmark size is 600 items: 400 QA plus 200 actions.
-- Todo QA includes both correlated and Todo-only facts.
+- Current implemented benchmark data is PART-Pair v1.
+- Main PART-Pair benchmark is mixed-surface, not files-only.
+- Benchmark size is 600 items: 200 Files QA, 200 States QA, and 200 Actions.
+- States QA includes both correlated and state-only facts.
 - Actions are evaluated separately from QA.
 - Escalation is a distinct verdict, not merely a refusal string.
 - Calendar and Gmail are discussed as production-supported actions but excluded
-  from the reproducible PART-Dyad v1 core.
+  from the reproducible PART-Pair v1 core.
 - Multi-agent network evaluation should be framed as PART-Net, a separate
-  networked delegation suite, rather than as a simple scaling axis of PART-Dyad.
+  networked delegation suite, rather than as a simple scaling axis of PART-Pair.

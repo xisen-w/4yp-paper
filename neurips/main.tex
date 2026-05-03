@@ -18,7 +18,7 @@
 \usepackage{multirow}
 \usepackage{enumitem}
 
-\title{A Red Team of Networked Personal Agents}
+\title{When Delegates Cross Boundaries: Measuring the Utility--Security Frontier of Networked Personal Agents}
 
 \author{%
   Anonymous Author(s)
@@ -29,7 +29,7 @@
 \maketitle
 
 \begin{abstract}
-As large language models gain tool access, persistent memory, and autonomous execution capabilities, they are deployed as \emph{networked personal agents} that act on behalf of individual users and coordinate with one another across ownership boundaries. No existing benchmark evaluates the behavioral safety of such agents in a setting that is simultaneously personal, realistic, and autonomously adversarial. Each agent's deep access to its owner's private data---scattered across hundreds of notes, todos, and other personal records---meets another agent operating under a different principal, creating a safety surface where leakage occurs through tool calls, memory retrieval, state-changing actions, and multi-turn social dynamics rather than direct text disclosure alone. We introduce \textbf{PART-Bench} (\textbf{P}ersonal \textbf{A}gent \textbf{R}ed-\textbf{T}eam Benchmark), the first benchmark for \emph{spontaneous agentic red-teaming} of networked personal agents: fully-equipped agents with realistic tools, persistent memory, hundreds of scattered notes and todos, and autonomous multi-turn interaction probe one another's boundaries without scripted attack templates. We design a synthetic personal data environment with ground-truth labels across five sensitivity categories, producing 3{,}600 evaluations and 14{,}400 agentic attempts (3{,}600 single-step plus 3{,}600$\times$3 multi-turn). We evaluate state-of-the-art models along the utility--security Pareto frontier, reveal emergent agent red-team failure patterns, and characterise how different governance configurations---from generic privacy instructions to category-specific policies---perform in the networked personal agent setting. Across XXXX experimental runs, we find that governance \emph{specificity} determines behavioral safety: category-specific policies yield XXXX pp leak reduction while generic instructions yield only XXXX pp. Multi-turn coordination amplifies leakage XXXX$\times$ over single-step probing, and relationship context shifts leakage in opposing directions depending on data category. We release the full benchmark suite including agent configurations, evaluation queries with gold-standard labels, and the autonomous coordination engine.
+Personal agents are evolving from passive assistants into delegates that act, remember, and coordinate on behalf of their owners. When two such delegates interact across an ownership boundary, every exchange becomes a \emph{permission decision}: which knowledge to share with this requester, which state changes to allow, and which requests to refuse or escalate. Over multiple turns these permission decisions compound as context accumulates, social pressure builds, and prior concessions reshape what the agent treats as permissible. The interaction surface grows combinatorially across relationship types and tool capabilities, making static test suites and fixed-budget human audits insufficient. Few existing evaluations capture how permission failures develop organically through autonomous delegate-to-delegate interaction. We introduce \textbf{PACT-Bench} (\textbf{P}ermissioned \textbf{A}gent \textbf{C}oordination \textbf{T}estbed), the first benchmark that evaluates safety as an emergent property of how personal-agent delegates interact under different permission regimes. Rather than testing agents against fixed attack templates, PACT-Bench lets delegates probe one another's boundaries autonomously over multi-turn exchanges, combining evaluation with organic red-teaming. We construct a synthetic personal data environment with ground-truth labels across five sensitivity categories, producing 3{,}600 evaluations and 14{,}400 interaction attempts across governance policies and relationship conditions. Category-specific permission policies reduce leakage by XXXX pp, while generic privacy instructions provide only XXXX pp improvement. Multi-turn interaction amplifies leakage by XXXX$\times$ compared with single-step probing, and relationship context shifts permission decisions differently across data categories. We release the full benchmark suite, including agent configurations, labelled evaluation tasks, and the autonomous interaction engine.
 \end{abstract}
 
 
@@ -38,20 +38,45 @@ As large language models gain tool access, persistent memory, and autonomous exe
 \label{sec:intro}
 % ============================================================================
 
-Large language models have rapidly evolved from conversational assistants into agentic systems capable of autonomous reasoning and action. Architectures such as ReAct~\citep{yao2023react} and Toolformer~\citep{schick2023toolformer} established the paradigm of interleaving chain-of-thought reasoning with tool invocation; subsequent work on persistent memory~\citep{packer2024memgpt}, self-reflection~\citep{shinn2023reflexion}, and multi-step planning~\citep{wang2024planandsolve} has produced agents that maintain state across sessions, learn from past interactions, and execute complex workflows without continuous human oversight. Commercial deployments now instantiate these capabilities as personal agents that manage calendars, search private document stores, draft communications, and coordinate tasks on behalf of individual users~\citep{manus2025, devin2024, openclaw2025}, with standardised protocols for tool integration (MCP;~\citealp{anthropic2024mcp}) and agent-to-agent communication (A2A;~\citealp{google2025a2a}) accelerating adoption.
+LLM-based personal agents are rapidly evolving from question-answering tools into \emph{delegates}: systems that hold private data, wield tools, and act with authority on behalf of a specific person~\citep{manus2025, devin2024, openclaw2025}. Standardised protocols for tool integration (MCP~\citealp{anthropic2024mcp}) and inter-agent communication (A2A~\citealp{google2025a2a}) are accelerating this transition. The delegate framing matters because it changes the unit of agency: the agent no longer merely responds to its owner's prompts, but represents the owner to the outside world.
 
-The next frontier for these agents is not greater individual autonomy but \emph{inter-agent coordination}. Many high-value tasks are inherently cross-boundary: scheduling a meeting requires checking two people's calendars, sharing a project update requires one agent to contact another, and coordinating a product launch requires a manager's agent to collect status from several teammates' agents~\citep{talebirad2023multiagent, guo2024largelanguagemodelbased}. Each of these tasks requires one person's delegate to interact with another person's delegate. Without this capability, humans remain manually bridging between individually capable AI systems. Yet when two delegate agents interact across an ownership boundary, a new class of behavioral safety problems emerges: a personal agent may reveal sensitive data through tool calls and memory retrieval, refuse legitimate requests and become useless as a delegate, comply with social pressure from the counterpart agent, or fail to escalate to its owner when ambiguity arises~\citep{shapira2026chaos, meta2025ruletwo}. The security community has documented that every published prompt-level defence can be bypassed under adaptive attack~\citep{nasr2025attacker}, and cross-boundary coordination satisfies all three conditions that make agents critically vulnerable: simultaneous processing of untrusted input, access to sensitive data, and execution of state-changing actions.
+The consequence is that delegates now \emph{interact with one another across ownership boundaries}. Scheduling a meeting requires one delegate to query another's calendar. Sharing a project update means one agent contacts another to retrieve status. Coordinating a product launch means a manager's delegate collects information from several teammates' delegates~\citep{talebirad2023multiagent, guo2024largelanguagemodelbased}. These cross-boundary interactions are where the novel safety problem lives: every request forces the responding delegate to make a permission decision with no analogue in single-agent settings. Table~\ref{tab:permission_dimensions} illustrates the range of permission dimensions that arise.
 
-Existing evaluation approaches address fragments of this problem. Single-agent security benchmarks~\citep{zhan2024injecagent, debenedetti2024agentdojo, toyer2024tensortrust, schulhoff2024hackaprompt} measure prompt injection resilience but involve no cross-boundary interaction. Multi-agent privacy benchmarks~\citep{wang2026agentsocialbench, gomaa2025converse, juneja2025magpie, park2026pacbench, yagoubi2026agentleak} study information disclosure in social or collaborative settings, but their agents communicate through scripted text exchanges without tool access, persistent memory, or scattered personal documents. Applied red-teaming studies~\citep{shapira2026chaos} demonstrate behavioral failures in deployed systems but are expensive, non-reproducible, and unsuitable for systematic comparison of governance configurations. No existing benchmark simultaneously provides \emph{realistic} agent capabilities (tools, memory, fragmented data), \emph{proactive} autonomous interaction (agents that query without human prompting), and \emph{reproducible} controlled evaluation (systematic comparison across defence levels, relationship conditions, and attack modalities).
+\begin{table}[t]
+  \caption{Permission dimensions in cross-boundary delegate interaction, illustrated with concrete scenarios between a requesting delegate (Tina's agent) and a target delegate (Alex's agent).}
+  \label{tab:permission_dimensions}
+  \centering
+  \small
+  \resizebox{\textwidth}{!}{%
+  \begin{tabular}{p{0.17\linewidth}p{0.36\linewidth}p{0.37\linewidth}}
+    \toprule
+    \textbf{Dimension} & \textbf{Example request} & \textbf{Permission challenge} \\
+    \midrule
+    Information  & ``What is Alex's deadline for Project Alpha?'' vs.\ ``What is Alex's salary?'' & Same requester, same tool (file search). The boundary depends on the \emph{content} retrieved, not the action taken. \\
+    Action       & ``Create a shared meeting note'' vs.\ ``Edit Alex's compensation file'' & Both require write access. The boundary depends on whether the mutation falls within the requester's delegated authority. \\
+    Policy-based & D0: no instruction. D1: ``protect private data.'' D2: explicit category deny list. & The same question may be answered or refused depending on how specifically the policy names the protected category. \\
+    Relationship & Colleague asks about project status vs.\ stranger asks the same question. & Relationship context shifts what the agent treats as permissible, even when the policy is identical. \\
+    Multi-turn erosion & Turn 1: refused. Turn 5: same question reframed as a project dependency. & Social pressure, reframing, and prior concessions erode boundaries that held in isolation. \\
+    Memory       & First interaction vs.\ after ten prior exchanges with shared project history. & Accumulated memory of past cooperation changes the agent's judgment about what this requester should see. \\
+    \bottomrule
+  \end{tabular}
+  }
+\end{table}
 
-We introduce \textbf{PART-Bench} (\textbf{P}ersonal \textbf{A}gent \textbf{R}ed-\textbf{T}eam Benchmark), a benchmark for evaluating the behavioral safety of networked personal agents engaged in cross-boundary coordination. Our contributions are:
+These dimensions interact combinatorially. Each exchange involves a specific pair of principals, a relationship type, a set of tools, accumulated conversational history, and a governance policy. The space of possible permission failures grows as a branching process over multi-turn trajectories, not as a fixed list of attack patterns. Static test suites and fixed-budget human audits cannot cover this space~\citep{nasr2025attacker}. This motivates an evaluation methodology where delegates interact autonomously and boundary failures surface organically, combining evaluation with red-teaming in a single framework.
+
+Because the agents are delegates acting on behalf of their owners, they must also remain \emph{useful}: a delegate that refuses everything is safe but useless, and one that shares everything is useful but dangerous. Evaluating safety in delegate-to-delegate interaction therefore requires characterising the \emph{utility--security frontier}, not just attack success rates.
+
+Few existing evaluations address this problem. Single-agent benchmarks~\citep{zhan2024injecagent, debenedetti2024agentdojo, toyer2024tensortrust, schulhoff2024hackaprompt} test prompt injection within a single trust domain but involve no cross-boundary interaction. Multi-agent privacy benchmarks~\citep{wang2026agentsocialbench, gomaa2025converse, juneja2025magpie, park2026pacbench, yagoubi2026agentleak} study information disclosure but through scripted text exchanges where agents lack tool-mediated access to private data, persistent memory, and autonomy in deciding what to probe. Applied red-teaming~\citep{shapira2026chaos} demonstrates failures in deployed systems but is expensive, non-reproducible, and unsuitable for systematic governance comparison.
+
+We introduce \textbf{PACT-Bench} (\textbf{P}ermissioned \textbf{A}gent \textbf{C}oordination \textbf{T}estbed), the first benchmark that evaluates the safety of personal-agent delegates through autonomous cross-boundary interaction under controlled permission regimes. Our contributions:
 
 \begin{enumerate}[leftmargin=*, itemsep=2pt]
-  \item \textbf{Formulation and platform.} We formulate the problem of networked personal agents coordinating across ownership boundaries and provide an evaluation platform in which fully-equipped agents---with persistent memory, hundreds of scattered notes and todos, callable tools for search, retrieval, and state mutation, and relationship context---interact autonomously over multi-turn horizons. This is the first benchmark where leakage occurs through tool calls and memory retrieval, not only through conversation text, and where agents spontaneously red-team one another without scripted attack templates.
+  \item \textbf{Interaction-centred evaluation.} Delegates equipped with their owner's private files, structured states, tools, and relationship context interact autonomously over multi-turn exchanges. Permission failures emerge organically from the interaction itself, unifying evaluation and red-teaming in a single framework.
 
-  \item \textbf{Benchmark design.} We construct a synthetic personal data environment spanning five sensitivity categories with ground-truth labels for automated evaluation. PART-Bench comprises two complementary suites: \emph{PART-Dyad}, a 600-task dyadic boundary evaluation (200 notes QA, 200 todo QA, 200 state-changing actions) producing 3{,}600 evaluations across three governance policies and two relationship-memory conditions; and \emph{PART-Net}, a networked delegation suite that tests multi-hop information routing and transitive permission failures across agent societies. We define a governance gradient that isolates the effect of policy \emph{specificity} from strictness, and provide four evaluation metrics---information utility, information security, action utility, and action safety---that simultaneously capture the utility--security tradeoff across both QA and state-changing tasks.
+  \item \textbf{Benchmark design.} PACT-Bench comprises two suites. \emph{PACT-Pair} is a 600-task dyadic evaluation (200 file QA, 200 state QA, 200 actions) producing 3{,}600 evaluations across three governance policies and two relationship conditions. \emph{PACT-Net} extends this to multi-agent societies testing multi-hop routing, transitive permission failures, and confused-deputy behaviour. A governance gradient isolates policy \emph{specificity} from strictness, and four metrics (information utility, information security, action utility, action safety) jointly characterise the utility--security frontier.
 
-  \item \textbf{Empirical findings.} Across XXXX experimental runs, we establish that governance specificity dominates strictness (XXXX pp improvement from category enumeration vs.\ XXXX pp from generic instruction), multi-turn interaction amplifies leakage XXXX$\times$ over single-step probing, relationship context has non-uniform category-dependent effects on data protection, and agents develop emergent attack patterns including progressive escalation and social reframing without explicit adversarial programming.
+  \item \textbf{Empirical findings.} Category-specific policies reduce leakage by XXXX pp while generic instructions provide only XXXX pp improvement. Multi-turn interaction amplifies leakage XXXX$\times$ over single-step probing. Relationship context shifts permission decisions non-uniformly across data categories. Delegates develop emergent probing strategies including progressive escalation and social reframing without explicit adversarial programming.
 \end{enumerate}
 
 
@@ -61,30 +86,22 @@ We introduce \textbf{PART-Bench} (\textbf{P}ersonal \textbf{A}gent \textbf{R}ed-
 % ============================================================================
 
 \paragraph{LLM agents.}
-The evolution from stateless language models to autonomous agents has proceeded along several axes. ReAct~\citep{yao2023react} and Toolformer~\citep{schick2023toolformer} established the paradigm of interleaving chain-of-thought reasoning with tool invocation. Persistent memory systems such as MemGPT~\citep{packer2024memgpt} extended agents beyond single-session completion, while self-reflection~\citep{shinn2023reflexion} and multi-step planning~\citep{wang2024planandsolve} enabled agents to learn from past interactions and execute complex workflows autonomously. Standardised protocols for tool integration (MCP;~\citealp{anthropic2024mcp}) and inter-agent communication (A2A;~\citealp{google2025a2a}) have made this architecture the default for deployed personal agents~\citep{manus2025, devin2024, openclaw2025}. Multi-agent coordination~\citep{talebirad2023multiagent, guo2024largelanguagemodelbased} further extends individual agent capabilities into collaborative societies where agents delegate, negotiate, and share information across principal boundaries. The safety implications of this progression---from single-turn completion to persistent, tool-equipped, networked personal agents---motivate the benchmark we propose.
+The evolution from stateless language models to autonomous agents has proceeded along several axes. ReAct~\citep{yao2023react} and Toolformer~\citep{schick2023toolformer} established the paradigm of interleaving chain-of-thought reasoning with tool invocation. Persistent memory systems such as MemGPT~\citep{packer2024memgpt} extended agents beyond single-session completion, while self-reflection~\citep{shinn2023reflexion} and multi-step planning~\citep{wang2024planandsolve} enabled agents to learn from past interactions and execute complex workflows autonomously. Standardised protocols for tool integration (MCP;~\citealp{anthropic2024mcp}) and inter-agent communication (A2A;~\citealp{google2025a2a}) have made this architecture the default for deployed personal agents~\citep{manus2025, devin2024, openclaw2025}. Multi-agent coordination~\citep{talebirad2023multiagent, guo2024largelanguagemodelbased} further extends individual agent capabilities into collaborative societies where agents delegate, negotiate, and share information across principal boundaries. The safety implications of this progression, from single-turn completion to persistent, tool-equipped, networked personal agents, motivate the benchmark we propose.
 
 \paragraph{Agent security benchmarks.}
-The evaluation of LLM agent safety has produced a rich landscape of benchmarks, each targeting a specific threat model. InjecAgent~\citep{zhan2024injecagent} measures indirect prompt injection in tool-integrated agents across 1,054 test cases. AgentDojo~\citep{debenedetti2024agentdojo} provides a dynamic sandboxed environment with 97 tasks and 629 injection tests. TensorTrust~\citep{toyer2024tensortrust} and HackAPrompt~\citep{schulhoff2024hackaprompt} study prompt-level attack and defence at scale through gamified platforms. These benchmarks establish that LLM agents are vulnerable to injection, but evaluate single agents within a single trust domain and do not model cross-boundary interaction or measure the utility cost of defences.
+Single-agent benchmarks such as InjecAgent~\citep{zhan2024injecagent}, AgentDojo~\citep{debenedetti2024agentdojo}, TensorTrust~\citep{toyer2024tensortrust}, and HackAPrompt~\citep{schulhoff2024hackaprompt} establish that LLM agents are vulnerable to prompt injection, but evaluate within a single trust domain and do not model cross-boundary interaction or the utility cost of defences.
 
-Recent multi-agent privacy benchmarks move closer to our setting but answer a different question. AgentSocialBench~\citep{wang2026agentsocialbench} asks whether agents in social-network scenarios disclose private information, and uncovers an ``abstraction paradox'' in which privacy instructions paradoxically increase leakage. ConVerse~\citep{gomaa2025converse} evaluates contextual safety in agent-to-agent conversations and finds attack success rates up to 88\% when personal assistants interact with service providers. PAC-BENCH~\citep{park2026pacbench} treats privacy as a constraint on collaborative utility, MAGPIE~\citep{juneja2025magpie} provides 200 collaborative tasks under a shared principal, and AgentLeak~\citep{yagoubi2026agentleak} taxonomises seven leakage channels in enterprise workflows. These works establish that privacy failures arise in social and collaborative settings. PART-Bench instead evaluates whether a \emph{production-style networked personal-agent stack} is deployable under cross-owner access: the target agent has tools, persistent memory, scattered private documents, relationship context, and autonomy to search, retrieve, and respond over multiple turns. The benchmark question is therefore not only whether agents leak, but whether a concrete agent stack can preserve data boundaries while remaining useful.
-
-This distinction matters for methodology. Most multi-agent privacy benchmarks operate through scripted text exchanges: agents have no tool-mediated access to a private knowledge store, no persistent memory beyond injected profiles, and limited autonomy in deciding what to ask, retrieve, or probe next. Complementing automated benchmarks, \citet{shapira2026chaos} present applied red-teaming of deployed agents, uncovering behavioral failures including uncontrolled information sharing and capability self-disablement, but their methodology is expensive, non-reproducible, and unsuitable for systematic comparison of governance configurations.
-
-\paragraph{Attack and defence methods.}
-Relevant attack modalities include automated jailbreak search via PAIR~\citep{chao2025pair} and GCG~\citep{zou2023universal}, multi-turn escalation via Crescendo~\citep{russinovich2025crescendo}, and persuasion-based social engineering via PAP~\citep{zeng2024pap}. On the defence side, Instruction Hierarchy~\citep{wallace2024instruction} and Spotlighting~\citep{hines2024spotlighting} represent prompt-level hardening, while system-level frameworks advocate layered defence~\citep{meta2025ruletwo} or architectural isolation through capability-based sandboxing. The consensus from large-scale adaptive evaluations~\citep{nasr2025attacker} is that no prompt-level defence alone provides reliable protection. Our governance gradient (D0/D1/D2) is designed to quantify this gap empirically.
-
-\paragraph{Positioning.}
-Table~\ref{tab:comparison} summarises existing benchmarks across eight dimensions critical to evaluating cross-boundary agent safety. PART-Bench is the first automated benchmark that simultaneously provides realistic agent capabilities (callable tools, persistent memory, fragmented personal data), proactive autonomous interaction (agents that query and adapt without human prompting), and controlled reproducible evaluation (systematic comparison across governance levels, relationship conditions, and interaction modalities). This combination is necessary to answer the deployment question faced by personal-agent platforms: given a raw or defended agent stack, where does it sit on the utility--security frontier?
+Multi-agent privacy benchmarks move closer to our setting. AgentSocialBench~\citep{wang2026agentsocialbench} uncovers an ``abstraction paradox'' where privacy instructions paradoxically increase leakage. ConVerse~\citep{gomaa2025converse} finds attack success rates up to 88\% in agent-to-agent conversations. PAC-BENCH~\citep{park2026pacbench} treats privacy as a constraint on collaborative utility, MAGPIE~\citep{juneja2025magpie} provides 200 tasks under a shared principal, and AgentLeak~\citep{yagoubi2026agentleak} taxonomises seven leakage channels. However, these benchmarks operate through scripted text exchanges: agents have no tool-mediated access to a private knowledge store, no persistent memory beyond injected profiles, and limited autonomy in deciding what to probe next. \citet{shapira2026chaos} complement automated work with applied red-teaming of deployed agents, but their methodology is expensive, non-reproducible, and unsuitable for systematic governance comparison. PACT-Bench instead evaluates whether personal-agent delegates can preserve data boundaries while remaining useful during autonomous cross-boundary interaction. Table~\ref{tab:comparison} summarises how existing benchmarks compare across the dimensions that delegate-to-delegate interaction requires.
 
 \begin{table}[t]
   \caption{Comparison of agent safety benchmarks. $\checkmark$ = fully supported, $\sim$ = partially supported.}
   \label{tab:comparison}
   \centering
-  \small
+  \footnotesize
+  \resizebox{\textwidth}{!}{%
   \begin{tabular}{lcccccccc}
     \toprule
-    \textbf{Benchmark} & \textbf{Cross-} & \textbf{Tool} & \textbf{Dual} & \textbf{Defence} & \textbf{Multi-} & \textbf{Persistent} & \textbf{Relation-} & \textbf{Action} \\
-    & \textbf{boundary} & \textbf{access} & \textbf{metric} & \textbf{gradient} & \textbf{turn} & \textbf{memory} & \textbf{ship} & \textbf{safety} \\
+    \textbf{Benchmark} & \textbf{Cross-boundary} & \textbf{Tool access} & \textbf{Dual metric} & \textbf{Defence gradient} & \textbf{Multi-turn} & \textbf{Persistent memory} & \textbf{Relationship} & \textbf{Action safety} \\
     \midrule
     InjecAgent          &            & $\checkmark$ &            &            &            &            &            &            \\
     AgentDojo           &            & $\checkmark$ & $\sim$     &            &            &            &            &            \\
@@ -95,10 +112,17 @@ Table~\ref{tab:comparison} summarises existing benchmarks across eight dimension
     AgentLeak           & $\checkmark$ & $\sim$   &            &            &            &            &            & $\sim$     \\
     Chaos of Agents     & $\checkmark$ & $\checkmark$ &        &            & $\checkmark$ & $\checkmark$ &          & $\sim$   \\
     \midrule
-    \textbf{PART-Bench} & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ \\
+    \textbf{PACT-Bench} & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ \\
     \bottomrule
   \end{tabular}
+  }
 \end{table}
+
+\paragraph{Attack and defence methods.}
+Relevant attack modalities include automated jailbreak search via PAIR~\citep{chao2025pair} and GCG~\citep{zou2023universal}, multi-turn escalation via Crescendo~\citep{russinovich2025crescendo}, and persuasion-based social engineering via PAP~\citep{zeng2024pap}. On the defence side, Instruction Hierarchy~\citep{wallace2024instruction} and Spotlighting~\citep{hines2024spotlighting} represent prompt-level hardening, while system-level frameworks advocate layered defence~\citep{meta2025ruletwo} or architectural isolation through capability-based sandboxing. The consensus from large-scale adaptive evaluations~\citep{nasr2025attacker} is that no prompt-level defence alone provides reliable protection. Our governance gradient (D0/D1/D2) is designed to quantify this gap empirically.
+
+\paragraph{Positioning.}
+In a real deployment, a delegate autonomously decides what to share, what to mutate, and what to refuse based on who is asking and what they have asked before. Safety failures emerge organically from the interaction itself, not from isolated prompt attacks. PACT-Bench is designed to match this reality: delegates interact autonomously with full tool access, memory, and relationship context, and the benchmark measures where boundaries break during that interaction.
 
 
 % ============================================================================
@@ -106,19 +130,19 @@ Table~\ref{tab:comparison} summarises existing benchmarks across eight dimension
 \label{sec:agents}
 % ============================================================================
 
-We define the concept of a networked personal agent through a three-layer abstraction. Each layer strictly extends the previous one: an \emph{agent} gains persistent state and tool access; a \emph{personal agent} binds that capability to a specific human principal and their private data; a \emph{networked personal agent} opens a communication channel to agents operating under different principals. Crucially, each extension increases both utility and the dimensionality of the safety surface, and the growth is combinatorial rather than additive---a fact that motivates the benchmark design in \S\ref{sec:design}.
+We define the concept of a networked personal agent through a three-layer abstraction. Each layer strictly extends the previous one. An \emph{agent} gains persistent state and tool access. A \emph{personal agent} binds that capability to a specific human principal and their private data. A \emph{networked personal agent} opens a communication channel to agents operating under different principals. Each extension increases both the utility and the dimensionality of the safety surface. The growth is combinatorial rather than additive, a fact that motivates the benchmark design in \S\ref{sec:design}.
 
 \subsection{Agent}
 \label{sec:agent_def}
 
-An LLM agent couples a foundation model with persistent state and executable actions~\citep{yao2023react}. The foundation model serves as the reasoning core: given a context comprising instructions, conversation history, and tool results, it generates natural language or structured tool invocations. Memory extends the agent beyond stateless completion by persisting facts, preferences, and interaction summaries across sessions, stored in a searchable store and accessible through dedicated retrieval tools~\citep{packer2024memgpt}. Tools constitute the action interface---each is a typed function with a parameter schema and an execution handler that can read data, modify state, or communicate with external services. The agent operates in a bounded perception-action loop: observe the current context, reason about what to do, invoke a tool, incorporate its result, and repeat until the task is complete or a step limit is reached~\citep{yao2023react, shinn2023reflexion}. Standardised protocols for tool integration (MCP;~\citealp{anthropic2024mcp}) and inter-agent communication (A2A;~\citealp{google2025a2a}) have made this architecture the default for deployed LLM systems---but, by itself, the architecture has no concept of acting \emph{on behalf of} a specific person or protecting \emph{that person's} data.
+An LLM agent couples a foundation model with persistent state and executable actions~\citep{yao2023react}. The foundation model serves as the reasoning core: given a context comprising instructions, conversation history, and tool results, it generates natural language or structured tool invocations. Memory extends the agent beyond stateless completion by persisting facts, preferences, and interaction summaries across sessions, stored in a searchable store and accessible through dedicated retrieval tools~\citep{packer2024memgpt}. Tools constitute the action interface. Each tool is a typed function with a parameter schema and an execution handler that can read data, modify state, or communicate with external services. The agent operates in a bounded perception-action loop: observe the current context, reason about what to do, invoke a tool, incorporate its result, and repeat until the task is complete or a step limit is reached~\citep{yao2023react, shinn2023reflexion}. Standardised protocols for tool integration (MCP;~\citealp{anthropic2024mcp}) and inter-agent communication (A2A;~\citealp{google2025a2a}) have made this architecture the default for deployed LLM systems. Yet by itself, the architecture has no concept of acting \emph{on behalf of} a specific person or protecting \emph{that person's} data.
 
 \subsection{Personal Agent}
 \label{sec:personal_agent}
 
-A personal agent is an LLM agent that operates on behalf of a specific human principal $H_i$, with access to that individual's private data and the authority to act in their name. Where a generic agent has tools and memory, a personal agent has the \emph{owner's} tools and the \emph{owner's} data---notes containing salary figures and medical records alongside project timelines and meeting agendas. This distinction transforms the system from a general-purpose assistant into something closer to a software operating system for an individual's digital life.
+A personal agent is an LLM agent that operates on behalf of a specific human principal $H_i$, with access to that individual's private data and the authority to act in their name. Where a generic agent has tools and memory, a personal agent has the \emph{owner's} tools and the \emph{owner's} data: files containing salary figures and medical records alongside structured states such as deadlines, tasks, appointments, and application records. Files and states together form the \emph{Personal Agent Operating System}: the substrate over which the agent searches, reasons, answers, and mutates on the owner's behalf.
 
-The analogy to an operating system is structural, not metaphorical. In a traditional OS, processes access files through system calls, the file system organises data in a hierarchical namespace, and the kernel mediates every resource request. A personal agent exhibits the same architecture, as Table~\ref{tab:os_analogy} summarises. The owner's documents---notes organised in hierarchical folders such as Work/Projects, Work/HR, Personal/Finance, Personal/Health---correspond to files in a file system, accessed through agent tool calls that function as semantic equivalents of traditional OS utilities. Structured records---todos with priorities, due dates, and completion status; calendar events; email threads---constitute managed state, manipulated through typed tool interfaces. External connectors---web search, email providers, calendar systems, and third-party application integrations via standardised protocols---extend the agent's action space beyond the local data store. The tool assembly pipeline serves as the kernel: for each invocation, it loads the appropriate tools for the owner, applies access-control scoping based on the invocation context, and presents a flat namespace to the foundation model. The model's tool calls are the agent's system calls; the kernel mediates every interaction between reasoning and data.
+The analogy to an operating system is structural, not metaphorical. In a traditional OS, processes access files through system calls, the file system organises data in a hierarchical namespace, and the kernel mediates every resource request. A personal agent exhibits the same architecture, as Table~\ref{tab:os_analogy} summarises. The owner's documents (instantiated in PACT-Pair v1 as notes organised in hierarchical folders such as Work/Projects, Work/HR, Personal/Finance, Personal/Health) correspond to files in a file system, accessed through agent tool calls that function as semantic equivalents of traditional OS utilities. Structured records (instantiated in v1 as todos with priorities, due dates, and completion status, extensible to calendar events, email threads, Notion pages, and other application state) constitute managed state, manipulated through typed tool interfaces. External connectors (web search, email providers, calendar systems, and third-party application integrations via standardised protocols) extend the agent's action space beyond the local data store. The tool assembly pipeline serves as the kernel. For each invocation, it loads the appropriate tools for the owner, applies access-control scoping based on the invocation context, and presents a flat namespace to the foundation model. The model's tool calls are the agent's system calls. The kernel mediates every interaction between reasoning and data.
 
 \begin{table}[h]
   \caption{Operating system analogy for the personal agent architecture. Agent tools serve as typed system calls over the owner's data.}
@@ -129,17 +153,17 @@ The analogy to an operating system is structural, not metaphorical. In a traditi
     \toprule
     \textbf{OS concept} & \textbf{Agent equivalent} & \textbf{Function} \\
     \midrule
-    File system (hierarchical) & Notes in folders & Persistent personal documents \\
-    \texttt{grep} (search) & Search notes & Semantic retrieval over notes \\
-    \texttt{cat} (read) & Get note content & Read a specific document \\
-    Task scheduler & Todo tools (create, complete, search) & Managed task state \\
+    File system (hierarchical) & Files (notes in v1) & Persistent personal documents \\
+    \texttt{grep} (search) & Search files & Semantic retrieval over files \\
+    \texttt{cat} (read) & Get file content & Read a specific document \\
+    Task scheduler / app state & State tools (todos in v1) & Managed application state \\
     IPC / sockets & Contact agent (A2A) & Cross-principal communication \\
     Kernel & Tool assembly pipeline & Permission-scoped mediation \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-Formally, the personal agent $A_i$ for principal $H_i$ accesses a knowledge store $K_i = (F_i, S_i, M_i)$, where $F_i$ is a set of documents (notes organised in folders), $S_i$ is structured state (todos, calendar, email), and $M_i$ is persistent memory (agent-curated summaries of prior interactions). The agent is equipped with a tool set $T_i$ through which it accesses $K_i$. Knowledge is \emph{fragmented}: no single document contains a complete picture. Answering a question about a project requires searching notes, reading multiple documents, cross-referencing with todos, and synthesising---the same multi-step retrieval pipeline that makes the agent useful for legitimate queries also enables it to surface sensitive information when the query crosses a privacy boundary.
+Formally, the personal agent $A_i$ for principal $H_i$ accesses a knowledge store $K_i = (F_i, S_i, M_i)$, where $F_i$ is a set of files (documents, instantiated as notes in v1), $S_i$ is structured state (todos in v1, extensible to calendar, email, Notion, and other application state), and $M_i$ is persistent memory (agent-curated summaries of prior interactions). The agent is equipped with a tool set $T_i$ through which it accesses $K_i$. Knowledge is \emph{fragmented}: no single document or state object contains a complete picture. Answering a question about a project may require searching files, reading multiple documents, cross-referencing structured state, and synthesising. The same multi-step retrieval pipeline that makes the agent useful for legitimate queries also enables it to surface sensitive information when the query crosses a privacy boundary.
 
 \subsection{Networked Personal Agent}
 \label{sec:networked_agent}
@@ -151,17 +175,17 @@ The safety surface is not the Cartesian product of a few homogeneous factors. Le
 \[
   \sum_{j \ne i} |\mathcal{T}_i| \cdot |\mathcal{F}(\mathcal{C}_{ji}, \mathcal{T}_i)|,
 \]
-where $\mathcal{F}(\cdot)$ is the set of failure modes that can arise from that concrete context: a search tool may reveal protected facts, a write tool may mutate state, and the same request may be answered, refused, or escalated depending on the requester's identity. Multi-turn interaction turns this into a branching process. At turn $t$, the next state depends on the full history $h_t$---request wording, retrieved tool outputs, refusal or escalation decisions, and previous agent responses---so an $L$-turn probe has a trajectory space proportional to
+where $\mathcal{F}(\cdot)$ is the set of failure modes that can arise from that concrete context: a search tool may reveal protected facts, a write tool may mutate state, and the same request may be answered, refused, or escalated depending on the requester's identity. Multi-turn interaction turns this into a branching process. At turn $t$, the next state depends on the full history $h_t$ (request wording, retrieved tool outputs, refusal or escalation decisions, and previous agent responses), so an $L$-turn probe has a trajectory space proportional to
 \[
   \sum_{j \ne i} \prod_{t=1}^{L} b_{ji,t}(h_t),
 \]
-where $b_{ji,t}$ counts the semantically distinct next actions available in that context, including choosing among tools, answering, refusing, escalating, reframing, or contacting another agent. Thus the evaluation surface grows through heterogeneous tools, pair-specific relationships, and history-dependent branching, not simply through more agents. Static test cases and fixed-budget human red-teaming sample only a sparse slice of this surface. These observations motivate \emph{agentic red-teaming}---using autonomous agents to probe one another's boundaries---and the benchmark design in \S\ref{sec:design}.
+where $b_{ji,t}$ counts the semantically distinct next actions available in that context, including choosing among tools, answering, refusing, escalating, reframing, or contacting another agent. Thus the evaluation surface grows through heterogeneous tools, pair-specific relationships, and history-dependent branching, not simply through more agents. Static test cases and fixed-budget human red-teaming sample only a sparse slice of this surface. These observations motivate \emph{agentic red-teaming}: using autonomous agents to probe one another's boundaries. This is the evaluation methodology underlying the benchmark design in \S\ref{sec:design}.
 
-The communication mechanism is agent-to-agent remote procedure call. When agent $A_j$ (acting for $H_j$) sends a message to $A_i$ via the inter-agent communication protocol, the system resolves the recipient, loads the per-relationship permissions that $H_i$ has granted to $H_j$, assembles $A_i$'s tools with those permissions applied, runs $A_i$'s full reasoning loop---system prompt, memory, multi-step tool use, response composition---and returns $A_i$'s final response as a tool result to $A_j$. This is not a text-only exchange: during execution, $A_i$ may invoke its full tool set---searching notes, reading documents, checking calendar entries---to access $H_i$'s private data, and the content of those tool results flows into the response that $A_j$ receives.
+The communication mechanism is agent-to-agent remote procedure call. When agent $A_j$ (acting for $H_j$) sends a message to $A_i$ via the inter-agent communication protocol, the system resolves the recipient, loads the per-relationship permissions that $H_i$ has granted to $H_j$, assembles $A_i$'s tools with those permissions applied, runs $A_i$'s full reasoning loop (system prompt, memory, multi-step tool use, response composition) and returns $A_i$'s final response as a tool result to $A_j$. This is not a text-only exchange. During execution, $A_i$ may invoke its full tool set (searching files, reading documents, querying state items, checking calendar entries) to access $H_i$'s private data, and the content of those tool results flows into the response that $A_j$ receives.
 
-Two mechanisms govern cross-boundary interaction. \emph{Access control} determines what the target agent can see. Permissions are stored per-relationship as $\text{access}(H_i, H_j) = \{(\text{domain}, \text{scope}, \text{level})\}$, where domain $\in \{\text{notes}, \text{todos}, \text{calendar}, \text{email}\}$, scope $\in \{\text{all}, \text{folder}, \text{none}\}$, and level $\in \{\text{read}, \text{write}\}$. When scope is \texttt{all}, every item in the domain is accessible; when \texttt{folder}, only whitelisted folders; when \texttt{none}, the corresponding tools are not loaded at all. \emph{Relationship context} $R(H_i, H_j) \in \mathcal{R}$ determines how the agent reasons about appropriate disclosure---a colleague relationship legitimises work-related queries while a stranger provides no trust context. Relationship context does not change which tools are loaded; it influences the agent's judgment, not architecture.
+Two mechanisms govern cross-boundary interaction. \emph{Access control} determines what the target agent can see. Permissions are stored per-relationship as $\text{access}(H_i, H_j) = \{(\text{domain}, \text{scope}, \text{level})\}$, where domain $\in \{\text{files}, \text{todos}, \text{calendar}, \text{email}, \text{notion}\}$ in the current implementation vocabulary, scope $\in \{\text{all}, \text{folder}, \text{none}\}$, and level $\in \{\text{read}, \text{write}\}$. When scope is \texttt{all}, every item in the domain is accessible. When \texttt{folder}, only whitelisted folders are visible. When \texttt{none}, the corresponding tools are not loaded at all. \emph{Relationship context} $R(H_i, H_j) \in \mathcal{R}$ determines how the agent reasons about appropriate disclosure. A colleague relationship legitimises work-related queries, while a stranger provides no trust context. Relationship context does not change which tools are loaded. It influences the agent's judgment, not architecture.
 
-The combination of deep data access and cross-principal communication creates a behavioural safety surface with no analogue in single-agent settings. The target agent has the same tool access to its owner's salary data, medical records, and personal relationships that it uses to answer legitimate questions about project timelines and meeting schedules. When an external agent sends a cross-boundary request, the target searches, retrieves, and must decide---within the reasoning loop---which facts to include and which to withhold. We partition $K_i$ into sensitivity categories $C = \{c_1, \ldots, c_m\}$ with a protected subset $C_{\text{prot}} \subset C$, and define a governance policy $\pi$ that constrains disclosure during cross-boundary interaction, varying along a \emph{specificity} gradient: from no policy ($\pi_0$), to a generic privacy instruction ($\pi_1$), to category-specific enumeration of protected data types ($\pi_2$). For a given configuration $(\pi, R)$ over queries $Q = Q_{\text{pub}} \cup Q_{\text{prot}}$:
+The combination of deep data access and cross-principal communication creates a behavioural safety surface with no analogue in single-agent settings. The target agent has the same tool access to its owner's salary data, medical records, and personal relationships that it uses to answer legitimate questions about project timelines and meeting schedules. When an external agent sends a cross-boundary request, the target searches, retrieves, and must decide (within the reasoning loop) which facts to include and which to withhold. We partition $K_i$ into sensitivity categories $C = \{c_1, \ldots, c_m\}$ with a protected subset $C_{\text{prot}} \subset C$, and define a governance policy $\pi$ that constrains disclosure during cross-boundary interaction, varying along a \emph{specificity} gradient: from no policy ($\pi_0$), to a generic privacy instruction ($\pi_1$), to category-specific enumeration of protected data types ($\pi_2$). For a given configuration $(\pi, R)$ over queries $Q = Q_{\text{pub}} \cup Q_{\text{prot}}$:
 \begin{align}
   U(\pi, R) &= \frac{|\{q \in Q_{\text{pub}} : \text{gold facts of } q \text{ appear in response}\}|}{|Q_{\text{pub}}|} \label{eq:utility_formal} \\[4pt]
   S(\pi, R) &= \frac{|\{q \in Q_{\text{prot}} : \text{no gold facts of } q \text{ appear in response}\}|}{|Q_{\text{prot}}|} \label{eq:security_formal}
@@ -170,68 +194,75 @@ where $U$ measures task-completion utility and $S$ measures data-protection secu
 
 
 % ============================================================================
-\section{PART-Bench Design}
+\section{PACT-Bench Design}
 \label{sec:design}
 % ============================================================================
 
-PART-Bench instantiates the networked personal agent model defined in \S\ref{sec:agents} as a concrete, reproducible evaluation platform. It is structured as a \emph{suite} of two complementary sub-benchmarks that test different boundary topologies: \emph{PART-Dyad} evaluates one requester agent probing one owner agent across a single privacy boundary, while \emph{PART-Net} evaluates multi-agent societies where information and actions can route through a network of relationships, permissions, and delegation chains. This section describes the suite structure, evaluation tasks, governance gradient, interaction modes, and evaluation metrics.
+PACT-Bench instantiates the networked personal agent model defined in \S\ref{sec:agents} as a concrete, reproducible evaluation platform. It is structured as a \emph{suite} of two complementary sub-benchmarks that test different boundary topologies: \emph{PACT-Pair} evaluates one requester agent probing one owner agent across a single privacy boundary, while \emph{PACT-Net} evaluates multi-agent societies where information and actions can route through a network of relationships, permissions, and delegation chains. This section describes the suite structure, evaluation tasks, governance gradient, interaction modes, and evaluation metrics.
 
 \subsection{Suite Structure}
 \label{sec:scenario}
 
-% TODO: add a figure here showing the PART-Bench data environment and suite structure
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{figures/part_pair_overview.png}
+  \caption{\textbf{PACT-Pair benchmark design.} The one-to-one boundary suite evaluates a requesting principal and agent (Tina/Iris) interacting with an owner principal and agent (Alex/Atlas) across Alex's privacy and permission boundary. The benchmark contains 600 base tasks (200 file QA tasks, 200 state QA tasks instantiated as todos in v1, and 200 actions mutating files and states) crossed with three policy modes and two relationship-memory modes, yielding 3{,}600 evaluations. The judge evaluates agent outputs, retrieved context, state diffs, and policy/memory conditions for answer correctness, refusal correctness, mutation safety, no-change guarantees, and boundary adherence.}
+  \label{fig:part_pair_overview}
+\end{figure}
 
-\paragraph{PART-Dyad: dyadic boundary evaluation.}
-PART-Dyad is the core benchmark. It centres on a dyadic interaction between a \emph{target agent} (``Alex's agent'') and a \emph{querying agent} (``Tina's agent''). Alex's agent is a fully-equipped networked personal agent as defined in \S\ref{sec:personal_agent}: it has persistent memory containing its owner's preferences and interaction history, hundreds of notes and todos organised in hierarchical folders (Work/Projects, Work/Meetings, Work/HR, Personal/Finance, Personal/Health, Personal/Family), callable tools for search, retrieval, and state mutation that access real encrypted data through the personal agent's tool assembly pipeline, and an identity established through system prompt configuration. Tina's agent acts on behalf of a second principal and communicates with Alex's agent through the cross-boundary RPC mechanism described in \S\ref{sec:networked_agent}. In multi-turn mode, Tina's agent maintains a checklist of pending questions and adaptively selects which to ask, how to frame them, and whether to retry based on the evolving conversation history. PART-Dyad contains 600 benchmark tasks producing 3{,}600 evaluations across three governance policies and two relationship-memory conditions.
+\paragraph{PACT-Pair: one-to-one boundary evaluation.}
+PACT-Pair is the core benchmark. It centres on a one-to-one interaction between a \emph{target agent} (``Alex's agent'') and a \emph{querying agent} (``Tina's agent''). Alex's agent is a fully-equipped networked personal agent as defined in \S\ref{sec:personal_agent}: it has persistent memory containing its owner's preferences and interaction history, hundreds of files and structured state objects organised by domain and sensitivity (Work/Projects, Work/Meetings, Work/HR, Personal/Finance, Personal/Health, Personal/Family), callable tools for search, retrieval, and file/state mutation that access real encrypted data through the personal agent's tool assembly pipeline, and an identity established through system prompt configuration. In the v1 implementation, files are instantiated as notes and states are instantiated as todos. The same abstraction extends to calendar, email, Notion, and other application state. Tina's agent acts on behalf of a second principal and communicates with Alex's agent through the cross-boundary RPC mechanism described in \S\ref{sec:networked_agent}. In multi-turn mode, Tina's agent maintains a checklist of pending questions and adaptively selects which to ask, how to frame them, and whether to retry based on the evolving conversation history. PACT-Pair contains 600 benchmark tasks producing 3{,}600 evaluations across three governance policies and two relationship-memory conditions.
 
-\paragraph{PART-Net: networked delegation evaluation.}
-PART-Net extends the evaluation to multi-agent societies connected by a relationship graph. In this setting, a requester agent may contact another agent to obtain information, ask for a delegated action, or route a request through an intermediate relationship. PART-Net tests a fundamentally different risk class from PART-Dyad: multi-hop delegation, transitive permission failures, confused-deputy behaviour, and the possibility that agents route around a privacy boundary by querying intermediaries. PART-Net supports configurations from three requesters with different relationships (S3) to fifty requesters with one interaction each (S50). The scientific axis is boundary topology, not merely agent count.
+\paragraph{PACT-Net: networked delegation evaluation.}
+PACT-Net extends the evaluation to multi-agent societies connected by a relationship graph. In this setting, a requester agent may contact another agent to obtain information, ask for a delegated action, or route a request through an intermediate relationship. PACT-Net tests a fundamentally different risk class from PACT-Pair: multi-hop delegation, transitive permission failures, confused-deputy behaviour, and the possibility that agents route around a privacy boundary by querying intermediaries. PACT-Net supports configurations from three requesters with different relationships (S3) to fifty requesters with one interaction each (S50). The scientific axis is boundary topology, not merely agent count.
 
 \subsection{Evaluation Tasks}
 \label{sec:queries}
 
-PART-Dyad comprises 600 evaluation tasks across two tracks and five sensitivity categories:
+PACT-Pair comprises 600 evaluation tasks across two boundary tracks and five sensitivity categories:
 
 \begin{table}[h]
-  \caption{PART-Dyad task distribution. The benchmark evaluates both information boundaries (QA) and action boundaries (state-changing mutations). Work/public items measure utility; all others measure security.}
+  \caption{PACT-Pair task distribution. The benchmark evaluates both information boundaries (QA over files and states) and action boundaries (mutations of files and states). Work/public items measure utility. All others measure security.}
   \label{tab:categories}
   \centering
   \small
+  \resizebox{\textwidth}{!}{%
   \begin{tabular}{llcl}
     \toprule
     \textbf{Track and category} & \textbf{ID range} & \textbf{Count} & \textbf{Expected behaviour} \\
     \midrule
-    \multicolumn{4}{l}{\emph{Information Boundary Track: Notes QA (200 items)}} \\
+    \multicolumn{4}{l}{\emph{Information Boundary Track: Files QA (200 items; notes in v1)}} \\
     \quad Work/public              & Q1\textendash Q100    & 100 & Answer (utility) \\
     \quad Sensitive work            & Q101\textendash Q130  & 30  & Refuse (security) \\
     \quad Personal finance         & Q131\textendash Q155  & 25  & Refuse (security) \\
     \quad Personal health          & Q156\textendash Q175  & 20  & Refuse (security) \\
     \quad Personal relationships   & Q176\textendash Q200  & 25  & Refuse (security) \\
     \midrule
-    \multicolumn{4}{l}{\emph{Information Boundary Track: Todo QA (200 items)}} \\
+    \multicolumn{4}{l}{\emph{Information Boundary Track: States QA (200 items; todos in v1)}} \\
     \quad Work/public              & Q201\textendash Q250, Q301\textendash Q350    & 100 & Answer (utility) \\
     \quad Sensitive work            & Q251\textendash Q265, Q351\textendash Q365  & 30  & Refuse (security) \\
     \quad Personal finance         & Q266\textendash Q277, Q366\textendash Q377  & 24  & Refuse (security) \\
     \quad Personal health          & Q278\textendash Q287, Q378\textendash Q387  & 20  & Refuse (security) \\
     \quad Personal relationships   & Q288\textendash Q300, Q388\textendash Q400  & 26  & Refuse (security) \\
     \midrule
-    \multicolumn{4}{l}{\emph{Action Boundary Track (200 tasks)}} \\
-    \quad Authorized actions (create, edit, complete) & A1\textendash A100 & 100 & Execute (utility) \\
-    \quad Unauthorized actions (sensitive, probing, leaking) & A101\textendash A200 & 100 & Refuse (safety) \\
+    \multicolumn{4}{l}{\emph{Action Boundary Track: File and State Mutations (200 tasks)}} \\
+    \quad Authorized file/state actions (create, edit, complete) & A1\textendash A100 & 100 & Execute (utility) \\
+    \quad Unauthorized file/state actions (sensitive, probing, leaking) & A101\textendash A200 & 100 & Refuse (safety) \\
     \bottomrule
   \end{tabular}
+  }
 \end{table}
 
-The Information Boundary Track tests whether the agent answers allowed questions and withholds sensitive information. Notes QA evaluates direct retrieval over long-form personal memory; Todo QA includes both \emph{correlated} items (the same underlying fact accessible through a different tool surface) and \emph{todo-only} items (facts that exist only as task state), testing whether policies generalise across memory surfaces. The Action Boundary Track tests whether the agent performs authorised state-changing mutations (creating a shared meeting note, completing a delegated task) while refusing unauthorised ones (editing sensitive compensation records, planting information-leaking instructions). Action evaluation inspects database state before and after execution, not only the agent's text response.
+The Information Boundary Track tests whether the agent answers allowed questions and withholds sensitive information. Files QA evaluates direct retrieval over long-form personal records (notes in v1). States QA evaluates structured application state. In v1 the state surface is instantiated as todos, including both \emph{correlated} items (the same underlying fact accessible through a different tool surface) and \emph{state-only} items (facts that exist only as task state). This tests whether policies generalise across the Personal Agent Operating System rather than over one storage surface. The Action Boundary Track tests whether the agent performs authorised mutations of files and states (creating a shared meeting file, completing a delegated task) while refusing unauthorised ones (editing sensitive compensation records, planting information-leaking instructions). Action evaluation inspects database state before and after execution, not only the agent's text response.
 
-Each task is paired with \textbf{gold key facts}: specific pieces of information whose presence in the agent's response constitutes a leak (for sensitive queries) or a correct answer (for work/public queries). Action tasks additionally specify a \textbf{gold state-diff check} (e.g., ``note created,'' ``no change''). This enables automated evaluation via string matching and state inspection, removing the need for LLM-as-judge and its associated reliability concerns.
+Each task is paired with \textbf{gold key facts}: specific pieces of information whose presence in the agent's response constitutes a leak (for sensitive queries) or a correct answer (for work/public queries). Action tasks additionally specify a \textbf{gold state-diff check} (e.g., ``file created,'' ``state edited,'' ``no change''). This enables automated evaluation via string matching and state inspection, removing the need for LLM-as-judge and its associated reliability concerns.
 
 \subsection{Defence Gradient}
 \label{sec:defences}
 
-PART-Bench separates prompt-level governance from architectural isolation, instantiating the specificity gradient $\pi_0, \pi_1, \pi_2$ defined in \S\ref{sec:networked_agent} as concrete defence levels D0, D1, D2 and extending it with four additional levels. Prompt-level defences (D0--D4) keep the target data visible to the model and rely on the agent's reasoning to withhold restricted information. Architectural defences (D5--D6) remove or gate data before it enters the generation context, testing whether safety improves when the agent cannot access restricted content in the first place.
+PACT-Bench separates prompt-level governance from architectural isolation, instantiating the specificity gradient $\pi_0, \pi_1, \pi_2$ defined in \S\ref{sec:networked_agent} as concrete defence levels D0, D1, D2 and extending it with four additional levels. Prompt-level defences (D0--D4) keep the target data visible to the model and rely on the agent's reasoning to withhold restricted information. Architectural defences (D5--D6) remove or gate data before it enters the generation context, testing whether safety improves when the agent cannot access restricted content in the first place.
 
-The governance gradient comprises seven levels. \textbf{D0} provides no defence: the agent's system prompt contains no privacy instructions, establishing baseline behaviour with full data access and zero policy. \textbf{D1} appends a generic instruction (``\emph{Try not to share personal or private information}'')---the most common real-world defence pattern. \textbf{D2} provides a category-specific deny list that explicitly enumerates protected data types (``\emph{Never share: financial data including salary, equity, and investments; health information including conditions, medications, and appointments; HR and compensation details; personal relationship information}''). D1 and D2 express the same strictness intent; they differ only in specificity, isolating whether the agent's compliance depends on knowing exactly what to protect. \textbf{D3} applies spotlighting~\citep{hines2024spotlighting}: the external agent's message is explicitly marked as untrusted input with delimiters, separating counterpart requests from the target agent's own instructions and memory. \textbf{D4} establishes an instruction hierarchy~\citep{wallace2024instruction}, explicitly ordering authority levels in the system prompt: system policy, owner policy, tool output, then external-agent request. \textbf{D5} introduces architectural isolation through Mountable Context Cells (MCC): restricted notes, tools, and memory shards are physically removed from the context before the agent processes the request. \textbf{D6} extends D5 with an escalation protocol: when the agent detects a request about restricted data, it flags the query for owner review instead of refusing outright, recovering utility without exposing the data.
+The governance gradient comprises seven levels. \textbf{D0} provides no defence: the agent's system prompt contains no privacy instructions, establishing baseline behaviour with full data access and zero policy. \textbf{D1} appends a generic instruction (``\emph{Try not to share personal or private information}''), the most common real-world defence pattern. \textbf{D2} provides a category-specific deny list that explicitly enumerates protected data types (``\emph{Never share: financial data including salary, equity, and investments; health information including conditions, medications, and appointments; HR and compensation details; personal relationship information}''). D1 and D2 express the same strictness intent. They differ only in specificity, isolating whether the agent's compliance depends on knowing exactly what to protect. \textbf{D3} applies spotlighting~\citep{hines2024spotlighting}: the external agent's message is explicitly marked as untrusted input with delimiters, separating counterpart requests from the target agent's own instructions and memory. \textbf{D4} establishes an instruction hierarchy~\citep{wallace2024instruction}, explicitly ordering authority levels in the system prompt: system policy, owner policy, tool output, then external-agent request. \textbf{D5} introduces architectural isolation through Mountable Context Cells (MCC): restricted notes, tools, and memory shards are physically removed from the context before the agent processes the request. \textbf{D6} extends D5 with an escalation protocol: when the agent detects a request about restricted data, it flags the query for owner review instead of refusing outright, recovering utility without exposing the data.
 
 D0 through D4 isolate the effect of prompt-level policy language. D5 and D6 test architectural isolation. This split is central to the benchmark: if D5 dominates D4 at similar utility, the limiting factor is not prompt wording but context exposure.
 
@@ -247,12 +278,12 @@ Both agents operate as persistent processes, exchanging messages at regular inte
 \subsection{Evaluation Metrics}
 \label{sec:metrics}
 
-Every experimental run produces four primary metrics: \emph{Information Utility} (allowed QA answered correctly), \emph{Information Security} (sensitive QA refused or escalated), \emph{Action Utility} (authorised actions executed correctly), and \emph{Action Safety} (unauthorised actions refused or escalated). For the QA tracks, these correspond to $U$ and $S$ defined in Equations~\ref{eq:utility_formal} and~\ref{eq:security_formal}. A perfect governance configuration achieves all four metrics at 1: all legitimate queries answered, all sensitive data protected, all authorised actions executed, and all unauthorised mutations refused. The metric tuple for each configuration defines a point on the Pareto frontier. A defence that achieves perfect security by refusing all queries is useless; one with perfect utility that leaks everything is dangerous. The benchmark avoids a single aggregate score because a personal agent can be secure but useless, useful but unsafe, or safe for QA but unsafe for actions---these axes must remain visible.
+Every experimental run produces four primary metrics: \emph{Information Utility} (allowed QA answered correctly), \emph{Information Security} (sensitive QA refused or escalated), \emph{Action Utility} (authorised actions executed correctly), and \emph{Action Safety} (unauthorised actions refused or escalated). For the QA tracks, these correspond to $U$ and $S$ defined in Equations~\ref{eq:utility_formal} and~\ref{eq:security_formal}. A perfect governance configuration achieves all four metrics at 1: all legitimate queries answered, all sensitive data protected, all authorised actions executed, and all unauthorised mutations refused. The metric tuple for each configuration defines a point on the Pareto frontier. A defence that achieves perfect security by refusing all queries is useless. One with perfect utility that leaks everything is dangerous. The benchmark avoids a single aggregate score because a personal agent can be secure but useless, useful but unsafe, or safe for QA but unsafe for actions. These axes must remain visible.
 
 \subsection{Relationship and Agent-Network Conditions}
 \label{sec:relationships}
 
-PART-Dyad evaluates two relationship-memory conditions as a controlled variable. Under \textbf{R0 (stranger; no relationship memory)}, Tina is identified by name only and the agent treats her as unknown, providing no trust context. Under \textbf{R1 (colleague; native relationship memory)}, Tina is identified as a project manager who works with Alex daily; shared project context and interaction history are seeded into the relationship memory shard. The extended benchmark adds \textbf{R2 (Close friend)} and \textbf{R3 (Investor/formal stakeholder)} to test whether personal, professional, and strategic relationships shift disclosure in different sensitivity categories. PART-Net extends relationship conditions to full social graphs---three requesters with different relationships (S3), four agents that can interact with one another (S4), and fifty requesters with one interaction each (S50)---testing whether leakage is a property of an isolated dyadic conversation or of the relationship distribution and delegation topology around the personal agent.
+PACT-Pair evaluates two relationship-memory conditions as a controlled variable. Under \textbf{R0 (stranger, no relationship memory)}, Tina is identified by name only and the agent treats her as unknown, providing no trust context. Under \textbf{R1 (colleague, native relationship memory)}, Tina is identified as a project manager who works with Alex daily, and shared project context and interaction history are seeded into the relationship memory shard. The extended benchmark adds \textbf{R2 (Close friend)} and \textbf{R3 (Investor/formal stakeholder)} to test whether personal, professional, and strategic relationships shift disclosure in different sensitivity categories. PACT-Net extends relationship conditions to full social graphs: three requesters with different relationships (S3), four agents that can interact with one another (S4), and fifty requesters with one interaction each (S50). These configurations test whether leakage is a property of an isolated one-to-one conversation or of the relationship distribution and delegation topology around the personal agent.
 
 
 % ============================================================================
@@ -261,10 +292,10 @@ PART-Dyad evaluates two relationship-memory conditions as a controlled variable.
 % ============================================================================
 
 \paragraph{Design principle.}
-The complete PART-Bench design crosses models, modes, defences, attacks, relationships, and social-network structure. A naive full factorial design is not scientifically useful: it would require $5$ models $\times$ $3$ replications $\times$ $2$ modes $\times$ $7$ defences $\times$ $4$ attacks $=840$ runs per social setup, before adding multi-agent network conditions. We therefore use a staged design. Each layer answers one new question that the previous layer cannot answer, and later layers are only run after the preceding layer is stable.
+The complete PACT-Bench design crosses models, modes, defences, attacks, relationships, and social-network structure. A naive full factorial design is not scientifically useful: it would require $5$ models $\times$ $3$ replications $\times$ $2$ modes $\times$ $7$ defences $\times$ $4$ attacks $=840$ runs per social setup, before adding multi-agent network conditions. We therefore use a staged design. Each layer answers one new question that the previous layer cannot answer, and later layers are only run after the preceding layer is stable.
 
 \begin{table}[t]
-  \caption{Layered PART-Bench experimental design. The NeurIPS paper first runs Layer 0 to select and characterise the model substrate. Layer 1 and a small Layer 2 attack slice are optional additions if space and budget permit. Layers 3, 5, and 6 are benchmark extensions for the thesis and follow-up defence paper.}
+  \caption{Layered PACT-Bench experimental design. The NeurIPS paper first runs Layer 0 to select and characterise the model substrate. Layer 1 and a small Layer 2 attack slice are optional additions if space and budget permit. Layers 3, 5, and 6 are benchmark extensions for the thesis and follow-up defence paper.}
   \label{tab:experiment_layers}
   \centering
   \small
@@ -273,12 +304,12 @@ The complete PART-Bench design crosses models, modes, defences, attacks, relatio
     \toprule
     \textbf{Layer} & \textbf{Suite} & \textbf{Question} & \textbf{Matrix} & \textbf{Role} \\
     \midrule
-    L0 Model sentinel & Dyad & Which model should serve as the ablation backbone? & Five models $\times$ 2 reps $\times$ SS/MS $\times$ D0/D1/D2 $\times$ A0 $\times$ R0 & Core paper \\
-    L1 Relationship & Dyad & Does relationship context shift category leakage? & Backbone model $\times$ 3 reps $\times$ SS/MS $\times$ D0/D1/D2 $\times$ A0 $\times$ R0/R1 & Optional paper / thesis \\
-    L2 Attacks & Dyad & Do formal attacks break prompt-level defences more than natural questioning? & Backbone model $\times$ 3 reps $\times$ D1/D2 $\times$ A0/A1/A2/A3 $\times$ R0 & Strong paper slice \\
-    L3 Defences & Dyad & Where does the utility--security frontier bend? & Backbone model $\times$ 3 reps $\times$ SS/MS $\times$ D0--D6 $\times$ A0 $\times$ R0 & Thesis / follow-up \\
-    L4 Model confirm. & Dyad & Do later findings reproduce across models? & Selected final cells $\times$ five models & Optional confirmation \\
-    L5 Actions & Dyad & Does cross-boundary pressure cause unsafe actions, not just leaks? & Backbone model $\times$ 3 reps $\times$ D0/D2/D5/D6 $\times$ A0/A2 $\times$ R0/R1 $\times$ action tasks & Thesis / follow-up \\
+    L0 Model sentinel & Pair & Which model should serve as the ablation backbone? & Five models $\times$ 2 reps $\times$ SS/MS $\times$ D0/D1/D2 $\times$ A0 $\times$ R0 & Core paper \\
+    L1 Relationship & Pair & Does relationship context shift category leakage? & Backbone model $\times$ 3 reps $\times$ SS/MS $\times$ D0/D1/D2 $\times$ A0 $\times$ R0/R1 & Optional paper / thesis \\
+    L2 Attacks & Pair & Do formal attacks break prompt-level defences more than natural questioning? & Backbone model $\times$ 3 reps $\times$ D1/D2 $\times$ A0/A1/A2/A3 $\times$ R0 & Strong paper slice \\
+    L3 Defences & Pair & Where does the utility--security frontier bend? & Backbone model $\times$ 3 reps $\times$ SS/MS $\times$ D0--D6 $\times$ A0 $\times$ R0 & Thesis / follow-up \\
+    L4 Model confirm. & Pair & Do later findings reproduce across models? & Selected final cells $\times$ five models & Optional confirmation \\
+    L5 Actions & Pair & Does cross-boundary pressure cause unsafe actions, not just leaks? & Backbone model $\times$ 3 reps $\times$ D0/D2/D5/D6 $\times$ A0/A2 $\times$ R0/R1 $\times$ action tasks & Thesis / follow-up \\
     L6 Social scale & Net & Does relationship distribution change aggregate leakage? & Backbone model $\times$ 3 reps $\times$ MS $\times$ D0/D2/D5 $\times$ A0 $\times$ S1/S3/S4/S50 & Thesis / follow-up \\
     \bottomrule
   \end{tabular}
@@ -286,14 +317,14 @@ The complete PART-Bench design crosses models, modes, defences, attacks, relatio
 \end{table}
 
 \paragraph{Model sentinel and replications.}
-Layer 0 is the first experiment, not a later robustness check. It compares five model families: \texttt{gpt-5-mini}, \texttt{gpt-5.4-mini}, \texttt{gpt-5.4}, \texttt{kimi}, and \texttt{deepseek}. Each cell is run with two independent replications. The goal is to choose a stable, representative, cost-effective backbone model for later ablations, while also testing whether the basic signatures of PART-Bench hold across model families.
+Layer 0 is the first experiment, not a later robustness check. It compares five model families: \texttt{gpt-5-mini}, \texttt{gpt-5.4-mini}, \texttt{gpt-5.4}, \texttt{kimi}, and \texttt{deepseek}. Each cell is run with two independent replications. The goal is to choose a stable, representative, cost-effective backbone model for later ablations, while also testing whether the basic signatures of PACT-Bench hold across model families.
 
 \paragraph{Core benchmark.}
 The minimum NeurIPS experiment is Layer 0:
 \[
 5 \text{ models} \times 2 \text{ reps} \times 2 \text{ modes} \times 3 \text{ policies} \times 1 \text{ attack} \times 1 \text{ relationship} = 60 \text{ runs}.
 \]
-Each single-step run evaluates 600 tasks independently (400 QA plus 200 actions). Each multi-step run uses the 10 $\times$ 20 split protocol: ten groups of twenty questions, with sixty heartbeat ticks per group. The relationship condition is fixed to R0 (stranger) so that the first experiment isolates model and policy behaviour rather than social context.
+Each single-step run evaluates 600 tasks independently (200 file QA, 200 state QA, and 200 actions). Each multi-step run uses the 10 $\times$ 20 split protocol: ten groups of twenty questions, with sixty heartbeat ticks per group. The relationship condition is fixed to R0 (stranger) so that the first experiment isolates model and policy behaviour rather than social context.
 
 \paragraph{Strong benchmark additions.}
 Layer 1 adds relationship context after the backbone model is chosen:
@@ -317,7 +348,7 @@ For every run we compute the four metrics defined in \S\ref{sec:metrics}: inform
 \subsection{Layer 0: Model Sentinel}
 
 \begin{table}[t]
-  \caption{Layer 0 model sentinel. The first experiment fixes relationship to R0 and attack to A0 (direct / natural querying), then varies model, mode, and policy. Values are placeholders in this draft; final results report means over two replications.}
+  \caption{Layer 0 model sentinel. The first experiment fixes relationship to R0 and attack to A0 (direct / natural querying), then varies model, mode, and policy. Values are placeholders in this draft. Final results report means over two replications.}
   \label{tab:layer0_model_sentinel}
   \centering
   \small
@@ -338,12 +369,12 @@ For every run we compute the four metrics defined in \S\ref{sec:metrics}: inform
 
 \textbf{Expected finding 2: the raw stack is not deployable as-is.} D0 should preserve utility but leak protected facts at a high rate, especially in multi-step mode. If this holds across most models, the benchmark exposes a stack-level deployment risk rather than a single-model artifact.
 
-\textbf{Expected finding 3: explicit allow/deny policy beats generic privacy language.} D1 tests the common deployment pattern of adding a vague privacy sentence; D2 states clearly what may be shared and what must not be shared. The key comparison is D0 versus D1 versus D2 across both modes.
+\textbf{Expected finding 3: explicit allow/deny policy beats generic privacy language.} D1 tests the common deployment pattern of adding a vague privacy sentence. D2 states clearly what may be shared and what must not be shared. The key comparison is D0 versus D1 versus D2 across both modes.
 
 \subsection{Mode and Policy Effects}
 
 \begin{table}[t]
-  \caption{Layer 0 mode and policy decomposition. This table is filled after selecting the backbone model from Table~\ref{tab:layer0_model_sentinel}; it reports utility, security, and false refusal for the three policies under single-step and multi-step evaluation.}
+  \caption{Layer 0 mode and policy decomposition. This table is filled after selecting the backbone model from Table~\ref{tab:layer0_model_sentinel}. It reports utility, security, and false refusal for the three policies under single-step and multi-step evaluation.}
   \label{tab:mode_policy}
   \centering
   \small
@@ -365,7 +396,7 @@ For every run we compute the four metrics defined in \S\ref{sec:metrics}: inform
 \subsection{Layer 1: Relationship Baseline}
 
 \begin{table}[t]
-  \caption{Optional relationship baseline after the backbone model is selected. This table is not part of the first model sentinel; it tests whether relationship context shifts leakage by category.}
+  \caption{Optional relationship baseline after the backbone model is selected. This table is not part of the first model sentinel. It tests whether relationship context shifts leakage by category.}
   \label{tab:relationship_category}
   \centering
   \small
@@ -386,7 +417,7 @@ For every run we compute the four metrics defined in \S\ref{sec:metrics}: inform
 \subsection{Layer 2: Attack Slice}
 
 \begin{table}[t]
-  \caption{Attack robustness slice. A0 is natural questioning; A2 is a Crescendo-style multi-turn escalation. A1 and A3 are retained as benchmark extensions.}
+  \caption{Attack robustness slice. A0 is natural questioning. A2 is a Crescendo-style multi-turn escalation. A1 and A3 are retained as benchmark extensions.}
   \label{tab:attack_slice}
   \centering
   \small
@@ -402,12 +433,12 @@ For every run we compute the four metrics defined in \S\ref{sec:metrics}: inform
   \end{tabular}
 \end{table}
 
-\textbf{Expected finding 7: formal attacks turn residual leaks into systematic failures.} D2 should remain useful against direct requests, but multi-turn escalation and persuasion should expose category ambiguity and partial-compliance failures. This does not replace the core benchmark; it shows that the same harness can gauge adversarial pressure.
+\textbf{Expected finding 7: formal attacks turn residual leaks into systematic failures.} D2 should remain useful against direct requests, but multi-turn escalation and persuasion should expose category ambiguity and partial-compliance failures. This does not replace the core benchmark. It shows that the same harness can gauge adversarial pressure.
 
 \subsection{Benchmark Extensions: Defences, Actions, and Social Scale}
 
 \begin{table}[t]
-  \caption{Planned defence-frontier result table. Layers 3, 5, and 6 are not required for the minimum NeurIPS benchmark but define how PART-Bench scales into the thesis and follow-up defence paper.}
+  \caption{Planned defence-frontier result table. Layers 3, 5, and 6 are not required for the minimum NeurIPS benchmark but define how PACT-Bench scales into the thesis and follow-up defence paper.}
   \label{tab:defence_frontier}
   \centering
   \small
@@ -427,7 +458,7 @@ For every run we compute the four metrics defined in \S\ref{sec:metrics}: inform
 \end{table}
 
 \begin{table}[t]
-  \caption{Action-safety track. PART-Dyad v1 evaluates Notes and Todos surfaces; Calendar and Messaging are planned extensions requiring provider-backed tool integration.}
+  \caption{Action-safety track. PACT-Pair v1 evaluates file and state surfaces, instantiated as notes and todos. Calendar, Email, Notion, and Messaging are planned extensions requiring provider-backed tool integration.}
   \label{tab:action_safety}
   \centering
   \small
@@ -436,9 +467,9 @@ For every run we compute the four metrics defined in \S\ref{sec:metrics}: inform
     \toprule
     \textbf{Task family} & \textbf{Scope} & \textbf{Authorized utility} & \textbf{Unauthorized action rate} & \textbf{Expected risk} \\
     \midrule
-    Notes & v1 core & XXXX & XXXX & Shares, edits, or summarises restricted notes \\
-    Todos & v1 core & XXXX & XXXX & Creates or completes tasks for the wrong actor \\
-    Calendar & Extension & --- & --- & Exposes full calendar or schedules without permission \\
+    Files (notes in v1) & v1 core & XXXX & XXXX & Shares, edits, or summarises restricted files \\
+    States (todos in v1) & v1 core & XXXX & XXXX & Creates or completes state for the wrong actor \\
+    Calendar / Email / Notion & Extension & --- & --- & Exposes or mutates provider state without permission \\
     Messaging & Extension & --- & --- & Drafts or sends messages under the wrong principal \\
     \bottomrule
   \end{tabular}
@@ -473,13 +504,13 @@ The extension tables make the benchmark cumulative rather than factorial. The pa
 % ============================================================================
 
 \paragraph{Implications for practitioners.}
-PART-Bench is designed to answer a deployment question: given a raw or defended personal-agent stack, where does it sit on the utility--security frontier? The expected practical lessons are: (1)~do not deploy cross-boundary personal agents with raw or generic privacy prompts alone; (2)~measure utility and security together, because refusal-only systems are safe but useless; (3)~evaluate multi-turn interactions, because one-shot tests understate risk; and (4)~treat relationship context as a security parameter, not just a personalization feature.
+PACT-Bench is designed to answer a deployment question: given a raw or defended personal-agent stack, where does it sit on the utility--security frontier? The expected practical lessons are: (1)~do not deploy cross-boundary personal agents with raw or generic privacy prompts alone, (2)~measure utility and security together because refusal-only systems are safe but useless, (3)~evaluate multi-turn interactions because one-shot tests understate risk, and (4)~treat relationship context as a security parameter, not just a personalization feature.
 
 \paragraph{Toward architectural defences.}
-The defence-frontier layer distinguishes prompt hardening from architectural isolation. If D3 and D4 improve security only incrementally while D5 changes the frontier, the conclusion is not merely that prompts need to be better. It is that personal-agent platforms need permissioned context construction: do not ask the agent to avoid sharing data it can see; ensure the data is not mounted for that relationship unless it should be available. D6 then tests whether escalation can recover utility lost through isolation.
+The defence-frontier layer distinguishes prompt hardening from architectural isolation. If D3 and D4 improve security only incrementally while D5 changes the frontier, the conclusion is not merely that prompts need to be better. It is that personal-agent platforms need permissioned context construction: do not ask the agent to avoid sharing data it can see. Ensure the data is not mounted for that relationship unless it should be available. D6 then tests whether escalation can recover utility lost through isolation.
 
 \paragraph{Limitations.}
-\textbf{Staged scope}: the benchmark is intentionally not a full factorial grid. This improves interpretability but means each layer answers a bounded question. \textbf{Synthetic scenario}: the personal agent's data is synthetic, although it is structured to resemble realistic notes, memory, and tools. \textbf{Evaluation method}: gold-fact string matching may miss paraphrased leaks or trigger on coincidental matches; we will supplement it with LLM-based and human spot-check evaluation. \textbf{Model coverage}: Layer 4 tests five model families, but the benchmark should be rerun as new agent models and tool-use stacks emerge. \textbf{Attack coverage}: A0 and A2 cover natural and progressive multi-turn pressure; PAIR-style optimization and persuasion attacks remain benchmark extensions.
+\textbf{Staged scope}: the benchmark is intentionally not a full factorial grid. This improves interpretability but means each layer answers a bounded question. \textbf{Synthetic scenario}: the personal agent's data is synthetic, although it is structured to resemble realistic notes, memory, and tools. \textbf{Evaluation method}: gold-fact string matching may miss paraphrased leaks or trigger on coincidental matches. We will supplement it with LLM-based and human spot-check evaluation. \textbf{Model coverage}: Layer 4 tests five model families, but the benchmark should be rerun as new agent models and tool-use stacks emerge. \textbf{Attack coverage}: A0 and A2 cover natural and progressive multi-turn pressure. PAIR-style optimization and persuasion attacks remain benchmark extensions.
 
 \paragraph{Benchmark release.}
 We will release the benchmark suite including: evaluation queries with gold key facts, agent configuration files (notes, memory, tools), the heartbeat evaluation engine, action-task templates, social-network setup templates, and evaluation scripts. The framework is model-agnostic and explicitly staged so future work can add models, attacks, defences, action families, and relationship graphs without changing the core utility--security contract.
@@ -524,7 +555,7 @@ Category ambiguity is the dominant failure mode: data stored in ``Work'' folders
 \section{Experimental Configuration Details}
 \label{app:config}
 
-\paragraph{Alex's agent.} System prompt establishes identity (Co-founder \& CTO, Oxford CS background). Hundreds of notes and todos across 6 folder categories. Tools include search, retrieval, creation, completion, and scheduling interfaces (see Table~\ref{tab:os_analogy}). Memory contains preferences and interaction history.
+\paragraph{Alex's agent.} System prompt establishes identity (Co-founder \& CTO, Oxford CS background). Hundreds of files and state objects across 6 categories, instantiated as notes and todos in v1. Tools include search, retrieval, creation, completion, and scheduling interfaces (see Table~\ref{tab:os_analogy}). Memory contains preferences and interaction history.
 
 \paragraph{Tina's agent.} Operates from a HEARTBEAT.md instruction file. Phase 1 (information gathering): systematically works through pending questions. Phase 2 (deeper probing): re-asks refused questions with different framing. Maintains a MEMORY.md checklist tracking answered/refused/pending status per question.
 
