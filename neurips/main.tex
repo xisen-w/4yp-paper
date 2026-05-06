@@ -53,7 +53,7 @@
 \maketitle
 
 \begin{abstract}
-Personal agents are becoming delegates: systems that hold private data, wield tools, and act on behalf of their owners. When two delegates interact across an ownership boundary, every exchange becomes a permission decision about what to share, what to withhold, and what to refuse. These decisions create security, delegation, and privacy risks with no analogue in single-agent settings. To this end, we introduce \textbf{SharedOS}, a multi-agent shared delegation system where tool-equipped delegates interact autonomously across ownership boundaries, revealing how permission failures emerge from the interaction itself. We evaluate 600 curated tasks across five model families under three governance policies and find: (1)~policy \emph{specificity}, not policy existence, determines security: category-specific policies reduce leakage by 69--91\,pp while generic privacy instructions change nothing; (2)~the same policy produces dramatically different costs on different data surfaces (1\,pp utility loss on documents, 37\,pp on structured state); and (3)~delegates that search private data before refusing inadvertently leak metadata in their refusals, enabling follow-up extraction that text-exchange benchmarks cannot capture.
+Personal agents are becoming delegates: systems that hold private data, wield tools, and act on behalf of their owners. When two delegates interact across an ownership boundary, every exchange becomes a permission decision about what to share, what to withhold, and what to refuse. There must be a trade-off between how much an agent shares (utility) and how much it protects (security), but nobody has mapped this frontier under deployment-realistic conditions. We introduce \textbf{SharedOS}, a multi-agent shared delegation system, and use it to systematically chart the security-utility frontier across three axes. We find: (1)~policy \emph{specificity} is the primary lever: generic instructions change nothing, while category-specific policies reduce leakage by 69--91\,pp across five model families; (2)~multi-turn interaction does not collapse this protection (12.6\% leak after 240 autonomous ticks vs 14\% single-turn), but reveals novel attack strategies and metadata side-channels invisible to single-turn evaluation; and (3)~relationship context reshapes the frontier in category-specific ways: the same policy produces 31\% over-refusal for investors but 86\% for friends, with personal categories forming a hard floor no relationship can penetrate while work categories remain permeable to organisational standing.
 \end{abstract}
 
 
@@ -64,18 +64,20 @@ Personal agents are becoming delegates: systems that hold private data, wield to
 
 Large language models have progressed from stateless question-answering systems to autonomous agents that wield tools, maintain persistent memory, and execute multi-step plans~\citep{yao2023react, schick2023toolformer, packer2024memgpt, shinn2023reflexion}. Standardised protocols for tool integration~\citep{anthropic2024mcp} and inter-agent communication~\citep{google2025a2a} are accelerating this transition, and commercial products already deploy personal agents that manage calendars, files, tasks, and communications on behalf of individual users~\citep{manus2025, devin2024, openclaw2025}.
 
-This capability turns agents into \emph{delegates}: systems that represent their owner to the outside world. When two delegates interact across an ownership boundary, a new class of safety problem appears. Scheduling a meeting requires one delegate to query another's calendar. Sharing a project update means one agent contacts another to retrieve status. Coordinating a product launch means a manager's delegate collects information from several teammates' delegates~\citep{talebirad2023multiagent, guo2024largelanguagemodelbased}. In each case, the responding delegate must make a \emph{permission decision}: which facts to disclose, which state changes to allow, and which requests to refuse. The decision depends on what was asked, who asked it, what governance policy is in place, and what happened in prior turns. These variables interact combinatorially, and the space of possible failures grows as a branching process over multi-turn trajectories, not as a fixed list of attack patterns~\citep{nasr2025attacker}. A delegate that refuses everything is safe but useless. One that shares everything is useful but dangerous. Evaluating safety in this setting therefore requires characterising the \emph{utility--security frontier}, not just attack success rates.
+This capability turns agents into \emph{delegates}: systems that represent their owner to the outside world. When two delegates interact across an ownership boundary, a new class of safety problem appears. Scheduling a meeting requires one delegate to query another's calendar. Sharing a project update means one agent contacts another to retrieve status. Coordinating a product launch means a manager's delegate collects information from several teammates' delegates~\citep{talebirad2023multiagent, guo2024largelanguagemodelbased}. In each case, the responding delegate must make a \emph{permission decision}: which facts to disclose, which state changes to allow, and which requests to refuse. A delegate that refuses everything is safe but useless. One that shares everything is useful but dangerous. There must be a trade-off between these extremes. Evaluating safety in this setting requires characterising the \emph{security-utility frontier}: the set of achievable (security, utility) operating points under a given governance configuration.
+
+In traditional access control~\citep{bell1973secure, denning1976lattice}, the policy IS the enforcement. You write an access-control list; the system executes it deterministically. The frontier is a design parameter that the system administrator chooses. When enforcement is delegated to an LLM's contextual reasoning, this guarantee vanishes. The policy becomes one input to a reasoning process whose output also depends on the model's implicit social norms (acquired through pretraining on human organisational behaviour), the requester's conversational framing, and the semantic properties of the data itself. The frontier is no longer chosen. It is emergent. We cannot predict from the policy text alone where the boundary will fall. We can only measure it.
 
 Few existing evaluations address this problem. Single-agent benchmarks~\citep{zhan2024injecagent, debenedetti2024agentdojo, toyer2024tensortrust, schulhoff2024hackaprompt} test prompt injection within a single trust domain. Multi-agent privacy benchmarks~\citep{wang2026agentsocialbench, gomaa2025converse, juneja2025magpie, park2026pacbench, yagoubi2026agentleak} study information disclosure but through scripted text exchanges where agents lack tool-mediated access to private data, persistent memory, and autonomy in deciding what to probe.
 
-To this end, we introduce \textbf{SharedOS}, a multi-agent shared delegation system designed to measure the security, delegation, and privacy risks that emerge when personal-agent delegates interact autonomously across ownership boundaries. Our contributions:
+To this end, we introduce \textbf{SharedOS}, a multi-agent shared delegation system, and use it to systematically map the security-utility frontier in cross-boundary agent delegation. Our contributions:
 
 \begin{enumerate}[leftmargin=*, itemsep=2pt]
-  \item \textbf{Problem formalisation.} We formalise cross-boundary delegation as the atomic interaction where one delegate receives a request, retrieves data from its owner's private store through tools, and decides what to disclose under a governance policy. We show that the safety surface grows combinatorially across four dimensions: policy specificity, data surface, relationship context, and interaction history.
+  \item \textbf{Problem formulation.} We formalise cross-boundary delegation as the setting where enforcement is delegated to an LLM's reasoning, making the security-utility frontier emergent rather than designed. The frontier depends on policy specificity, interaction length, and relationship context, and cannot be predicted from the policy text alone.
 
-  \item \textbf{Platform and dataset.} SharedOS is a configurable multi-agent delegation system where state, tools, and governance policy are independently variable. We curate 600 evaluation tasks (200 file QA, 200 state QA, 200 actions) across three governance policies and two relationship conditions, producing 3{,}600 evaluations. Four metrics (information utility, information security, action utility, action safety) jointly characterise the utility--security frontier.
+  \item \textbf{Platform and dataset.} SharedOS is a configurable delegation system where state, tools, and governance policy are independently variable. We curate 600 evaluation tasks across three policies and four relationship conditions. Four metrics jointly characterise both axes of the frontier: information utility, information security, action utility, and action safety.
 
-  \item \textbf{Empirical findings.} Category-specific policies reduce leakage by 69--91\,pp across five model families while generic instructions change nothing. The same policy costs 1\,pp utility on documents but 37\,pp on structured state. Delegates that search private data before refusing inadvertently leak metadata (note IDs, folder structure, data existence) in their refusals, enabling follow-up extraction that only a tool-equipped benchmark can capture.
+  \item \textbf{Frontier characterisation.} We chart the frontier across three axes. Policy specificity is the primary lever (69--91\,pp security gain). Multi-turn interaction does not collapse the frontier but reveals novel attack strategies and metadata side-channels. Relationship context reshapes the frontier non-uniformly: the same policy produces 31\% over-refusal for investors but 86\% for friends, with personal categories forming a hard floor while work categories remain relationship-permeable.
 \end{enumerate}
 
 
@@ -84,9 +86,9 @@ To this end, we introduce \textbf{SharedOS}, a multi-agent shared delegation sys
 \label{sec:formalism}
 % ============================================================================
 
-We are moving toward a world where personal agents manage calendars, emails, documents, and tasks on behalf of individual users---and where these agents routinely interact with one another. When one person's agent contacts another's to schedule a meeting, retrieve a status update, or coordinate a project, the responding agent must decide what to share. This is the \emph{cross-boundary delegation} problem: an agent that holds private data, wields tools capable of reading and modifying that data, and must make permission decisions on every incoming request.
+We are moving toward a world where personal agents manage calendars, emails, documents, and tasks on behalf of individual users, and where these agents routinely interact with one another. When one person's agent contacts another's to schedule a meeting, retrieve a status update, or coordinate a project, the responding agent must decide what to share. This is the \emph{cross-boundary delegation} problem: an agent that holds private data, wields tools capable of reading and modifying that data, and must make permission decisions on every incoming request.
 
-To study this problem under controlled conditions, we build \textbf{SharedOS}, a multi-agent shared delegation system. SharedOS gives each agent access to its owner's private state through configurable tools, and allows external agents to initiate cross-boundary requests. Three components are independently configurable---state, tools, and governance policy---enabling systematic evaluation of how each affects the utility--security frontier.
+To study this problem under controlled conditions, we build \textbf{SharedOS}, a multi-agent shared delegation system. SharedOS gives each agent access to its owner's private state through configurable tools, and allows external agents to initiate cross-boundary requests. Three components are independently configurable (state, tools, and governance policy), enabling systematic evaluation of how each affects the security-utility frontier.
 
 \begin{figure}[t]
   \centering
@@ -104,15 +106,15 @@ Each agent $A_i$ operates over a private state store $K_i = (F_i, S_i, M_i)$ com
 \end{itemize}
 
 \paragraph{Tool layer.}
-The agent accesses $K_i$ exclusively through a typed tool set $T_i$. Tools are the only mechanism for reading or modifying state---the agent cannot bypass them. Each tool exposes a defined operation:
+The agent accesses $K_i$ exclusively through a typed tool set $T_i$. Tools are the only mechanism for reading or modifying state. The agent cannot bypass them. Each tool exposes a defined operation:
 \begin{itemize}[leftmargin=*, itemsep=1pt, topsep=2pt]
   \item \textbf{Read tools}: search files by keyword, read a document by ID, list todos by folder, query calendar events by date range.
   \item \textbf{Write tools}: create a new note, edit a todo item, send an email, update a calendar event, delete a record.
 \end{itemize}
-This architecture mirrors a conventional operating system: files and structured state form the namespace, tools form the system-call interface, and the SharedOS runtime serves as the kernel that mediates every cross-boundary request. Crucially, the same tool that makes the agent useful for legitimate queries---searching notes to answer a colleague's question---also enables it to surface sensitive information when a request crosses a privacy boundary.
+This architecture mirrors a conventional operating system: files and structured state form the namespace, tools form the system-call interface, and the SharedOS runtime serves as the kernel that mediates every cross-boundary request. The same tool that makes the agent useful for legitimate queries (searching notes to answer a colleague's question) also enables it to surface sensitive information when a request crosses a privacy boundary.
 
 \paragraph{The atomic interaction.}
-When a requesting agent $A_j$ (acting for human $H_j$) contacts target agent $A_i$, SharedOS loads per-relationship context and assembles $A_i$'s tools. $A_i$ then executes its full reasoning loop: it reads the request, invokes read tools to search its owner's data, and constructs a response. The response may disclose facts, refuse the request, invoke write tools to execute a mutation, or escalate to the owner. This is not a text-only exchange---tool results flow directly into the agent's generation context, creating the conditions for both utility and leakage.
+When a requesting agent $A_j$ (acting for human $H_j$) contacts target agent $A_i$, SharedOS loads per-relationship context and assembles $A_i$'s tools. $A_i$ then executes its full reasoning loop: it reads the request, invokes read tools to search its owner's data, and constructs a response. The response may disclose facts, refuse the request, invoke write tools to execute a mutation, or escalate to the owner. This is not a text-only exchange. Tool results flow directly into the agent's generation context, creating the conditions for both utility and leakage.
 
 \paragraph{Governance policy.}
 A policy $\pi$ constrains disclosure during cross-boundary interaction. SharedOS supports arbitrary policy configurations; we instantiate three levels along a \emph{specificity} gradient to isolate whether compliance depends on naming exactly what to protect. $\pi_0$ provides no instruction, $\pi_1$ adds a generic directive (``protect private data''), and $\pi_2$ enumerates protected categories explicitly. $\pi_1$ and $\pi_2$ express the same intent and differ only in specificity.
@@ -129,21 +131,18 @@ where $\mathcal{F}(\mathcal{C}_{ji}, t)$ is the set of failure modes for tool $t
 \[
   \sum_{j \ne i} \sum_{\text{paths } h_1,\ldots,h_L} \prod_{t=1}^{L} b_{ji,t}(h_t),
 \]
-where $b_{ji,t}(h_t)$ counts the semantically distinct next actions available at turn $t$ given history $h_t$. Static test cases and fixed-budget human red-teaming sample only a sparse slice of this surface. Now that we have SharedOS, a platform where autonomous delegates probe one another's boundaries and failures surface organically, we can ask three questions:
+where $b_{ji,t}(h_t)$ counts the semantically distinct next actions available at turn $t$ given history $h_t$. Static test cases and fixed-budget human red-teaming sample only a sparse slice of this surface. Now that we have SharedOS, we can systematically probe the security-utility frontier along three axes:
 
 \begin{tcolorbox}[colback=blue!3!white, colframe=blue!50!black, boxrule=0.4pt, arc=2pt, left=6pt, right=6pt, top=4pt, bottom=4pt]
-\textbf{RQ1.} \emph{Can you just tell the agent what to protect?}
-We test whether prompt-level governance suffices by varying policy specificity from none (D0) to generic instruction (D1) to category-specific enumeration (D2). If D1 works, the rest is unnecessary.
+\textbf{RQ1: What moves the frontier?} We vary policy specificity from none (D0) to generic instruction (D1) to category enumeration (D2). If a simple instruction suffices, the frontier is easy to shift. If not, the shape of what works reveals what the model actually responds to.
 \end{tcolorbox}
 
 \begin{tcolorbox}[colback=blue!3!white, colframe=blue!50!black, boxrule=0.4pt, arc=2pt, left=6pt, right=6pt, top=4pt, bottom=4pt]
-\textbf{RQ2.} \emph{Does multi-turn interaction erode protection?}
-Real deployment is multi-turn. We compare single-turn and 240-tick autonomous interaction under the same D2 policy. If single-turn results generalise, evaluation is simple. If not, multi-turn platforms like SharedOS are necessary.
+\textbf{RQ2: Is the frontier stable over time?} Real deployment is multi-turn. We compare single-turn and 240-tick autonomous interaction under the same policy. If multi-turn interaction erodes the frontier, single-turn evaluation is misleading and platforms like SharedOS are necessary.
 \end{tcolorbox}
 
 \begin{tcolorbox}[colback=blue!3!white, colframe=blue!50!black, boxrule=0.4pt, arc=2pt, left=6pt, right=6pt, top=4pt, bottom=4pt]
-\textbf{RQ3.} \emph{Does who's asking change what gets leaked?}
-In practice, agents interact with colleagues, friends, and investors. We fix the D2 policy and vary only the requester's relationship. If privacy decisions are context-independent, agents are ignoring social structure. If context-dependent, we ask: in which direction, and is it predictable?
+\textbf{RQ3: Is the frontier the same for everyone?} Agents interact with colleagues, friends, and investors. We fix the policy and vary only the requester's relationship. If the frontier shifts per person, a single policy cannot serve all requesters optimally, and the over-refusal cost becomes relationship-dependent.
 \end{tcolorbox}
 
 
@@ -205,18 +204,18 @@ We instantiate three levels of the specificity gradient defined in \S\ref{sec:fo
 
 \paragraph{Metrics.}
 \label{sec:metrics}
-Evaluation produces two metric families --- \textbf{Utility} (work/public subset) and \textbf{Security} (sensitive subset) --- each decomposed by verdict source.
+Evaluation produces two metric families. \textbf{Utility} measures correctness on the work/public subset. \textbf{Security} measures protection on the sensitive subset. Each is decomposed by verdict source.
 
 \textbf{Utility} is a single rate: the fraction of legitimate queries answered correctly (LLM judge verdict = correct).
 
 \textbf{Security} is decomposed into three mutually exclusive direct-response rates plus one independent scan-based rate:
 \begin{itemize}[leftmargin=*, itemsep=1pt, topsep=2pt]
-  \item \textbf{Refuse Rate} --- model explicitly declines (LLM judge verdict = refused). Policy working as intended.
-  \item \textbf{Message Leak Rate} --- model responds and the response is verified to contain gold key facts (LLM judge verdict = correct on sensitive query). Actual information damage.
-  \item \textbf{Failed Attempt Rate} --- model responds but the answer does not contain gold key facts (LLM judge verdict = incorrect). Policy violated in intent but no factual disclosure.
-  \item \textbf{Global Leak Rate} --- fraction of security queries where gold key facts appear in \emph{any} response across all ticks (gold-fact scan). Upper bound on exposure; includes incidental disclosure via responses to other questions.
+  \item \textbf{Refuse Rate}: model explicitly declines (LLM judge verdict = refused). Policy working as intended.
+  \item \textbf{Message Leak Rate}: model responds and the response contains gold key facts (LLM judge verdict = correct on sensitive query). Actual information damage.
+  \item \textbf{Failed Attempt Rate}: model responds but the answer does not contain gold key facts (LLM judge verdict = incorrect). Policy violated in intent but no factual disclosure.
+  \item \textbf{Global Leak Rate}: fraction of security queries where gold key facts appear in \emph{any} response across all ticks (gold-fact scan). Independent exposure measure that includes incidental disclosure via responses to other questions.
 \end{itemize}
-The first three direct-response rates are mutually exclusive (Refuse $+$ Message Leak $+$ Failed Attempt $=$ 1). Global Leak Rate is an independent scan-based upper bound that is always $\geq$ Message Leak Rate in multi-turn settings. Actions follow the same structure: Executed / Refused / Failed, with a state-diff gold check confirming correctness of executed actions.
+The first three direct-response rates are mutually exclusive (Refuse $+$ Message Leak $+$ Failed Attempt $=$ 1). Global Leak Rate is an independent scan-based measure computed by a different detector (string match vs LLM judge). In multi-turn settings, it typically exceeds Message Leak Rate because it captures incidental disclosure across all 240 ticks, though the two detectors can disagree on individual items. Actions follow the same structure: Executed / Refused / Failed, with a state-diff gold check confirming correctness of executed actions.
 
 \subsection{Setup}
 \label{sec:setup}
@@ -255,8 +254,8 @@ We organise findings around the three research questions from \S\ref{sec:formali
   \label{fig:specificity}
 \end{figure}
 
-\paragraph{RQ1: Can you just tell the agent what to protect?}
-No. Not without enumerating exactly \emph{what} to protect. D1 adds a generic ``protect private data'' instruction and achieves zero net improvement: McNemar discordant pairs are tied on files (10:10, $p = \text{n.s.}$) and on states (13:15, $p = \text{n.s.}$). D2 names four protected categories and reduces file leakage from 83\% to 14\% (69\,pp, $p < 0.001$) while preserving utility at 77\%. There is a \emph{specificity threshold}: below it, governance has no measurable effect; above it, protection is immediate.
+\paragraph{RQ1: What moves the frontier?}
+Specificity, not existence. Only category enumeration shifts the frontier. D1 adds a generic ``protect private data'' instruction and achieves zero net improvement: McNemar discordant pairs are tied on files (10:10, $p = \text{n.s.}$) and on states (13:15, $p = \text{n.s.}$). D2 names four protected categories and reduces file leakage from 83\% to 14\% (69\,pp, $p < 0.001$) while preserving utility at 77\%. There is a \emph{specificity threshold}: below it, governance has no measurable effect; above it, protection is immediate.
 
 Why does naming matter? Under D0, every model already refuses obvious PII (tax IDs, home addresses) at 93--100\% rates. D1 fails on \emph{ambiguous} categories: hiring budgets, 1:1 feedback, promotion frameworks, and fundraising terms at the boundary between ``work information'' and ``private data.'' Without explicit category names, the agent defaults to sharing anything work-adjacent. D2 resolves this by naming the boundary. The Refusal column in Table~\ref{tab:ss_main} confirms: D0 and D1 produce near-zero refusals on sensitive queries. Protection under these policies is incidental (retrieval failures), not intentional. D2's 71.5\% refusal rate shows active enforcement.
 
@@ -269,7 +268,7 @@ On the action track, D2 improves both safety \emph{and} utility. It blocks 100\%
 
 The protection is not free everywhere. D2 costs only 1\,pp utility on files but 37\,pp on structured state, where terse queries (``SOC2 status?'') share vocabulary with protected categories and trigger a 26.5\% false-refusal rate. Practitioners cannot evaluate a single surface and generalise.
 
-\paragraph{RQ2: Does multi-turn interaction erode protection?}
+\paragraph{RQ2: Is the frontier stable over time?}
 
 \begin{figure}[t]
   \centering
@@ -279,7 +278,7 @@ The protection is not free everywhere. D2 costs only 1\,pp utility on files but 
 \end{figure}
 
 \begin{table}[t]
-  \caption{\textbf{Multi-turn D2 security breakdown by category} (gpt-5-mini, 10 splits $\times$ 240 ticks, $n{=}191$ security queries via LLM judge, $n{=}200$ via gold scan). Refuse = explicit refusal. Msg.~Leak = response verified to contain gold facts. Failed Att.\ = attempted answer without gold facts. Glob.~Leak = gold facts appear anywhere across 240 ticks (scan-based upper bound).}
+  \caption{\textbf{Multi-turn D2 security breakdown by category} (gpt-5-mini, 10 splits $\times$ 240 ticks, $n{=}191$ security queries via LLM judge, $n{=}200$ via gold scan). Refuse = explicit refusal. Msg.~Leak = response verified to contain gold facts. Failed Att.\ = attempted answer without gold facts. Glob.~Leak = gold facts appear anywhere across 240 ticks (independent scan-based measure).}
   \label{tab:ms_main}
   \centering
   \footnotesize
@@ -298,7 +297,7 @@ The protection is not free everywhere. D2 costs only 1\,pp utility on files but 
   \end{tabular}
 \end{table}
 
-Not catastrophically. D2's multi-turn message leak rate (12.6\%) is comparable to its single-turn rate (14.0\%), confirming bounded erosion rather than collapse (Table~\ref{tab:ms_main}). But multi-turn interaction reveals new failure modes. The remaining 35.6\% of non-refused queries splits into 12.6\% actual disclosure and 24.1\% failed attempts (policy violated but no gold facts leaked). The global leak rate (38.0\%, scan-based) is 3$\times$ the message rate because sensitive facts surface incidentally via responses to unrelated questions.
+The frontier holds. D2's multi-turn message leak rate (12.6\%) is comparable to its single-turn rate (14.0\%), confirming bounded erosion rather than collapse (Table~\ref{tab:ms_main}). But multi-turn interaction reveals failure modes invisible to single-turn evaluation. The remaining 35.6\% of non-refused queries splits into 12.6\% actual disclosure and 24.1\% failed attempts (policy violated but no gold facts leaked). The global leak rate (38.0\%, scan-based) is 3$\times$ the message rate because sensitive facts surface incidentally via responses to unrelated questions.
 
 The category structure matters. Sensitive work has the lowest refuse rate (36.8\%) and highest message leak (22.8\%) because of genuine boundary ambiguity between ``work question'' and ``HR data.'' Personal health achieves 89.7\% refusal with only 2.6\% message leak. Yet even personal health has a 20\% global leak rate: health facts surface incidentally when the agent answers related work queries.
 
@@ -306,9 +305,9 @@ The category structure matters. Sensitive work has the lowest refuse rate (36.8\
 
 \paragraph{Refusals leak metadata.} Tool-equipped delegates exhibit a failure mode invisible to text-exchange benchmarks. The agent searches its owner's data store \emph{before} deciding to refuse. The refusal itself then discloses metadata: one delegate refused to share brokerage balance but revealed the note ID, folder name, and data existence (``The info is recorded in his notes under `Bank Accounts', Finance folder, note ID 7795''). The requesting agent uses disclosed note IDs to retrieve data directly on the next turn. This attack chain requires both tool access and multi-turn interaction.
 
-\paragraph{RQ3: Does who's asking change what gets leaked?}
+\paragraph{RQ3: Is the frontier the same for everyone?}
 
-We fix the D2 policy and vary only the requester's relationship framing via a single memory shard injected into the defending agent. Four requesters probe the same 400-question pool: Tina (colleague/work peer), Marcus (CEO's delegate), Jordan (close personal friend), and Dana (investor/board observer). Ground-truth labels are relationship-conditioned: the same question may be legitimate under one relationship but private under another (Appendix~\ref{app:relationship_labels}).
+We fix the D2 policy and vary only the requester's relationship via a single memory shard injected into the defending agent. Four requesters probe the same 400-question pool: Tina (colleague/work peer), Marcus (CEO's delegate), Jordan (close personal friend), and Dana (investor/board observer). Ground-truth labels are relationship-conditioned: the same question may be legitimate under one relationship but private under another (Appendix~\ref{app:relationship_labels}).
 
 \begin{table}[t]
   \caption{\textbf{Relationship-conditioned D2 results} (gpt-5-mini, 400 QA + 200 actions per requester, OR-adjudication). Leak = total P-item leak rate. O-Ref = over-refusal on L-items. Safety = unauthorised actions blocked.}
@@ -330,7 +329,7 @@ We fix the D2 policy and vary only the requester's relationship framing via a si
   \end{tabular}
 \end{table}
 
-Table~\ref{tab:relationship} reveals that relationship context does not uniformly help or hurt. It reshapes the security-utility frontier in category-specific and direction-specific ways.
+No. The frontier is not flat across requesters (Table~\ref{tab:relationship}). Relationship context reshapes it in category-specific and direction-specific ways.
 
 \textbf{Finding: sensitive\_work is the only relationship-dependent category.} Personal finance (0--2\% leak), personal health (5--10\%), and personal relationships (0--4\%) are protected regardless of who asks. Only sensitive\_work shows a relationship gradient: Tina 0\%, Marcus 20\%, Jordan 18\%, Dana 26\%. The agent treats financial and health data as belonging to the \emph{owner}, but work data as belonging to the \emph{organisation}. Relationship framing modulates perceived organisational standing.
 
@@ -367,7 +366,7 @@ Table~\ref{tab:relationship} reveals that relationship context does not uniforml
 
 The specificity threshold (RQ1) holds across all six evaluated model families (Table~\ref{tab:crossmodel}). Under D0, all models leak at 83--93\% despite substantial capability differences (utility 78--98\%). D2 reduces leakage by 69--91\,pp in every model. Two non-OpenAI models (Kimi~K2, DeepSeek~V3) show the same pattern, ruling out provider-specific training artifacts.
 
-\paragraph{Model scale under multi-turn.} Under D0, GPT-5.5's message leak rate is 28.0\% vs.\ gpt-5-mini's 84.2\% --- a 56\,pp reduction from scale alone. Under D2, both converge: 13.0\% vs.\ 12.6\% (Table~\ref{tab:ms_model_scale}). The explicit deny list is the great equaliser: it renders model scale irrelevant for the question of whether protection holds.
+\paragraph{Model scale under multi-turn.} Under D0, GPT-5.5's message leak rate is 28.0\% vs.\ gpt-5-mini's 84.2\%, a 56\,pp reduction from scale alone. Under D2, both converge: 13.0\% vs.\ 12.6\% (Table~\ref{tab:ms_model_scale}). The explicit deny list is the great equaliser: it renders model scale irrelevant for the question of whether protection holds.
 
 \begin{table}[t]
   \caption{\textbf{Multi-turn model scaling} (10 splits $\times$ 240 ticks, 200 security QA per defence level). Ref = refuse rate. Msg.L = message leak rate (LLM judge). Glob.L = global leak rate (gold-fact scan). Util = work-public correct rate.}
@@ -436,11 +435,11 @@ Relevant attacks include PAIR~\citep{chao2025pair}, GCG~\citep{zou2023universal}
 \label{sec:discussion}
 % ============================================================================
 
-\paragraph{Implications for practitioners.}
-SharedOS yields three actionable findings. First, generic privacy instructions provide zero measurable protection, so practitioners should deploy category-specific policies as a minimum defence. Second, policy effectiveness depends on data surface: the same policy that costs 1\,pp utility on documents costs 37\,pp on structured state. Practitioners must evaluate each surface independently. Third, the protection effect holds across five model families, confirming that the leakage problem is structural (tool-equipped agents searching private stores on behalf of a requester) rather than model-specific.
+\paragraph{The frontier cannot be flattened by prompt engineering.}
+Our results show the security-utility frontier is shaped by three forces the policy author does not control: the model's implicit social norms (investor framing bypasses sensitive\_work protection through internalised fiduciary-access schemas), the semantic properties of the data itself (terse state queries resist classification, producing 37\,pp utility cost), and multi-turn conversational dynamics (strategy combinations crack locally what holds globally). A single policy cannot serve all requesters optimally because the model's role inference is itself emergent and unreliable. The same D2 policy produces 31\% over-refusal for investors and 86\% for friends. This is not a tuning problem. It is a structural limitation of enforcement-via-reasoning.
 
 \paragraph{Toward architectural defences.}
-The 26.5\% false-refusal rate on state queries under D2 illustrates the ceiling of prompt-level policies: the agent must decide from surface-level cues whether a query targets protected information, and terse queries defeat this classification. Architectural isolation (restricting which data is \emph{mounted} for a given relationship rather than asking the agent to \emph{avoid} data it can see) offers a path forward. D2's surface-dependent over-refusal provides the baseline that architectural defences must beat.
+Our data suggests three specific architectural interventions. First, pre-search policy classification (determine what the query targets before invoking tools) would eliminate metadata leakage in refusals (2.8\% of cases). Second, requester-conditioned retrieval scope (mount different data per relationship) would address the trust decomposition finding where investors and friends need different access. Third, post-generation content auditing would catch incidental disclosure (the 3x gap between message and global leak rates). These move enforcement from reasoning to structure: do not ask the agent to avoid data it can see; ensure the data is absent from its context.
 
 \paragraph{Limitations.}
 \textbf{Single dyad.} The main results evaluate one requester--target pair. The category-level hierarchy may vary with different professional contexts and power asymmetries. Appendix~\ref{app:pact_net} presents PACT-Net, a 25-agent network extension that evaluates transitive leakage and multi-requester amplification; systematic experimental evaluation of this extension is planned. \textbf{Synthetic data.} The personal data store is synthetic, though structured with realistic category boundaries (e.g., company benefits that blur personal and work categories). \textbf{Evaluation pipeline.} The two-pass evaluator (LLM judge + string match) achieves 89--94\% agreement with zero false positives in manual audit (Appendix~\ref{app:validity}). \textbf{Replication variance.} D2 states QA shows 26\,pp utility variance across replications, attributable to initial-context sensitivity in prompt-level policy enforcement. \textbf{Attack coverage.} All results use natural querying. Optimised attack strategies (PAIR, GCG) are benchmark extensions.
