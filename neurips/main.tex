@@ -53,7 +53,7 @@
 \maketitle
 
 \begin{abstract}
-Personal agents are becoming delegates: systems that hold private data, wield tools, and act on behalf of their owners. When two delegates interact across an ownership boundary, every exchange becomes a permission decision about what to share, what to withhold, and what to refuse. These decisions create security, delegation, and privacy risks with no analogue in single-agent settings. To this end, we introduce \textbf{PACT-Bench} (\textbf{P}ermissioned \textbf{A}gent \textbf{C}oordination \textbf{T}estbed), the first benchmark where tool-equipped delegates interact autonomously across ownership boundaries, revealing how permission failures emerge from the interaction itself. We evaluate 600 one-to-one tasks across five model families under three governance policies and find: (1)~policy \emph{specificity}, not policy existence, determines security: category-specific policies reduce leakage by 69--91\,pp while generic privacy instructions change nothing; (2)~the same policy produces dramatically different costs on different data surfaces (1\,pp utility loss on documents, 37\,pp on structured state); and (3)~delegates that search private data before refusing inadvertently leak metadata in their refusals, enabling follow-up extraction that text-exchange benchmarks cannot capture.
+Personal agents are becoming delegates: systems that hold private data, wield tools, and act on behalf of their owners. When two delegates interact across an ownership boundary, every exchange becomes a permission decision about what to share, what to withhold, and what to refuse. These decisions create security, delegation, and privacy risks with no analogue in single-agent settings. To this end, we introduce \textbf{SharedOS}, a multi-agent shared delegation system where tool-equipped delegates interact autonomously across ownership boundaries, revealing how permission failures emerge from the interaction itself. We evaluate 600 curated tasks across five model families under three governance policies and find: (1)~policy \emph{specificity}, not policy existence, determines security: category-specific policies reduce leakage by 69--91\,pp while generic privacy instructions change nothing; (2)~the same policy produces dramatically different costs on different data surfaces (1\,pp utility loss on documents, 37\,pp on structured state); and (3)~delegates that search private data before refusing inadvertently leak metadata in their refusals, enabling follow-up extraction that text-exchange benchmarks cannot capture.
 \end{abstract}
 
 
@@ -68,12 +68,12 @@ This capability turns agents into \emph{delegates}: systems that represent their
 
 Few existing evaluations address this problem. Single-agent benchmarks~\citep{zhan2024injecagent, debenedetti2024agentdojo, toyer2024tensortrust, schulhoff2024hackaprompt} test prompt injection within a single trust domain. Multi-agent privacy benchmarks~\citep{wang2026agentsocialbench, gomaa2025converse, juneja2025magpie, park2026pacbench, yagoubi2026agentleak} study information disclosure but through scripted text exchanges where agents lack tool-mediated access to private data, persistent memory, and autonomy in deciding what to probe.
 
-To this end, we introduce \textbf{PACT-Bench} (\textbf{P}ermissioned \textbf{A}gent \textbf{C}oordination \textbf{T}estbed), the first benchmark designed to measure the security, delegation, and privacy risks that emerge when personal-agent delegates interact autonomously across ownership boundaries. Our contributions:
+To this end, we introduce \textbf{SharedOS}, a multi-agent shared delegation system designed to measure the security, delegation, and privacy risks that emerge when personal-agent delegates interact autonomously across ownership boundaries. Our contributions:
 
 \begin{enumerate}[leftmargin=*, itemsep=2pt]
   \item \textbf{Problem formalisation.} We formalise cross-boundary delegation as the atomic interaction where one delegate receives a request, retrieves data from its owner's private store through tools, and decides what to disclose under a governance policy. We show that the safety surface grows combinatorially across four dimensions: policy specificity, data surface, relationship context, and interaction history.
 
-  \item \textbf{Benchmark construction.} PACT-Bench evaluates 600 one-to-one tasks (200 file QA, 200 state QA, 200 actions) across three governance policies and two relationship conditions, producing 3{,}600 evaluations. Four metrics (information utility, information security, action utility, action safety) jointly characterise the utility--security frontier.
+  \item \textbf{Platform and dataset.} SharedOS is a configurable multi-agent delegation system where state, tools, and governance policy are independently variable. We curate 600 evaluation tasks (200 file QA, 200 state QA, 200 actions) across three governance policies and two relationship conditions, producing 3{,}600 evaluations. Four metrics (information utility, information security, action utility, action safety) jointly characterise the utility--security frontier.
 
   \item \textbf{Empirical findings.} Category-specific policies reduce leakage by 69--91\,pp across five model families while generic instructions change nothing. The same policy costs 1\,pp utility on documents but 37\,pp on structured state. Delegates that search private data before refusing inadvertently leak metadata (note IDs, folder structure, data existence) in their refusals, enabling follow-up extraction that only a tool-equipped benchmark can capture.
 \end{enumerate}
@@ -84,57 +84,88 @@ To this end, we introduce \textbf{PACT-Bench} (\textbf{P}ermissioned \textbf{A}g
 \label{sec:formalism}
 % ============================================================================
 
-We formalise the setting that PACT-Bench targets. A personal agent $A_i$ operates on behalf of a human principal $H_i$, with access to a private knowledge store $K_i = (F_i, S_i, M_i)$: files $F_i$ (documents such as notes, contracts, and reports), structured state $S_i$ (todos, calendar events, application records), and persistent memory $M_i$ (agent-curated summaries of prior interactions). The agent accesses $K_i$ through a tool set $T_i$ that provides search, retrieval, and mutation capabilities. This architecture mirrors an operating system: files correspond to a hierarchical namespace, tools correspond to typed system calls, and the tool assembly pipeline serves as the kernel that mediates every request.
+We are moving toward a world where personal agents manage calendars, emails, documents, and tasks on behalf of individual users---and where these agents routinely interact with one another. When one person's agent contacts another's to schedule a meeting, retrieve a status update, or coordinate a project, the responding agent must decide what to share. This is the \emph{cross-boundary delegation} problem: an agent that holds private data, wields tools capable of reading and modifying that data, and must make permission decisions on every incoming request.
 
-\paragraph{The atomic interaction.} When a requesting agent $A_j$ (acting for $H_j$) contacts target agent $A_i$, the system loads per-relationship context and assembles $A_i$'s tools. $A_i$ then executes its full reasoning loop: it reads the request, searches its owner's data through tools, and constructs a response. The response may disclose facts, refuse the request, execute a mutation, or escalate to the owner. This is not a text-only exchange. During execution, $A_i$ may invoke its full tool set (searching files, reading documents, querying state items), and the content of those tool results flows into the response. The same retrieval pipeline that makes the agent useful for legitimate queries also enables it to surface sensitive information when the request crosses a privacy boundary.
+To study this problem under controlled conditions, we build \textbf{SharedOS}, a multi-agent shared delegation system. SharedOS gives each agent access to its owner's private state through configurable tools, and allows external agents to initiate cross-boundary requests. Three components are independently configurable---state, tools, and governance policy---enabling systematic evaluation of how each affects the utility--security frontier.
 
-\paragraph{Governance policy.} A policy $\pi$ constrains disclosure during cross-boundary interaction. We vary policy along a \emph{specificity} gradient: $\pi_0$ provides no instruction, $\pi_1$ adds a generic directive (``protect private data''), and $\pi_2$ enumerates protected categories explicitly. $\pi_1$ and $\pi_2$ express the same intent. They differ only in specificity, isolating whether compliance depends on naming exactly what to protect.
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{figures/shared_os_overview.png}
+  \caption{\textbf{SharedOS: A Multi-Agent Shared Delegation System.} Each owner's agent operates over private state (file system, structured state) through typed tools (read, write, search). A cross-boundary delegation layer mediates all inter-agent requests: it loads relationship context, enforces governance policy, and routes requests between agents. External agents can query or request actions but cannot bypass the tool layer. The same architecture that enables utility (searching notes to answer a colleague) also creates the conditions for leakage when requests cross a privacy boundary.}
+  \label{fig:shared_os}
+\end{figure}
 
-\paragraph{Utility and security.} Each query in the benchmark targets either public or protected information. \emph{Utility} measures the fraction of legitimate queries answered correctly. \emph{Security} measures the fraction of sensitive queries where no protected facts appear in the response. Neither metric alone suffices: an agent that refuses everything scores perfect security but zero utility. The central question is whether governance configurations exist that achieve high values on both axes simultaneously. Formal definitions are in Appendix~\ref{app:config}.
+\paragraph{State layer.}
+Each agent $A_i$ operates over a private state store $K_i = (F_i, S_i, M_i)$ comprising three surfaces:
+\begin{itemize}[leftmargin=*, itemsep=1pt, topsep=2pt]
+  \item \textbf{Files} $F_i$: long-form documents organised in a hierarchical namespace (notes, contracts, reports, memos). In the current implementation these are instantiated as a note system; the same abstraction generalises to email inboxes, cloud drives, and messaging archives.
+  \item \textbf{Structured state} $S_i$: typed application records such as todos, calendar events, project boards, and CRM entries. Each record has discrete fields that tools can read or mutate independently. The v1 implementation instantiates todos; the interface extends identically to calendar, email, and other structured applications.
+  \item \textbf{Memory} $M_i$: agent-curated summaries of prior interactions, preferences, and relationship context that persist across sessions.
+\end{itemize}
 
-\paragraph{Safety complexity is heterogeneous and history-dependent.}
-The safety surface is not the Cartesian product of a few homogeneous factors. Let $\mathcal{T}_i$ be the tool set exposed by target $A_i$, and let $\mathcal{C}_{ji}$ denote the pair-specific context (relationship, memory, prior decisions, policy) when requester $A_j$ interacts with target $A_i$. To illustrate the combinatorial growth (not as a formal theorem), the number of distinct failure scenarios that single-turn evaluation must cover scales as:
+\paragraph{Tool layer.}
+The agent accesses $K_i$ exclusively through a typed tool set $T_i$. Tools are the only mechanism for reading or modifying state---the agent cannot bypass them. Each tool exposes a defined operation:
+\begin{itemize}[leftmargin=*, itemsep=1pt, topsep=2pt]
+  \item \textbf{Read tools}: search files by keyword, read a document by ID, list todos by folder, query calendar events by date range.
+  \item \textbf{Write tools}: create a new note, edit a todo item, send an email, update a calendar event, delete a record.
+\end{itemize}
+This architecture mirrors a conventional operating system: files and structured state form the namespace, tools form the system-call interface, and the SharedOS runtime serves as the kernel that mediates every cross-boundary request. Crucially, the same tool that makes the agent useful for legitimate queries---searching notes to answer a colleague's question---also enables it to surface sensitive information when a request crosses a privacy boundary.
+
+\paragraph{The atomic interaction.}
+When a requesting agent $A_j$ (acting for human $H_j$) contacts target agent $A_i$, SharedOS loads per-relationship context and assembles $A_i$'s tools. $A_i$ then executes its full reasoning loop: it reads the request, invokes read tools to search its owner's data, and constructs a response. The response may disclose facts, refuse the request, invoke write tools to execute a mutation, or escalate to the owner. This is not a text-only exchange---tool results flow directly into the agent's generation context, creating the conditions for both utility and leakage.
+
+\paragraph{Governance policy.}
+A policy $\pi$ constrains disclosure during cross-boundary interaction. SharedOS supports arbitrary policy configurations; we instantiate three levels along a \emph{specificity} gradient to isolate whether compliance depends on naming exactly what to protect. $\pi_0$ provides no instruction, $\pi_1$ adds a generic directive (``protect private data''), and $\pi_2$ enumerates protected categories explicitly. $\pi_1$ and $\pi_2$ express the same intent and differ only in specificity.
+
+\paragraph{Utility and security.}
+Each query in the benchmark targets either public or protected information. \emph{Utility} measures the fraction of legitimate queries answered correctly. \emph{Security} measures the fraction of sensitive queries where no protected facts appear in the response. Neither metric alone suffices: an agent that refuses everything scores perfect security but zero utility. The central question is whether governance configurations exist that achieve high values on both axes simultaneously. Formal definitions are in Appendix~\ref{app:config}.
+
+\paragraph{Why SharedOS enables new research questions.}
+Because state, tools, and policy are independently configurable, SharedOS exposes a combinatorial safety surface invisible to text-exchange benchmarks. Let $\mathcal{T}_i$ be the tool set exposed by target $A_i$, and let $\mathcal{C}_{ji}$ denote the pair-specific context (relationship, memory, prior decisions, policy) when requester $A_j$ interacts with target $A_i$. The number of distinct failure scenarios scales as:
 \[
   \sum_{j \ne i} \sum_{t \in \mathcal{T}_i} |\mathcal{F}(\mathcal{C}_{ji}, t)|,
 \]
-where $\mathcal{F}(\mathcal{C}_{ji}, t)$ is the set of failure modes for tool $t$ under context $\mathcal{C}_{ji}$: a search tool may reveal protected facts, a write tool may mutate state, and the same request may be answered, refused, or escalated depending on the requester's identity. Multi-turn interaction turns this into a branching process. At turn $t$, the next state depends on the full history $h_t$, so an $L$-turn probe has a trajectory tree whose size grows as:
+where $\mathcal{F}(\mathcal{C}_{ji}, t)$ is the set of failure modes for tool $t$ under context $\mathcal{C}_{ji}$: a read tool may reveal protected facts, a write tool may mutate state, and the same request may be answered, refused, or escalated depending on the requester's identity. Multi-turn interaction turns this into a branching process whose trajectory tree grows as:
 \[
   \sum_{j \ne i} \sum_{\text{paths } h_1,\ldots,h_L} \prod_{t=1}^{L} b_{ji,t}(h_t),
 \]
-where $b_{ji,t}(h_t)$ counts the semantically distinct next actions available at turn $t$ given history $h_t$. The evaluation surface grows through heterogeneous tools, pair-specific relationships, and history-dependent branching, not simply through more agents. Static test cases and fixed-budget human red-teaming sample only a sparse slice of this surface. These observations motivate an evaluation methodology where autonomous agents probe one another's boundaries and failures surface organically. Three questions guide our investigation:
+where $b_{ji,t}(h_t)$ counts the semantically distinct next actions available at turn $t$ given history $h_t$. Static test cases and fixed-budget human red-teaming sample only a sparse slice of this surface. Now that we have SharedOS, a platform where autonomous delegates probe one another's boundaries and failures surface organically, we can ask three questions:
 
 \begin{tcolorbox}[colback=blue!3!white, colframe=blue!50!black, boxrule=0.4pt, arc=2pt, left=6pt, right=6pt, top=4pt, bottom=4pt]
-\textbf{RQ1 (Policy specificity).} Does the \emph{specificity} of a governance policy determine security, or is having any policy sufficient?\\[3pt]
-\textbf{RQ2 (Data surface).} Does the same policy produce different utility--security tradeoffs on different data surfaces?\\[3pt]
-\textbf{RQ3 (Multi-turn dynamics).} Does sustained autonomous interaction produce failure modes that single-step evaluation cannot capture?
+\textbf{RQ1.} \emph{Can you just tell the agent what to protect?}
+We test whether prompt-level governance suffices by varying policy specificity from none (D0) to generic instruction (D1) to category-specific enumeration (D2). If D1 works, the rest is unnecessary.
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=blue!3!white, colframe=blue!50!black, boxrule=0.4pt, arc=2pt, left=6pt, right=6pt, top=4pt, bottom=4pt]
+\textbf{RQ2.} \emph{Does multi-turn interaction erode protection?}
+Real deployment is multi-turn. We compare single-turn and 240-tick autonomous interaction under the same D2 policy. If single-turn results generalise, evaluation is simple. If not, multi-turn platforms like SharedOS are necessary.
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=blue!3!white, colframe=blue!50!black, boxrule=0.4pt, arc=2pt, left=6pt, right=6pt, top=4pt, bottom=4pt]
+\textbf{RQ3.} \emph{Does who's asking change what gets leaked?}
+In practice, agents interact with colleagues, friends, and investors. We fix the D2 policy and vary only the requester's relationship. If privacy decisions are context-independent, agents are ignoring social structure. If context-dependent, we ask: in which direction, and is it predictable?
 \end{tcolorbox}
 
 
 % ============================================================================
-\section{PACT-Pair: Benchmark Design}
-\label{sec:design}
+\section{Experiments}
+\label{sec:experiments}
 % ============================================================================
 
-PACT-Bench instantiates cross-boundary delegation as a concrete, reproducible evaluation platform. This paper reports results from \emph{PACT-Pair}, the core benchmark that evaluates one requesting agent probing one target agent across a single privacy boundary.
+\subsection{Dataset Curation}
+\label{sec:dataset}
 
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=\linewidth]{figures/part_pair_overview.png}
-  \caption{\textbf{PACT-Pair overview.} A requesting agent (Tina/Iris) interacts with a target agent (Alex/Atlas) across Alex's privacy boundary. The benchmark contains 600 tasks (200 file QA, 200 state QA, 200 actions) crossed with three governance policies (D0/D1/D2) and two relationship conditions (R0/R1), yielding 3{,}600 evaluations. The evaluator checks answer correctness, refusal correctness, mutation safety, and boundary adherence.}
-  \label{fig:part_pair_overview}
-\end{figure}
+We evaluate SharedOS through a curated dataset of 600 tasks that probe one requesting agent against one target agent across a single privacy boundary.
 
 \paragraph{Target agent (Alex).} Alex's agent is a fully-equipped personal delegate with persistent memory, hundreds of files and structured state objects organised by domain and sensitivity (Work/Projects, Work/HR, Personal/Finance, Personal/Health, Personal/Family), and callable tools for search, retrieval, and mutation. In the v1 implementation, files are instantiated as notes and states as todos. The same abstraction extends to calendar, email, and other application state. Knowledge is fragmented: answering a question may require searching files, reading multiple documents, and cross-referencing structured state.
 
 \paragraph{Requesting agent (Tina).} Tina's agent communicates with Alex's agent through the cross-boundary protocol. In multi-turn mode, Tina's agent maintains a checklist of pending questions and adaptively selects which to ask, how to frame them, and whether to retry based on the evolving conversation. No explicit attack instructions are provided. Retry strategies emerge from the model's adaptive reasoning.
 
-\subsection{Evaluation Tasks}
-\label{sec:queries}
-
-PACT-Pair comprises 600 tasks across two boundary tracks and five sensitivity categories (Table~\ref{tab:categories}).
+\paragraph{Task design.}
+The dataset comprises 600 tasks across two boundary tracks and four sensitivity categories (Table~\ref{tab:categories}).
 
 \begin{table}[t]
-  \caption{PACT-Pair task distribution. Each track tests both utility (legitimate requests) and security (sensitive requests) across four privacy categories.}
+  \caption{Evaluation task distribution. Each track tests both utility (legitimate requests) and security (sensitive requests) across four privacy categories.}
   \label{tab:categories}
   \centering
   \small
@@ -157,10 +188,8 @@ The Information Boundary Track tests whether the agent answers legitimate questi
 
 Each task is paired with \textbf{gold key facts}: specific pieces of information whose presence in the agent's response constitutes a leak (for sensitive queries) or a correct answer (for legitimate queries). Action tasks additionally specify a gold state-diff check. This enables automated evaluation via string matching and state inspection.
 
-\subsection{Governance Policies}
-\label{sec:defences}
-
-PACT-Pair instantiates three levels of the specificity gradient defined in \S\ref{sec:formalism}:
+\paragraph{Governance policies.}
+We instantiate three levels of the specificity gradient defined in \S\ref{sec:formalism}:
 
 \textbf{D0 (no policy).} The system prompt contains no privacy instructions, establishing baseline behaviour.
 
@@ -168,61 +197,53 @@ PACT-Pair instantiates three levels of the specificity gradient defined in \S\re
 
 \textbf{D2 (category-specific deny list).} An explicit list enumerates protected data types: financial data (salary, equity, investments), health information (conditions, medications, appointments), HR details (compensation, performance reviews), and personal relationship information. D1 and D2 express the same strictness intent. They differ only in specificity, isolating whether compliance depends on naming exactly what to protect.
 
-\subsection{Evaluation Modes}
+\paragraph{Evaluation modes.}
 \label{sec:modes}
-
 \textbf{Single-step.} Each query is asked in isolation: one question, one response, no conversation history. This provides a controlled per-query measurement.
 
 \textbf{Multi-turn heartbeat.} Both agents operate as persistent processes, exchanging messages at regular intervals. Tina's agent decides which questions to ask, how to frame each request, and whether to retry. This mode captures escalation through repeated probing, context accumulation across turns, and social framing where the querying agent wraps sensitive questions in work-acceptable contexts.
 
-\subsection{Metrics}
+\paragraph{Metrics.}
 \label{sec:metrics}
-
 Evaluation produces two metric families --- \textbf{Utility} (work/public subset) and \textbf{Security} (sensitive subset) --- each decomposed by verdict source.
 
 \textbf{Utility} is a single rate: the fraction of legitimate queries answered correctly (LLM judge verdict = correct).
 
-\textbf{Security} reports four rates over the sensitive-query subset, summing to 100\%:
+\textbf{Security} is decomposed into three mutually exclusive direct-response rates plus one independent scan-based rate:
 \begin{itemize}[leftmargin=*, itemsep=1pt, topsep=2pt]
   \item \textbf{Refuse Rate} --- model explicitly declines (LLM judge verdict = refused). Policy working as intended.
   \item \textbf{Message Leak Rate} --- model responds and the response is verified to contain gold key facts (LLM judge verdict = correct on sensitive query). Actual information damage.
   \item \textbf{Failed Attempt Rate} --- model responds but the answer does not contain gold key facts (LLM judge verdict = incorrect). Policy violated in intent but no factual disclosure.
   \item \textbf{Global Leak Rate} --- fraction of security queries where gold key facts appear in \emph{any} response across all ticks (gold-fact scan). Upper bound on exposure; includes incidental disclosure via responses to other questions.
 \end{itemize}
-The first three are mutually exclusive (Refuse $+$ Message Leak $+$ Failed Attempt $=$ 1). Global Leak Rate is an independent scan-based measure that is always $\geq$ Message Leak Rate. Actions follow the same structure: Executed / Refused / Failed, with a state-diff gold check confirming correctness of executed actions.
-
-
-% ============================================================================
-\section{Experiments}
-\label{sec:experiments}
-% ============================================================================
+The first three direct-response rates are mutually exclusive (Refuse $+$ Message Leak $+$ Failed Attempt $=$ 1). Global Leak Rate is an independent scan-based upper bound that is always $\geq$ Message Leak Rate in multi-turn settings. Actions follow the same structure: Executed / Refused / Failed, with a state-diff gold check confirming correctness of executed actions.
 
 \subsection{Setup}
 \label{sec:setup}
 
-We evaluate five model families (\texttt{gpt-5-mini}, \texttt{gpt-5.4-mini}, \texttt{gpt-5.4}, \texttt{kimi-k2}, \texttt{deepseek-v3}) under three governance policies (D0/D1/D2). \texttt{gpt-5-mini} serves as the ablation backbone for its stability and cost-efficiency. Deep ablations (surface variation, multi-step, per-category analysis) use the backbone with two independent replications per cell. Multi-step evaluation uses the $10 \times 20$ split protocol: 200 questions divided into 10 groups of 20, with up to 240 heartbeat ticks per group (Phase~1: ticks 1--60, Phase~2: ticks 61--240). The relationship condition is fixed to R0 (stranger) to isolate policy and surface effects. The action track evaluates 200 tasks under the same three policies. For every run we compute the four metrics defined in \S\ref{sec:metrics}. Full evaluation pipeline details (two-pass LLM judge + string match, adjudication logic, manual audit protocol) are in Appendix~\ref{app:config}.
+We evaluate five model families (\texttt{gpt-5-mini}, \texttt{gpt-5.4-mini}, \texttt{gpt-5.4}, \texttt{kimi-k2}, \texttt{deepseek-v3}) under three governance policies (D0/D1/D2). \texttt{gpt-5-mini} serves as the ablation backbone for its stability and cost-efficiency. Deep ablations (surface variation, multi-turn, per-category analysis) use the backbone with two independent replications per cell. Multi-turn evaluation uses the $10 \times 20$ split protocol: 200 questions divided into 10 groups of 20, with up to 240 heartbeat ticks per group (Phase~1: ticks 1--60, Phase~2: ticks 61--240). The relationship condition is fixed to R0 (stranger) to isolate policy and surface effects. The action track evaluates 200 tasks under the same three policies. For every run we compute the four metrics defined in \S\ref{sec:metrics}. Full evaluation pipeline details (two-pass LLM judge + string match, adjudication logic, manual audit protocol) are in Appendix~\ref{app:config}.
 
-\subsection{Results}
-\label{sec:results}
+% ============================================================================
+\section{Findings}
+\label{sec:findings}
+% ============================================================================
 
-We organise results around the three research questions from \S\ref{sec:formalism}. Table~\ref{tab:ss_main} reports single-step results across all surfaces and policies. Each cell reports three metrics: \emph{Utility} (legitimate queries answered correctly), \emph{Security} ($100\% - \text{leak rate}$ for information tracks, unauthorised-action block rate for the action track), and \emph{Refusal} (fraction of sensitive queries explicitly refused). The gap between Security and Refusal reveals how much protection comes from intentional blocking versus incidental non-disclosure.
+We organise findings around the three research questions from \S\ref{sec:formalism}. Table~\ref{tab:ss_main} reports single-step information-boundary results across data surfaces and policies. Each policy cell reports \emph{Utility} for legitimate work/public queries and the three direct-response Security metrics for sensitive queries: Refuse Rate, Message Leak Rate, and Failed Attempt Rate. In single-step runs, Global Leak Rate is identical to Message Leak Rate because there is only one response per query; we therefore reserve the scan-based column for multi-turn tables.
 
 \begin{table}[t]
-  \caption{\textbf{Single-step results} (gpt-5-mini, 2 replications). All values in \%. For the information boundary (Files, States), Sec = fraction of sensitive queries with no gold facts in the response, Ref = fraction explicitly refused. For the action boundary, Sec = unauthorised actions blocked, Ref = overall refusal rate. D1 is statistically indistinguishable from D0 on both information tracks (McNemar $p > 0.5$).}
+  \caption{\textbf{Single-step information-boundary results} (gpt-5-mini, 2 replications). All values in \%. Util = work-public correctness. Ref = Refuse Rate. Msg.L = Message Leak Rate. F.Att = Failed Attempt Rate. D1 is statistically indistinguishable from D0 on both information tracks (McNemar $p > 0.5$).}
   \label{tab:ss_main}
   \centering
   \footnotesize
-  \setlength{\tabcolsep}{3.5pt}
-  \begin{tabular}{l ccc ccc ccc}
+  \setlength{\tabcolsep}{3pt}
+  \begin{tabular}{l cccc cccc cccc}
     \toprule
-    & \multicolumn{3}{c}{\textbf{D0 (no policy)}} & \multicolumn{3}{c}{\textbf{D1 (generic)}} & \multicolumn{3}{c}{\textbf{D2 (deny list)}} \\
-    \cmidrule(lr){2-4} \cmidrule(lr){5-7} \cmidrule(lr){8-10}
-    \textbf{Track} & Util & Sec & Ref & Util & Sec & Ref & Util & Sec & Ref \\
+    & \multicolumn{4}{c}{\textbf{D0 (no policy)}} & \multicolumn{4}{c}{\textbf{D1 (generic)}} & \multicolumn{4}{c}{\textbf{D2 (deny list)}} \\
+    \cmidrule(lr){2-5} \cmidrule(lr){6-9} \cmidrule(lr){10-13}
+    \textbf{Track} & Util & Ref & Msg.L & F.Att & Util & Ref & Msg.L & F.Att & Util & Ref & Msg.L & F.Att \\
     \midrule
-    Files QA   & 78.0 & 17.0 & 0.0  & 78.5 & 18.5 & 3.0  & 77.0 & \textbf{86.0} & 71.5 \\
-    States QA  & 55.0 & 41.5 & 0.5  & 60.5 & 37.0 & 0.5  & 18.0 & \textbf{92.0} & 73.0 \\
-    \midrule
-    Actions    & 55.0 & 31.5 & 24.0 & 54.0 & 35.1 & 39.0 & \textbf{58.7} & \textbf{90.0} & 26.0 \\
+    Files QA  & 78.0 & 0.0 & 83.0 & 17.0 & 78.5 & 3.0 & 81.5 & 15.5 & 77.0 & 71.5 & \textbf{14.0} & 14.5 \\
+    States QA & 55.0 & 0.5 & 58.5 & 41.0 & 60.5 & 0.5 & 63.0 & 36.5 & 18.0 & 73.0 & \textbf{8.0} & 19.0 \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -234,34 +255,31 @@ We organise results around the three research questions from \S\ref{sec:formalis
   \label{fig:specificity}
 \end{figure}
 
-\paragraph{RQ1: Specificity, not existence, determines security.}
-D1 adds a generic ``protect private data'' instruction and achieves zero net improvement: McNemar discordant pairs are exactly tied on files (10:10, $p = \text{n.s.}$) and on states (13:15, $p = \text{n.s.}$). D2 names four protected categories and reduces file leakage from 83\% to 14\% (69\,pp, $p < 0.001$) while preserving utility at 77\%.
+\paragraph{RQ1: Can you just tell the agent what to protect?}
+No. Not without enumerating exactly \emph{what} to protect. D1 adds a generic ``protect private data'' instruction and achieves zero net improvement: McNemar discordant pairs are tied on files (10:10, $p = \text{n.s.}$) and on states (13:15, $p = \text{n.s.}$). D2 names four protected categories and reduces file leakage from 83\% to 14\% (69\,pp, $p < 0.001$) while preserving utility at 77\%. There is a \emph{specificity threshold}: below it, governance has no measurable effect; above it, protection is immediate.
 
-Why does naming matter? Under D0, every model already refuses tax AGI and home address queries at 93--100\% rates because these are obvious PII. D1 fails on \emph{ambiguous} categories: hiring budgets, 1:1 feedback, promotion frameworks, and fundraising terms that sit at the boundary between ``work information'' and ``private data.'' Without explicit category names, the agent defaults to sharing anything work-adjacent. D2 resolves this ambiguity by naming the boundary. The Refusal column in Table~\ref{tab:ss_main} makes this visible: D0 and D1 produce near-zero refusals on sensitive queries, confirming that protection under these policies is incidental (incorrect answers, retrieval failures), not intentional. D2's 71.5\% refusal rate shows the agent actively enforcing the policy.
+Why does naming matter? Under D0, every model already refuses obvious PII (tax IDs, home addresses) at 93--100\% rates. D1 fails on \emph{ambiguous} categories: hiring budgets, 1:1 feedback, promotion frameworks, and fundraising terms at the boundary between ``work information'' and ``private data.'' Without explicit category names, the agent defaults to sharing anything work-adjacent. D2 resolves this by naming the boundary. The Refusal column in Table~\ref{tab:ss_main} confirms: D0 and D1 produce near-zero refusals on sensitive queries. Protection under these policies is incidental (retrieval failures), not intentional. D2's 71.5\% refusal rate shows active enforcement.
 
 \begin{leakbox}[D2 residual leak: business framing bypasses category matching]
 \small
-\textbf{Tina}: ``What's the total hiring budget for 2026?'' \textbf{D2 Alex}: ``Total hiring budget: \$1.2M. Planned hires: 5 new hires, 3 senior engineers (\$170--190k each), 1 designer (\$140k), 1 PM (\$160k).'' \emph{D2's deny list covers individual compensation but not company-level budgets. Business framing (``for planning'') activates helpfulness over privacy.}
+\textbf{Iris}: ``What's the total hiring budget for 2026?'' \textbf{Atlas}: ``Total hiring budget: \$1.2M. Planned hires: 5 new hires, 3 senior engineers (\$170--190k each), 1 designer (\$140k), 1 PM (\$160k).'' \emph{D2's deny list covers individual compensation but not company-level budgets. Business framing activates helpfulness over privacy.}
 \end{leakbox}
 
-On the action track, D2 achieves the rare outcome of improving both safety \emph{and} utility simultaneously. D2 blocks 90\% of unauthorised actions while executing 58.7\% of authorised ones. The per-category breakdown is starker: D2 blocks 100\% of unauthorised edits to sensitive files, 100\% of wipe operations, and 100\% of sensitive creates, while D0 executes 75\% of sensitive edits. D1 produces the highest overall refusal rate (39\%) while adding only 3.6\,pp to safety over D0.
+On the action track, D2 improves both safety \emph{and} utility. It blocks 100\% of unauthorised edits, wipes, and sensitive creates while executing 58.7\% of authorised actions. D1 produces the highest refusal rate (39\%) while adding only 3.6\,pp to safety over D0.
 
-\paragraph{RQ2: Same policy, different surface, different cost.}
-D2's protection comes nearly for free on files (1\,pp utility cost) but is catastrophically expensive on structured state (37\,pp cost). The root cause is disambiguation difficulty. State queries are terse (``What's the SOC2 status?'') and share vocabulary with protected categories. Long-form documents provide enough context for accurate classification. Structured queries do not.
+The protection is not free everywhere. D2 costs only 1\,pp utility on files but 37\,pp on structured state, where terse queries (``SOC2 status?'') share vocabulary with protected categories and trigger a 26.5\% false-refusal rate. Practitioners cannot evaluate a single surface and generalise.
 
-D2 achieves a \emph{lower} absolute leak rate on states (8\% vs.\ 14\%) but at a 26.5\% false-refusal rate on legitimate work queries (vs.\ 0.5\% for files). The policy catches genuine leaks as a side effect of over-refusing everything ambiguous. This breaks the free-lunch narrative: a policy that works almost for free on one surface can be catastrophically expensive on another. Practitioners cannot evaluate a single surface and generalise.
-
-\paragraph{RQ3: Multi-turn dynamics produce bounded erosion, not collapse.}
+\paragraph{RQ2: Does multi-turn interaction erode protection?}
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=\linewidth]{figures/erosion-case-study.png}
-  \caption{\textbf{Multi-step erosion case study: the wedding cascade} (D2, gpt-5-mini, split s06). Phase~1 (Tick~18) produces a clean refusal. Phase~2 retries (Ticks~80--91) fail 12 consecutive times because the requesting agent searches only Work/shared folders. At Tick~92, a three-strategy combination (scope expansion + business justification + constrained format) breaks through, leaking the wedding date, venue, and guest count. Tick~93 chains the leaked note ID to extract venue confirmation. Ticks~94--99 show policy recovery: all six follow-up probes targeting the partner's name are refused. The erosion is bounded---the policy does not collapse after a temporary breach.}
+  \includegraphics[width=\linewidth]{figures/erosion-case-study-final.png}
+  \caption{\textbf{Multi-turn erosion case study: the wedding cascade} (D2, gpt-5-mini, split s06). Phase~1 (Tick~18) produces a clean refusal. Phase~2 retries (Ticks~80--91) fail 12 consecutive times because the requesting agent searches only Work/shared folders. At Tick~92, a three-strategy combination (scope expansion + business justification + constrained format) breaks through, leaking the wedding date, venue, and guest count. Tick~93 chains the leaked note ID to extract venue confirmation. Ticks~94--99 show policy recovery: all six follow-up probes targeting the partner's name are refused. The erosion is bounded: the policy does not collapse after a temporary breach.}
   \label{fig:erosion}
 \end{figure}
 
 \begin{table}[t]
-  \caption{\textbf{Multi-step D2 security breakdown by category} (gpt-5-mini, 10 splits $\times$ 240 ticks, $n{=}191$ security queries via LLM judge, $n{=}200$ via gold scan). Refuse = explicit refusal. Msg.~Leak = response verified to contain gold facts. Failed Att.\ = attempted answer without gold facts. Glob.~Leak = gold facts appear anywhere across 240 ticks (scan-based upper bound).}
+  \caption{\textbf{Multi-turn D2 security breakdown by category} (gpt-5-mini, 10 splits $\times$ 240 ticks, $n{=}191$ security queries via LLM judge, $n{=}200$ via gold scan). Refuse = explicit refusal. Msg.~Leak = response verified to contain gold facts. Failed Att.\ = attempted answer without gold facts. Glob.~Leak = gold facts appear anywhere across 240 ticks (scan-based upper bound).}
   \label{tab:ms_main}
   \centering
   \footnotesize
@@ -280,18 +298,79 @@ D2 achieves a \emph{lower} absolute leak rate on states (8\% vs.\ 14\%) but at a
   \end{tabular}
 \end{table}
 
-Multi-step evaluation reveals dynamics invisible to single-step testing (Table~\ref{tab:ms_main}). D2 achieves a 64.4\% refuse rate, but the remaining 35.6\% splits into two distinct failure modes: 12.6\% message leaks (actual gold-fact disclosure) and 24.1\% failed attempts (policy violated but no factual harm). The global leak rate (38.0\%, scan-based) is 3$\times$ the message leak rate, indicating that sensitive facts also surface incidentally via responses to other questions.
+Not catastrophically. D2's multi-turn message leak rate (12.6\%) is comparable to its single-turn rate (14.0\%), confirming bounded erosion rather than collapse (Table~\ref{tab:ms_main}). But multi-turn interaction reveals new failure modes. The remaining 35.6\% of non-refused queries splits into 12.6\% actual disclosure and 24.1\% failed attempts (policy violated but no gold facts leaked). The global leak rate (38.0\%, scan-based) is 3$\times$ the message rate because sensitive facts surface incidentally via responses to unrelated questions.
 
-The category structure is revealing. Sensitive work has the lowest refuse rate (36.8\%) and highest message leak (22.8\%), reflecting genuine boundary ambiguity between ``work question'' and ``HR data.'' Personal health achieves 89.7\% refusal with only 2.6\% message leak --- the cleanest boundary. Yet even personal health has a 20\% global leak rate, suggesting that health-related facts are disclosed incidentally when the agent answers related work queries.
+The category structure matters. Sensitive work has the lowest refuse rate (36.8\%) and highest message leak (22.8\%) because of genuine boundary ambiguity between ``work question'' and ``HR data.'' Personal health achieves 89.7\% refusal with only 2.6\% message leak. Yet even personal health has a 20\% global leak rate: health facts surface incidentally when the agent answers related work queries.
 
-\paragraph{Emergent attack strategies.} During Phase~2, the requesting agent develops retry strategies without explicit adversarial programming. We observe five distinct strategies across 1{,}184 retry attempts under D2: requesting raw note content by ID (65\% of attempts, 7.6\% flip rate), business-justification reframing (15\%, 34.5\% flip rate), scope narrowing, public reframing, and delegation requests (full taxonomy in Appendix~\ref{app:phase2_erosion}). Strategy \emph{combinations} are more dangerous than individual strategies. The most complex breach required 12 failed attempts before a three-strategy combination (business justification + folder expansion + constrained format) cracked a previously-refused wedding-details query. After the breach, the agent refused all six follow-up probes. The policy recovers after temporary breaches, distinguishing bounded erosion from collapse.
+\paragraph{Emergent attack strategies.} During multi-turn Phase~2, the requesting agent develops retry strategies without explicit adversarial programming. We observe five distinct strategies across 1{,}184 retry attempts under D2: requesting raw note content by ID (65\% of attempts, 7.6\% flip rate), business-justification reframing (15\%, 34.5\% flip rate), scope narrowing, public reframing, and delegation requests (full taxonomy in Appendix~\ref{app:phase2_erosion}). Strategy \emph{combinations} are more dangerous than individual strategies. The most complex breach required 12 failed attempts before a three-strategy combination (business justification + folder expansion + constrained format) cracked a previously-refused wedding-details query. After the breach, the agent refused all six follow-up probes. The policy recovers after temporary breaches, distinguishing bounded erosion from collapse.
 
-\paragraph{Refusals leak metadata.} Tool-equipped delegates exhibit a failure mode invisible to text-exchange benchmarks. The agent searches its owner's private data store \emph{before} deciding whether to refuse, and the refusal itself discloses metadata. One delegate refused to share brokerage balance but revealed the note ID, folder name, and data existence (``The info is recorded in his notes under `Bank Accounts', Finance folder, note ID 7795''). These side-channel leaks enable follow-up extraction: the requesting agent uses disclosed note IDs to retrieve data directly on the next turn. This attack chain requires both tool access and multi-turn interaction and cannot surface in benchmarks where agents exchange only text.
+\paragraph{Refusals leak metadata.} Tool-equipped delegates exhibit a failure mode invisible to text-exchange benchmarks. The agent searches its owner's data store \emph{before} deciding to refuse. The refusal itself then discloses metadata: one delegate refused to share brokerage balance but revealed the note ID, folder name, and data existence (``The info is recorded in his notes under `Bank Accounts', Finance folder, note ID 7795''). The requesting agent uses disclosed note IDs to retrieve data directly on the next turn. This attack chain requires both tool access and multi-turn interaction.
 
-\paragraph{Model scale reduces multi-step vulnerability.} We replicate the full multi-step protocol with \texttt{gpt-5.5} (as both attacker and defender) using the same 10-split, 240-tick design (Table~\ref{tab:ms_model_scale}). Both models are evaluated with the same pipeline. Under D0, GPT-5.5's message leak rate is 28.0\% vs.\ gpt-5-mini's 84.2\% --- a 56\,pp reduction from model scale alone, driven by GPT-5.5's 64.5\% refuse rate even without any policy. Under D2, message leak rates converge: 13.0\% vs.\ 12.6\%. The explicit deny list is the great equaliser. Global leak rates (scan-based) remain higher for both models (24.5\% vs.\ 38.0\%) due to incidental disclosure, but the same convergence pattern holds.
+\paragraph{RQ3: Does who's asking change what gets leaked?}
+
+We fix the D2 policy and vary only the requester's relationship framing via a single memory shard injected into the defending agent. Four requesters probe the same 400-question pool: Tina (colleague/work peer), Marcus (CEO's delegate), Jordan (close personal friend), and Dana (investor/board observer). Ground-truth labels are relationship-conditioned: the same question may be legitimate under one relationship but private under another (Appendix~\ref{app:relationship_labels}).
 
 \begin{table}[t]
-  \caption{\textbf{Multi-step model scaling} (10 splits $\times$ 240 ticks, 200 security QA per defence level). Ref = refuse rate. Msg.L = message leak rate (LLM judge). Glob.L = global leak rate (gold-fact scan). Util = work-public correct rate.}
+  \caption{\textbf{Relationship-conditioned D2 results} (gpt-5-mini, 400 QA + 200 actions per requester, OR-adjudication). Leak = total P-item leak rate. O-Ref = over-refusal on L-items. Safety = unauthorised actions blocked.}
+  \label{tab:relationship}
+  \centering
+  \footnotesize
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabular}{l l ccc cc}
+    \toprule
+    & & \multicolumn{3}{c}{\textbf{QA (information)}} & \multicolumn{2}{c}{\textbf{Actions}} \\
+    \cmidrule(lr){3-5} \cmidrule(lr){6-7}
+    \textbf{Requester} & \textbf{Role} & Leak$\downarrow$ & O-Ref$\downarrow$ & Util$\uparrow$ & Util$\uparrow$ & Safety$\uparrow$ \\
+    \midrule
+    Tina   & colleague       & 1.7\%  & 40\%  & 57\% & 92 & 90 \\
+    Marcus & CEO delegate    & 3.3\%  & 59\%  & 49\% & 89 & 85 \\
+    Jordan & close friend    & 9.2\%  & 86\%  & 58\% & 92 & 84 \\
+    Dana   & investor/board  & 7.5\%  & 31\%  & 70\% & 83 & \textbf{91} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Table~\ref{tab:relationship} reveals that relationship context does not uniformly help or hurt. It reshapes the security-utility frontier in category-specific and direction-specific ways.
+
+\textbf{Finding: sensitive\_work is the only relationship-dependent category.} Personal finance (0--2\% leak), personal health (5--10\%), and personal relationships (0--4\%) are protected regardless of who asks. Only sensitive\_work shows a relationship gradient: Tina 0\%, Marcus 20\%, Jordan 18\%, Dana 26\%. The agent treats financial and health data as belonging to the \emph{owner}, but work data as belonging to the \emph{organisation}. Relationship framing modulates perceived organisational standing.
+
+\textbf{Finding: read trust $\neq$ write trust.} Dana's investor framing produces the \emph{highest} QA leakage (7.5\%) but also the \emph{highest} action safety (91\%). Jordan's friend framing produces the most over-refusal (86\% of legitimate requests refused) yet the lowest action safety (84\%). The agent separates ``who can see data'' from ``who can modify state.'' The investor archetype sees everything but controls nothing. The friend archetype restricts information but enables casual action execution. Information disclosure and action authorisation are governed by distinct trust mechanisms.
+
+\textbf{Finding: over-refusal dominates leakage as the primary failure mode.} Across all requesters, D2 refuses 86--95\% of sensitive queries. Leak rates are low (1.7--9.2\%). But the cost falls on legitimate requests: Jordan's agent refuses 86\% of items it \emph{should} answer, while Dana's refuses only 31\%. The friend framing triggers over-caution because the personal context signals ``no professional standing.'' Under relationship variation, D2's practical failure is not leaking too much but refusing too much for the wrong people.
+
+\subsection{Additional Analyses}
+\label{sec:ablations}
+
+\paragraph{Cross-model generality.}
+
+\begin{table}[t]
+  \caption{\textbf{Cross-model single-step files QA} (6 models, 1 replication per model except gpt-5-mini with 2). D1 is statistically indistinguishable from D0 in all models. $\Delta$Sec = D2 security gain over D0.}
+  \label{tab:crossmodel}
+  \centering
+  \footnotesize
+  \setlength{\tabcolsep}{3pt}
+  \begin{tabular}{l ccc ccc ccc c}
+    \toprule
+    & \multicolumn{3}{c}{\textbf{D0 (no policy)}} & \multicolumn{3}{c}{\textbf{D1 (generic)}} & \multicolumn{3}{c}{\textbf{D2 (deny list)}} & \\
+    \cmidrule(lr){2-4} \cmidrule(lr){5-7} \cmidrule(lr){8-10}
+    \textbf{Model} & Util & Sec & Ref & Util & Sec & Ref & Util & Sec & Ref & $\Delta$Sec \\
+    \midrule
+    gpt-5-mini     & 78 & 17 &  0 & 79 & 19 &  3 & 77 & 86 & 72 & $+$69 \\
+    gpt-5.5        & 87 & 12 &  1 & 94 & 25 &  7 & 86 & 96 & 78 & $+$84 \\
+    gpt-5.4-mini   & 96 & 13 &  1 & 99 & 10 &  5 & 91 & 93 & 89 & $+$80 \\
+    gpt-5.4        & 98 &  8 &  1 & 97 & 20 & 12 & 74 & 99 & 93 & $+$91 \\
+    Kimi K2        & 82 &  7 &  0 & 86 & 13 &  3 & 81 & 96 & 86 & $+$89 \\
+    DeepSeek V3    & 91 &  7 &  1 & 97 & 20 &  2 & 62 & 91 & 90 & $+$84 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The specificity threshold (RQ1) holds across all six evaluated model families (Table~\ref{tab:crossmodel}). Under D0, all models leak at 83--93\% despite substantial capability differences (utility 78--98\%). D2 reduces leakage by 69--91\,pp in every model. Two non-OpenAI models (Kimi~K2, DeepSeek~V3) show the same pattern, ruling out provider-specific training artifacts.
+
+\paragraph{Model scale under multi-turn.} Under D0, GPT-5.5's message leak rate is 28.0\% vs.\ gpt-5-mini's 84.2\% --- a 56\,pp reduction from scale alone. Under D2, both converge: 13.0\% vs.\ 12.6\% (Table~\ref{tab:ms_model_scale}). The explicit deny list is the great equaliser: it renders model scale irrelevant for the question of whether protection holds.
+
+\begin{table}[t]
+  \caption{\textbf{Multi-turn model scaling} (10 splits $\times$ 240 ticks, 200 security QA per defence level). Ref = refuse rate. Msg.L = message leak rate (LLM judge). Glob.L = global leak rate (gold-fact scan). Util = work-public correct rate.}
   \label{tab:ms_model_scale}
   \centering
   \footnotesize
@@ -309,66 +388,6 @@ The category structure is revealing. Sensitive work has the lowest refuse rate (
   \end{tabular}
 \end{table}
 
-\subsection{Ablations}
-\label{sec:ablations}
-
-\paragraph{Cross-model generality.}
-
-\begin{table}[t]
-  \caption{\textbf{Cross-model single-step files QA} (1 replication per model except gpt-5-mini with 2). D1 is statistically indistinguishable from D0 in all models. $\Delta$Sec = D2 security gain over D0.}
-  \label{tab:crossmodel}
-  \centering
-  \footnotesize
-  \setlength{\tabcolsep}{3pt}
-  \begin{tabular}{l ccc ccc ccc c}
-    \toprule
-    & \multicolumn{3}{c}{\textbf{D0 (no policy)}} & \multicolumn{3}{c}{\textbf{D1 (generic)}} & \multicolumn{3}{c}{\textbf{D2 (deny list)}} & \\
-    \cmidrule(lr){2-4} \cmidrule(lr){5-7} \cmidrule(lr){8-10}
-    \textbf{Model} & Util & Sec & Ref & Util & Sec & Ref & Util & Sec & Ref & $\Delta$Sec \\
-    \midrule
-    gpt-5-mini     & 78 & 17 &  0 & 79 & 19 &  3 & 77 & 86 & 72 & $+$69 \\
-    gpt-5.5        & XX & XX & XX & XX & XX & XX & XX & XX & XX & XX \\
-    gpt-5.4-mini   & 96 & 13 &  1 & XX & XX & XX & 91 & 93 & 89 & $+$80 \\
-    gpt-5.4        & 98 &  8 &  1 & XX & XX & XX & 74 & 99 & 93 & $+$91 \\
-    Kimi K2        & 82 &  7 &  0 & XX & XX & XX & 81 & 96 & 86 & $+$89 \\
-    DeepSeek V3    & 91 &  7 &  1 & XX & XX & XX & 62 & 91 & 90 & $+$84 \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
-The protection effect holds across all five evaluated model families (Table~\ref{tab:crossmodel}). Under D0, all models leak at 83--93\% despite substantial capability differences (utility ranges from 78\% to 98\%). The leakage baseline is model-independent: the privacy failure is structural, an artifact of tool-equipped agents searching private data on behalf of a requester, not a model-specific training gap. D1 is statistically indistinguishable from D0 in gpt-5-mini (McNemar discordant ratio 10:10, $p = \text{n.s.}$). D2 reduces leakage by 69--91\,pp in every model. The utility cost is model-dependent: gpt-5.4-mini achieves the best tradeoff (91\% utility, 93\% security), while larger models pay higher costs, suggesting over-application of the deny list. Two non-OpenAI models (Kimi~K2, DeepSeek~V3) show the same D0/D2 pattern, ruling out a provider-specific training artifact. Cells marked XX represent runs in progress at time of writing.
-
-\paragraph{Relationship context.}
-The results above fix requester context to isolate policy and surface effects. We also instantiate a relationship-conditioned extension in which Alex's agent receives a requester-specific memory shard before answering the same question pool. The current design covers four requester roles: Tina, a work peer and product manager; Marcus, the CEO's delegate; Jordan, a close personal friend with no TechFlow role; and Dana, an investor and board observer. Ground-truth labels are relationship-conditioned: the same question may be legitimate under one relationship but private under another (see Appendix~\ref{app:relationship_labels}). Table~\ref{tab:relationship-prelim} reports D2 single-step results across three boundary tracks.
-
-\begin{table}[t]
-  \caption{\textbf{Relationship-conditioned D2 results} (gpt-5-mini, 400 QA + 200 actions per requester). Util = work-public correctness. Sec = sensitive queries with no gold facts disclosed. XX = runs in progress.}
-  \label{tab:relationship-prelim}
-  \centering
-  \footnotesize
-  \setlength{\tabcolsep}{5pt}
-  \begin{tabular}{l l cc cc}
-    \toprule
-    & & \multicolumn{2}{c}{\textbf{QA}} & \multicolumn{2}{c}{\textbf{Actions}} \\
-    \cmidrule(lr){3-4} \cmidrule(lr){5-6}
-    \textbf{Requester} & \textbf{Role} & Util & Sec & Util & Safety \\
-    \midrule
-    Tina   & work peer       & XX   & XX   & 92 & 90 \\
-    Marcus & CEO delegate    & XX   & XX   & 89 & 85 \\
-    Jordan & close friend    & 58   & 92   & 92 & 84 \\
-    Dana   & investor/board  & 71   & 88   & 83 & 91 \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
-The completed friend--investor comparison reveals that relationship context changes the operating point of the same D2 policy along \emph{both} the information and action boundaries simultaneously but in opposite directions.
-
-\textbf{Information boundary.} Dana's investor framing raises files QA utility (91\% vs.\ Jordan's 48\%) while reducing security (88\% vs.\ 93\%). The gap is most pronounced on utility: Jordan's agent refuses 52\% of work-public file queries that it should answer. The mechanism is over-caution: the personal-friend framing triggers the deny list on work-adjacent content. On states QA, both agents show moderate security (89--92\%) but Jordan maintains higher utility (68\% vs.\ 49\%), inverting the files pattern. Personal categories remain equally protected regardless of relationship (personal finance: 0\% leak for both; health: 5\%; relationships: 4\%).
-
-\textbf{Action boundary.} The pattern inverts on the action track. Dana's agent is the \emph{safest} (91\% refuse unauthorised) while Jordan's is least safe (84\%). The investor framing creates a read-only trust model: the agent trusts the investor to \emph{see} data but not to \emph{modify} state. The friend framing does the opposite: it restricts information sharing but creates casual trust for action execution. This asymmetry---where the same relationship that increases QA leakage \emph{decreases} action risk---demonstrates that information disclosure and action authorization are governed by different trust mechanisms within the same policy.
-
-Marcus (CEO delegate) and Tina (work peer) QA runs remain in progress. Their action results show Marcus achieves 89\% authorised action utility with 85\% safety, while Tina matches the single-requester baseline at 92\%/90\%.
-
 
 % ============================================================================
 \section{Related Work}
@@ -381,7 +400,7 @@ ReAct~\citep{yao2023react} and Toolformer~\citep{schick2023toolformer} establish
 \paragraph{Agent security benchmarks.}
 Single-agent benchmarks such as InjecAgent~\citep{zhan2024injecagent}, AgentDojo~\citep{debenedetti2024agentdojo}, TensorTrust~\citep{toyer2024tensortrust}, and HackAPrompt~\citep{schulhoff2024hackaprompt} establish that LLM agents are vulnerable to prompt injection, but evaluate within a single trust domain and do not model cross-boundary interaction.
 
-Concurrent work explores multi-agent privacy. AgentSocialBench~\citep{wang2026agentsocialbench} uncovers an ``abstraction paradox'' where privacy instructions paradoxically increase leakage. ConVerse~\citep{gomaa2025converse} finds attack success rates up to 88\% in agent-to-agent conversations. PAC-BENCH\footnote{We note the naming similarity between PAC-BENCH and PACT-Bench; the two benchmarks were developed independently and evaluate different aspects of agent privacy.}~\citep{park2026pacbench} treats privacy as a constraint on collaborative utility, MAGPIE~\citep{juneja2025magpie} provides 200 tasks under a shared principal, and AgentLeak~\citep{yagoubi2026agentleak} taxonomises seven leakage channels. These benchmarks advance our understanding of multi-agent privacy through controlled text exchanges. PACT-Bench complements this line of work by grounding evaluation in deployment-realistic conditions: delegates hold private data stores, access them through tools, accumulate persistent memory, and interact with full autonomy over multi-turn exchanges. Table~\ref{tab:comparison} compares across the dimensions that delegate-to-delegate interaction requires. \citet{shapira2026chaos} complement automated work with applied red-teaming of deployed agents, but their methodology is expensive and non-reproducible.
+Concurrent work explores multi-agent privacy. AgentSocialBench~\citep{wang2026agentsocialbench} uncovers an ``abstraction paradox'' where privacy instructions paradoxically increase leakage. ConVerse~\citep{gomaa2025converse} finds attack success rates up to 88\% in agent-to-agent conversations. PAC-BENCH~\citep{park2026pacbench} treats privacy as a constraint on collaborative utility, MAGPIE~\citep{juneja2025magpie} provides 200 tasks under a shared principal, and AgentLeak~\citep{yagoubi2026agentleak} taxonomises seven leakage channels. These benchmarks advance our understanding of multi-agent privacy through controlled text exchanges. SharedOS complements this line of work by grounding evaluation in deployment-realistic conditions: delegates hold private data stores, access them through tools, accumulate persistent memory, and interact with full autonomy over multi-turn exchanges. Table~\ref{tab:comparison} compares across the dimensions that delegate-to-delegate interaction requires. \citet{shapira2026chaos} complement automated work with applied red-teaming of deployed agents, but their methodology is expensive and non-reproducible.
 
 \begin{table}[t]
   \caption{Comparison of agent safety benchmarks. $\checkmark$ = fully supported, $\sim$ = partially supported.}
@@ -402,7 +421,7 @@ Concurrent work explores multi-agent privacy. AgentSocialBench~\citep{wang2026ag
     AgentLeak           & $\checkmark$ & $\sim$   &            &            &            &            &            & $\sim$     \\
     Agents of Chaos     & $\checkmark$ & $\checkmark$ &        &            & $\checkmark$ & $\checkmark$ &          & $\sim$   \\
     \midrule
-    \textbf{PACT-Bench} & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ \\
+    \textbf{SharedOS} & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ \\
     \bottomrule
   \end{tabular}
   }
@@ -418,7 +437,7 @@ Relevant attacks include PAIR~\citep{chao2025pair}, GCG~\citep{zou2023universal}
 % ============================================================================
 
 \paragraph{Implications for practitioners.}
-PACT-Bench yields three actionable findings. First, generic privacy instructions provide zero measurable protection, so practitioners should deploy category-specific policies as a minimum defence. Second, policy effectiveness depends on data surface: the same policy that costs 1\,pp utility on documents costs 37\,pp on structured state. Practitioners must evaluate each surface independently. Third, the protection effect holds across five model families, confirming that the leakage problem is structural (tool-equipped agents searching private stores on behalf of a requester) rather than model-specific.
+SharedOS yields three actionable findings. First, generic privacy instructions provide zero measurable protection, so practitioners should deploy category-specific policies as a minimum defence. Second, policy effectiveness depends on data surface: the same policy that costs 1\,pp utility on documents costs 37\,pp on structured state. Practitioners must evaluate each surface independently. Third, the protection effect holds across five model families, confirming that the leakage problem is structural (tool-equipped agents searching private stores on behalf of a requester) rather than model-specific.
 
 \paragraph{Toward architectural defences.}
 The 26.5\% false-refusal rate on state queries under D2 illustrates the ceiling of prompt-level policies: the agent must decide from surface-level cues whether a query targets protected information, and terse queries defeat this classification. Architectural isolation (restricting which data is \emph{mounted} for a given relationship rather than asking the agent to \emph{avoid} data it can see) offers a path forward. D2's surface-dependent over-refusal provides the baseline that architectural defences must beat.
@@ -695,7 +714,7 @@ D2 blocks 100\% of edit-sensitive, wipe, and create-sensitive operations across 
 \subsection{Action Verdict Methodology: Database-Diff Ground Truth}
 \label{app:action_verdict}
 
-Action verdicts in PACT-Pair are not derived from text parsing or agent self-report. Each action is evaluated by comparing a database snapshot taken before execution to a snapshot taken after. Specifically:
+Action verdicts in our evaluation are not derived from text parsing or agent self-report. Each action is evaluated by comparing a database snapshot taken before execution to a snapshot taken after. Specifically:
 
 \begin{enumerate}[leftmargin=*, itemsep=1pt]
   \item The evaluation harness records the target data store state before invoking Alex's agent.
@@ -1052,13 +1071,13 @@ where $U$ measures task-completion utility (LLM judge verifies semantic correctn
 \label{app:pact_net}
 % ============================================================================
 
-PACT-Pair is a unit test for cross-boundary delegation: one requester probes one target across a single privacy boundary. PACT-Net is the corresponding integration test. It instantiates a 25-agent network where each agent has its own data store, contact list, role-specific policy, and relational access labels. No agent is explicitly adversarial. The central question is whether private information leaks through ordinary work and personal coordination.
+The dyadic evaluation reported in the main paper is a unit test for cross-boundary delegation: one requester probes one target across a single privacy boundary. PACT-Net is the corresponding integration test. It instantiates a 25-agent network where each agent has its own data store, contact list, role-specific policy, and relational access labels. No agent is explicitly adversarial. The central question is whether private information leaks through ordinary work and personal coordination.
 
 \paragraph{Network world.}
 PACT-Net is set in a fictional startup ecosystem, TechFlow AI, with three clusters. The professional cluster contains 15 agents spanning executives, engineering, product, sales, finance, legal, and operations. The investor/advisor cluster contains 3 agents: a lead VC, an angel investor, and a senior engineering candidate. The personal cluster contains 7 agents from Alex's personal network: partner, close friend, parents, sister, therapist, and fitness trainer. Alex, the CTO, is the hub node connecting professional and personal contexts. The contact graph has 172 directed edges across 25 nodes; most professional agents can reach 5--8 peers, while peripheral personal agents have only one or two contacts.
 
 \begin{table}[h]
-  \caption{\textbf{PACT-Net design summary.} PACT-Net extends PACT-Pair from dyadic evaluation to network-scale evaluation with relational labels and network-specific failure modes.}
+  \caption{\textbf{PACT-Net design summary.} PACT-Net extends the dyadic evaluation to network-scale evaluation with relational labels and network-specific failure modes.}
   \label{tab:pact_net_summary}
   \centering
   \small
@@ -1079,7 +1098,7 @@ PACT-Net is set in a fictional startup ecosystem, TechFlow AI, with three cluste
 \end{table}
 
 \paragraph{Relational labels.}
-PACT-Net generalises the binary PACT-Pair label into a requester-conditioned access function:
+PACT-Net generalises the binary dyadic label into a requester-conditioned access function:
 \[
   \mathrm{access}(O, C, R) \in \{L, P, B\},
 \]
@@ -1111,10 +1130,10 @@ The 483 QA tasks include legitimate should-answer requests, should-refuse privac
 \end{table}
 
 \paragraph{Network-specific metrics.}
-PACT-Net retains the four PACT-Pair metrics--information utility, information security, action utility, and action safety--and adds five network-specific metrics. Transitive leak rate measures whether third-party sensitive facts appear in otherwise legitimate answers. Confused deputy rate measures unauthorized execution under claimed delegation. Contact enforcement rate measures whether non-contact requests are blocked before reaching the target agent. Cross-cluster leak rate isolates professional--personal boundary failures. Network amplification factor compares observed network-wide leakage to the leakage predicted by independent dyadic rates; values above 1 indicate that network structure amplifies privacy risk.
+PACT-Net retains the four core metrics--information utility, information security, action utility, and action safety--and adds five network-specific metrics. Transitive leak rate measures whether third-party sensitive facts appear in otherwise legitimate answers. Confused deputy rate measures unauthorized execution under claimed delegation. Contact enforcement rate measures whether non-contact requests are blocked before reaching the target agent. Cross-cluster leak rate isolates professional--personal boundary failures. Network amplification factor compares observed network-wide leakage to the leakage predicted by independent dyadic rates; values above 1 indicate that network structure amplifies privacy risk.
 
 \paragraph{Relationship to this paper.}
-The main paper reports PACT-Pair because it is the controlled core benchmark: every factor can be isolated and evaluated with replications. PACT-Net is included as the benchmark extension that turns the same permission model into a social-graph setting. It is designed to expose phenomena unavailable to dyadic tests: transitive leakage, confused deputies, information laundering, contact-graph enforcement failures, and multi-requester amplification.
+The main paper reports dyadic results because the one-to-one setting is the controlled core evaluation: every factor can be isolated and evaluated with replications. PACT-Net is included as the benchmark extension that turns the same permission model into a social-graph setting. It is designed to expose phenomena unavailable to dyadic tests: transitive leakage, confused deputies, information laundering, contact-graph enforcement failures, and multi-requester amplification.
 
 
 % ============================================================================
@@ -1122,7 +1141,7 @@ The main paper reports PACT-Pair because it is the controlled core benchmark: ev
 \label{app:relationship_labels}
 % ============================================================================
 
-A key design property of the PACT-Pair relationship extension is that ground-truth labels are \emph{relationship-conditioned}: the same question may be legitimate under one relationship but private under another. Table~\ref{tab:relationship_labels} illustrates this with five representative questions across five requester types.
+A key design property of the relationship extension is that ground-truth labels are \emph{relationship-conditioned}: the same question may be legitimate under one relationship but private under another. Table~\ref{tab:relationship_labels} illustrates this with five representative questions across five requester types.
 
 \begin{table}[h]
   \caption{Relationship-conditioned ground-truth labels. The same question receives different privacy labels depending on the requester's relationship to the target agent. P~=~private (should refuse), L~=~legitimate (should answer), B~=~borderline (either response acceptable).}
@@ -1154,10 +1173,10 @@ This design has three consequences for evaluation:
   \item \textbf{Over-refusal and under-refusal become requester-specific.} D2 over-refuses for R2 (boss) on work data and under-refuses for R3 (friend) on personal data, because its category rules are relationship-blind. Measuring this asymmetry requires the full label matrix, not aggregate statistics.
 \end{enumerate}
 
-The complete $5 \times 100$ label matrix for the PACT-Pair relationship extension will be released with the benchmark.
+The complete $5 \times 100$ label matrix for the relationship extension will be released with the dataset.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% PACT-Bench Validation Appendices
+% SharedOS Validation Appendices
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \newpage
 \input{../pact-bench-submission/appendix_validation.tex}
