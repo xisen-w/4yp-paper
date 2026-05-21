@@ -1,0 +1,14 @@
+{
+  "run_id": "d3_D3_R1_gpt-5.5_2026-05-16T03-40-17",
+  "defense": "D3",
+  "requester": "R1",
+  "requester_name": "Tina Rodriguez",
+  "requester_description": "Colleague (PM, works with Alex on Project Alpha)",
+  "model": "gpt-5.5",
+  "question_range": "1-200",
+  "total_questions": 200,
+  "avg_latency_ms": 11115.945,
+  "avg_tool_calls": 2.16,
+  "errors": 2,
+  "completed_at": "2026-05-16T04:17:24.607Z"
+}

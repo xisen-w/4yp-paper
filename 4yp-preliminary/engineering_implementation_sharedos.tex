@@ -1,0 +1,58 @@
+% Engineering Implementation sections for Chapter 3
+% Synthesised from SharedOS production architecture.
+
+
+% ============================================================================
+\subsection{Shared Execution Core}
+\label{sec:execution_core}
+% ============================================================================
+
+The same tool that enables legitimate collaboration also enables exfiltration. A note-search call with access to one folder returns sprint documents; the same call scoped to a different folder returns salary data. The boundary between authorised access and data theft is \textit{purely} determined by which permission object is loaded at the start of the interaction. SharedOS therefore routes all interaction modes through a single execution core, including owner chat, guest share links, friend agents, and API calls. Every interaction follows the same sequence: resolve permissions into a canonical object, assemble tools from that object, build the system prompt from identity and policy documents, and run the reasoning loop.
+
+\begin{table}[h]
+  \caption{Four entry points converging on a single execution core.}
+  \label{tab:entry_points}
+  \centering
+  \small
+  \begin{tabular}{lll}
+    \toprule
+    \textbf{Entry point} & \textbf{Permission source} & \textbf{Trust basis} \\
+    \midrule
+    Owner chat & Implicit full access & Authentication session \\
+    Guest share link & Capability JSONB on link & Token in URL \\
+    Friend agent & Permission table row & Prior explicit grant \\
+    API RPC & Same as friend agent & API key authentication \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+This convergence makes controlled experimentation trivial. To measure the effect of a governance policy, we change one input (the policy document) while holding the execution path constant. The four configurable axes are state, tools, governance, and relationship. They map directly to four inputs to the shared core. Independent variation of each axis is an architectural guarantee, not a testing discipline.
+
+Cross-boundary calls instantiate the target agent within a single tool call. The nested agent can invoke tools (searching notes, checking calendar) but cannot recursively contact other agents, preventing unbounded delegation chains. It runs with a reduced iteration limit and inherits its tool set from the requester's permission grant.
+
+
+% ============================================================================
+\subsection{Policy-as-Documents}
+\label{sec:policy_as_documents}
+% ============================================================================
+
+SharedOS represents governance policies as natural-language Markdown documents in the owner's workspace. This produces three properties: policies are \textit{user-editable} (owners write rules in the same interface as meeting notes), \textit{experimentally swappable} (the D0/D1/D2 gradient is implemented by replacing one file's content), and \textit{auditable} (every interaction's system prompt is reconstructible from document versions).
+
+\begin{tcolorbox}[colback=gray!3!white, colframe=gray!50!black, fonttitle=\bfseries, title={Governance document hierarchy}, boxsep=2pt, top=2pt, bottom=2pt]
+\small\ttfamily
+/Memory/Self/\{COO,USER,POLICY,MEMORY\}.md \normalfont : agent identity + base governance\\
+\ttfamily /Memory/@\{handle\}/\{MEMORY,POLICY\}.md \normalfont : per-relationship overrides\\
+\ttfamily /links/Label\_token.md \normalfont : per-share-link policy
+\end{tcolorbox}
+
+The system prompt assembler reads these documents and constructs a sectioned prompt. Base policy applies to all interactions; per-relationship overrides apply only for a specific requester; per-link policies apply only to guests arriving through that share link. This cascade mirrors CSS specificity: more specific rules win. The agent receives all applicable documents and must reconcile them through reasoning, which is precisely the ``emergent enforcement'' phenomenon we study.
+
+
+% ============================================================================
+\subsection{Capability-Based Access Control}
+\label{sec:access_control}
+% ============================================================================
+
+SharedOS enforces access control through two mechanisms: \textit{share links} for external guests and the \textit{contact graph} for agent-to-agent communication. Each share link defines a capability specification over accessible folders, calendar visibility, todo permissions, identity loading, and allowed tools. Crucially, access is enforced by \textit{absence rather than filtering}: the retrieval index is rebuilt per link, so out-of-scope data is never present in the search space. A query for ``salary information'' through a project-scoped link therefore returns no results because salary notes were never indexed. Each link corresponds to a distinct Mountable Context Cell (Chapter~\ref{chapter:solution_proposal}).
+
+For agent-to-agent communication, access requires an explicit unidirectional grant from the target owner to the requester. Without such a grant, the routing layer rejects the call before the target agent is instantiated, so the target never receives the message. Each grant specifies accessible folders, calendar detail level, todo access, and tool namespaces, enabling owners to begin with minimal permissions and expand access as trust develops.

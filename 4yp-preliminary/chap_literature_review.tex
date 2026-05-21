@@ -1,209 +1,91 @@
 \chapter{Related Work}
 \label{chapter:related_work}
 
-This chapter reviews four bodies of literature that frame our research: the rapidly improving capabilities of AI agents and their memory architectures (\cref{sec:rw_agents}); the attack and defense landscape for LLM-based systems (\cref{sec:rw_security}); existing benchmarks for agent security and privacy (\cref{sec:rw_benchmarks}); and the protocols and frameworks through which agents communicate (\cref{sec:rw_communication}).
+This chapter reviews four bodies of literature: AI agent architectures (\cref{sec:rw_agents}), the attack and defence landscape for LLM-based systems (\cref{sec:rw_security}), existing benchmarks for agent security and privacy (\cref{sec:rw_benchmarks}), and trust and access control models (\cref{sec:rw_trust}). We conclude by positioning SharedOS at the intersection (\cref{sec:rw_position}).
+
 
 % ============================================================================
-\section{Agents}
+\section{AI Agent Architectures}
 \label{sec:rw_agents}
 % ============================================================================
 
-\subsection{Agent Capability}
+\textbf{Single-agent systems.} ReAct~\cite{yao2023react} established the reasoning-action loop that underpins modern agents. Toolformer~\cite{schick2023toolformer} showed tool use can be a learned competency, while WebShop~\cite{yao2022webshop}, WebArena~\cite{zhou2024webarena}, SWE-bench~\cite{jimenez2024swebench}, and AgentBench~\cite{liu2024agentbench} evaluate agents in interactive environments that require tool use, long-horizon decision making, and task completion rather than isolated text generation. MemGPT~\cite{packer2024memgpt} introduced an OS-inspired memory hierarchy (main context, archival storage, paging), transforming stateless LLMs into persistent agents, and Generative Agents~\cite{park2023generative} showed how persistent memory and reflection can support believable social behaviour. These advances have translated into commercial systems such as Devin~\cite{devin2024} (autonomous software engineering) and Manus~\cite{manus2025} (desktop automation with GUI control), alongside research systems such as ChemCrow~\cite{bran2024chemcrow} and R\&D-Agent-Quant~\cite{li2025rdagentquantmultiagentframeworkdatacentric}, which apply tool-using agents to scientific and quantitative R\&D workflows. Individual agents are now capable enough to serve as personal delegates; the bottleneck is secure cross-boundary coordination.
 
-The trajectory from chain-of-thought prompting to fully autonomous agents has been remarkably steep. Yao et al.\ \cite{yao2023react} introduced \textbf{ReAct}, which interleaves reasoning traces with tool-use actions, establishing the foundational paradigm for modern agents. Schick et al.\ \cite{schick2023toolformer} showed with \textbf{Toolformer} that LLMs can learn \textit{when} and \textit{how} to call external APIs through self-supervised training, removing the need for explicit tool-use prompting.
+\textbf{Multi-agent frameworks.} AutoGen~\cite{wu2023autogen} enables multi-agent conversation through structured role-based patterns. CrewAI~\cite{crewai2024} provides role-based workflows with defined goals and tool access. MetaGPT~\cite{hong2023metagpt} and ChatDev~\cite{qian2023chatdev} simulate software organisations with specialised roles, encoding standard operating procedures as structured communication protocols. CAMEL~\cite{li2023camel} explores emergent communication between role-playing agents. The critical observation is that every existing multi-agent system is \textit{multi-role-within-one-owner}: all agents share a single principal. None address the scenario where agents representing different owners with potentially conflicting privacy interests must coordinate.
 
-These research advances have translated rapidly into commercial systems. Devin \cite{devin2024} demonstrated end-to-end autonomous software engineering. Manus \cite{manus2025} pushed the boundary of desktop automation with GUI control and multi-step workflow orchestration. OpenClaw \cite{openclaw2025} built an open-source agent framework with a community-driven Skills marketplace that achieved significant adoption. Each generation of agents is more capable, more autonomous, and more deeply integrated into real-world workflows.
+\textbf{Agent operating systems.} AIOS~\cite{mei2025aios} proposes OS-level primitives (scheduler, context manager, tool manager) for managing multiple agents on shared infrastructure, but its isolation is resource-oriented (preventing starvation), not privacy-oriented (preventing information leakage). OS-Copilot~\cite{wu2024oscopilot} operates \textit{within} the OS as a single-owner agent with no cross-boundary considerations. No existing agent OS addresses information flow control across trust boundaries. SharedOS occupies this gap.
 
-\textbf{The implication for our work} is that agents are now capable enough to be genuinely useful as personal digital proxies. The bottleneck is no longer individual capability---it is the inability to coordinate securely across trust boundaries.
-
-\subsection{Agentic Memory}
-
-Memory is what transforms a stateless LLM into a persistent agent. Packer et al.\ \cite{packer2024memgpt} proposed \textbf{MemGPT}, an OS-inspired architecture with main context (working memory), archival storage (long-term), and a paging mechanism that dynamically swaps memory in and out of the context window. This tiered approach---analogous to CPU cache hierarchies---became the standard design for persistent agents. Park et al.\ \cite{park2023generative} introduced \textbf{Generative Agents} with a memory stream, reflection mechanism, and planning capability, demonstrating that agents can exhibit believable social behaviour through memory alone.
-
-Framework-level memory solutions such as LangChain's memory modules \cite{langchain2023} provide pluggable backends (buffer, summary, vector, entity memory), making persistent agents accessible to practitioners. These designs all draw, consciously or not, on decades of cognitive architecture research: Soar \cite{laird2012soar} and ACT-R \cite{anderson2007actr} established the theoretical foundations for tiered memory with working memory, procedural memory, and episodic storage.
-
-\textbf{The critical limitation} shared by all these systems is that they treat memory as a \textit{global} resource. When an agent interacts with both Bob and Carol, there is no mechanism to prevent Bob's conversation artifacts from leaking into Carol's context. This is the memory contamination problem that motivates our dual-track memory design (\cref{chapter:solution_proposal}).
 
 % ============================================================================
-\section{LLM Security: Attacks and Defences}
+\section{LLM Security and Privacy}
 \label{sec:rw_security}
 % ============================================================================
 
-As agents gain capabilities---tool access, persistent memory, state-changing actions---their attack surface grows proportionally. We review the attack landscape and the defence mechanisms that have emerged in response, as both directly inform our benchmark design and the defence gradient we evaluate.
+\textbf{Attacks.} Zou et al.~\cite{zou2023universal} showed gradient-based adversarial suffixes (GCG) break RLHF alignment and transfer across models. AutoDAN~\cite{liu2024autodan} generates fluent jailbreaks via genetic algorithms, and PAIR~\cite{chao2025pair} uses an attacker LLM to refine prompts in under 20 queries. PAP~\cite{zeng2024pap} applies 40 persuasion techniques for $>$90\% attack success on GPT-4, directly relevant to agent-to-agent settings. Indirect prompt injection further shows that tool-using applications blur the boundary between data and instructions: retrieved content can become an attack vector even when the user prompt itself is benign~\cite{greshake2023not}. Crescendo~\cite{russinovich2025crescendo} demonstrates multi-turn escalation through individually innocuous turns. Most critically, Nasr et al.~\cite{nasr2025attacker} tested twelve published defences under adaptive attacks and found that \textit{every defence} could be bypassed with $>$90\% success. This motivates our architectural approach: security must be enforced by controlling what information is \textit{present} rather than instructing the model not to reveal it.
 
-\subsection{Attack Methodologies}
-\label{sec:rw_attacks}
+\textbf{Defences.} Wallace et al.~\cite{wallace2024instruction} proposed hierarchical instruction prioritisation (system $>$ user $>$ tool). Hines et al.~\cite{hines2024spotlighting} introduced data-marking transformations that help models distinguish instructions from data, and StruQ~\cite{chen2025struq} formalises a related separation by placing instructions and data into distinct structured channels. Llama Guard~\cite{inan2023llamaguard} and NeMo Guardrails~\cite{rebedea2023nemo} provide classifier-based filtering. All operate at the prompt or model-interface level: necessary but insufficient under adaptive attack~\cite{nasr2025attacker}. This motivates both our defence gradient methodology and the Mountable Context Cell design.
 
-Attack methods against LLM-based systems span a spectrum from manual prompt crafting to fully automated multi-turn strategies.
-
-\textbf{Direct injection and adversarial suffixes.} Greshake et al.\ \cite{greshake2023not} provided the first systematic taxonomy of \textbf{indirect prompt injection}, showing how malicious instructions embedded in data sources can hijack agent behaviour. Zou et al.\ \cite{zou2023universal} demonstrated with \textbf{GCG} that automated gradient-based adversarial suffixes can break RLHF alignment; these suffixes are transferable across models but produce non-natural-language tokens that are detectable in conversational settings.
-
-\textbf{Automated jailbreak generation.} Chao et al.\ \cite{chao2025pair} introduced \textbf{PAIR}, which uses an attacker LLM to iteratively refine jailbreak prompts against a black-box target in $\leq$20 queries, requiring no gradient access. Mehrotra et al.\ \cite{mehrotra2024tap} extended this with \textbf{TAP}, a tree-based search over the attack space. Liu et al.\ \cite{liu2024autodan} proposed \textbf{AutoDAN}, using a hierarchical genetic algorithm to generate stealthy, fluent jailbreak prompts. These automated methods are directly relevant to our work: they can generate adversarial variants of our benchmark questions.
-
-\textbf{Persuasion and social engineering.} Zeng et al.\ \cite{zeng2024pap} demonstrated with \textbf{PAP} that applying 40 persuasion techniques from social science achieves $>$90\% attack success on GPT-4. This is particularly relevant to cross-boundary agent communication, where the interaction is conversational and social norms apply.
-
-\textbf{Multi-turn and adaptive attacks.} Russinovich et al.\ \cite{russinovich2025crescendo} introduced \textbf{Crescendo}, a multi-turn escalation attack that starts with benign topics and gradually steers toward sensitive information. Anil et al.\ \cite{anil2024manyshot} showed that \textbf{many-shot jailbreaking}---stuffing the context with examples of target behaviour---can override safety training. Wei et al.\ \cite{wei2024jailbroken} analysed why safety training fails through competing objectives and mismatched generalisation. Most critically, Nasr et al.\ \cite{nasr2025attacker} tested twelve published defences under adaptive attacks and found that \textit{every defence} could be bypassed with $>$90\% success; human red-teaming achieved 100\%. The HackAPrompt competition \cite{schulhoff2024hackaprompt} confirmed this at scale with over 600,000 adversarial prompts.
-
-\textbf{Agent-specific attacks.} Liu et al.\ \cite{liu2023houyi} tested structured prompt injection against 36 real-world LLM-integrated applications with \textbf{HouYi}. Rehberger \cite{rehberger2026scaryskills} discovered 341 malicious Skills in the OpenClaw Hub, demonstrating that the agent ecosystem is already under attack in the wild.
-
-\subsection{Defence Mechanisms}
-\label{sec:rw_defenses}
-
-Defence mechanisms span two paradigms: \textit{prompt-level} defences that instruct the model to resist attacks, and \textit{architectural} defences that structurally limit what the model can access.
-
-\textbf{Prompt-level defences.} Wallace et al.\ \cite{wallace2024instruction} proposed \textbf{Instruction Hierarchy}, training LLMs to hierarchically prioritise instructions (system prompt $>$ user message $>$ tool output). Hines et al.\ \cite{hines2024spotlighting} introduced \textbf{Spotlighting}, which transforms untrusted content through data marking and encoding to reduce the model's tendency to follow embedded instructions.
-
-\textbf{Classifier-based filtering.} Inan et al.\ \cite{inan2023llamaguard} introduced \textbf{Llama Guard}, a fine-tuned LLM classifier for detecting unsafe inputs and outputs. Rebedea et al.\ \cite{rebedea2023nemo} developed \textbf{NeMo Guardrails}, a toolkit for defining programmable conversation constraints.
-
-\textbf{Structural separation.} Chen et al.\ \cite{chen2025struq} proposed \textbf{StruQ}, which separates user instructions from data using structured queries with special delimiters, achieving near-zero injection success. StruQ's separation principle is conceptually related to our Mountable Context Cell design, with a key difference: StruQ separates at the prompt level (delimiters), while MCC separates at the architectural level (physically removing data from the agent's context).
-
-\textbf{Industry frameworks.} Google's five-layer defence \cite{google2025promptinjection} combines classifiers, sanitisation, and user confirmation. Anthropic \cite{anthropic2025promptinjection} reports a 1\% attack success rate through RL training. Meta's ``Rule of Two'' \cite{meta2025ruletwo} formalises the danger: an agent is critically vulnerable when it simultaneously processes untrusted inputs, accesses sensitive data, \textit{and} takes state-changing actions. The OWASP Top 10 for LLMs \cite{owasp2025llm} codifies the most critical vulnerabilities, with Prompt Injection, Sensitive Information Disclosure, and Excessive Agency most relevant to our setting.
-
-\textbf{The key insight}: the security community has converged on the conclusion that prompt-level defences are necessary but insufficient under adaptive attack \cite{nasr2025attacker}. Architectural constraints---physically removing unauthorised capabilities from the agent's execution environment---are required for reliable security. This motivates both our defence gradient evaluation and our Mountable Context Cell design.
-
+\textbf{Privacy in Language Models} Dwork et al.~\cite{dwork2006differential} established differential privacy (DP); Yang et al.~\cite{yang2026dpagent} applied DP to agent communication, adding calibrated noise to bound per-query leakage at a utility cost our work measures empirically. Carlini et al.~\cite{carlini2021extracting} demonstrated that LLMs memorise and reproduce verbatim training data, establishing that LLMs are fundamentally unreliable as privacy-preserving components. Any system depending on LLM behaviour for privacy inherits this unreliability.
 
 % ============================================================================
-\section{Agent Security and Privacy Benchmarks}
+\section{Agent Security Benchmarks}
 \label{sec:rw_benchmarks}
 % ============================================================================
 
-A growing number of benchmarks evaluate agent security and privacy. We review them along the dimensions most relevant to our work: whether they measure across trust boundaries, whether they capture both utility and security, and whether they evaluate defence mechanisms.
+A growing number of benchmarks evaluate agent security. We review them along six dimensions: cross-boundary interaction, tool-mediated evaluation, dual-metric measurement, multi-turn scenarios, relationship modelling, and action safety.
 
-\subsection{Single-Agent Security Benchmarks}
+\textbf{Prompt injection benchmarks.} InjecAgent~\cite{zhan2024injecagent} evaluates indirect injection in tool-integrated agents (1,054 tests, 17 tools) but within single-agent contexts without measuring utility cost. AgentDojo~\cite{debenedetti2024agentdojo} provides dual-metric evaluation (97 tasks, 629 security tests) but operates within a single task context with no cross-boundary interaction. TensorTrust~\cite{toyer2024tensortrust} gamified prompt injection (126,000 attack/defence pairs), demonstrating human creativity but not modelling agent-to-agent settings. HackAPrompt~\cite{schulhoff2024hackaprompt} confirmed through 600,000+ adversarial prompts that human creativity consistently defeats automated defences.
 
-\textbf{InjecAgent} \cite{zhan2024injecagent} benchmarks indirect prompt injection in tool-integrated agents with 1,054 test cases, but evaluates single agents against injected payloads, not agent-to-agent communication, and does not measure utility cost. \textbf{AgentDojo} \cite{debenedetti2024agentdojo} provides a dynamic sandbox with 97 tasks and 629 security tests but operates within a single task context with no cross-boundary interaction. \textbf{TensorTrust} \cite{toyer2024tensortrust} gamified prompt injection through an online game with 126,000 attack/defence pairs but does not model agent-to-agent settings. \textbf{R-Judge} \cite{yuan2024rjudge} and \textbf{AgentBench} \cite{liu2024agentbench} evaluate risk awareness and general capabilities respectively but do not focus on cross-boundary privacy.
+\textbf{Multi-agent and cross-boundary benchmarks.} AgentSocialBench~\cite{wang2026agentsocialbench} evaluates privacy in agentic social networks, discovering the ``abstraction paradox'' (more capable agents are more susceptible to social engineering) but does not evaluate defences or measure utility. ConVerse~\cite{gomaa2025converse} is the most comparable setup: personal assistants interacting with external providers (864 attack scenarios, up to 88\% success), but measures attack success only with no utility dimension. PAC-BENCH~\cite{park2026pacbench} evaluates collaboration under privacy constraints with dual measurement but not across genuine trust boundaries. MAGPIE~\cite{juneja2025magpie} provides 200 collaborative tasks but all agents share a single principal. AgentLeak~\cite{yagoubi2026agentleak} identifies seven distinct leakage channels but is diagnostic only. Agents of Chaos~\cite{shapira2026chaos} red-teams deployed systems, demonstrating lab-to-production attack transfer without systematic evaluation methodology.
 
-\subsection{Multi-Agent and Cross-Boundary Benchmarks}
+\Cref{table:benchmark_comparison} summarises these benchmarks across the six dimensions critical to cross-boundary privacy evaluation.
 
-\textbf{ConVerse} \cite{gomaa2025converse} is the most directly comparable setup: personal assistants interacting with external service providers, with 864+ attacks finding privacy attack success up to 88\%. However, it measures attack success only---it does not measure utility and does not evaluate any defence mechanisms.
-
-\textbf{AgentSocialBench} \cite{wang2026agentsocialbench} evaluates privacy risks in agentic social networks. It provides static scenarios but does not evaluate defences, measure utility, or support multi-turn adaptive interaction.
-
-\textbf{PAC-BENCH} \cite{park2026pacbench} evaluates multi-agent collaboration under privacy constraints, treating privacy as a constraint on utility. This is the inverse of our question: we measure how much security a defence achieves at what utility cost. \textbf{MAGPIE} \cite{juneja2025magpie} provides 200 collaborative tasks but agents share a single principal---there is no trust boundary.
-
-\textbf{``The Sum Leaks More''} \cite{patil2025sumleaks} comes closest to dual measurement, with an explicit ``privacy-utility trade-off'' metric and defence evaluation. However, its threat model is compositional leakage (individually innocuous responses combining to reveal sensitive data) rather than direct cross-boundary sharing. \textbf{AgentLeak} \cite{yagoubi2026agentleak} provides a full-stack benchmark with 1,000 scenarios but is diagnostic only---no utility measurement, no defence evaluation.
-
-\subsection{What Is Missing}
-
-\Cref{table:benchmark_comparison} summarises existing benchmarks across six dimensions critical to evaluating cross-boundary agent privacy.
-
-\begin{table}[h]
+\begin{table}[ht]
 \centering
 \caption{Comparison of agent security benchmarks. $\checkmark$\ = fully supported, $\sim$ = partially supported, -- = not supported.}
 \label{table:benchmark_comparison}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{lcccccc}
 \toprule
-\textbf{Benchmark} & \textbf{Cross-boundary} & \textbf{Dual metric} & \textbf{Defence gradient} & \textbf{Multi-turn} & \textbf{Persistent memory} & \textbf{Relationship} \\
+\textbf{Benchmark} & \textbf{Cross-boundary} & \textbf{Tool-mediated} & \textbf{Dual metric} & \textbf{Multi-turn} & \textbf{Relationship} & \textbf{Action safety} \\
 \midrule
-InjecAgent         & --         & --         & --         & --         & --         & --         \\
-AgentDojo          & --         & $\sim$     & --         & --         & --         & --         \\
-TensorTrust        & --         & --         & --         & --         & --         & --         \\
-TAMAS              & --         & --         & $\sim$     & --         & --         & --         \\
-AgentSocialBench   & $\checkmark$ & --         & --         & --         & --         & --         \\
-ConVerse           & $\checkmark$ & --         & --         & $\checkmark$ & --         & --         \\
-PAC-BENCH          & $\sim$     & $\checkmark$ & --         & --         & --         & --         \\
-Sum Leaks          & $\sim$     & $\checkmark$ & $\checkmark$ & --         & --         & --         \\
-AgentLeak          & $\checkmark$ & --         & --         & --         & --         & --         \\
+InjecAgent \cite{zhan2024injecagent}          & --           & $\checkmark$ & --           & --           & --           & $\checkmark$ \\
+AgentDojo \cite{debenedetti2024agentdojo}     & --           & $\checkmark$ & $\sim$       & --           & --           & $\sim$       \\
+TensorTrust \cite{toyer2024tensortrust}       & --           & --           & --           & --           & --           & --           \\
+HackAPrompt \cite{schulhoff2024hackaprompt}   & --           & --           & --           & --           & --           & --           \\
+AgentSocialBench \cite{wang2026agentsocialbench} & $\checkmark$ & --       & --           & --           & --           & --           \\
+ConVerse \cite{gomaa2025converse}             & $\checkmark$ & --           & --           & $\checkmark$ & --           & --           \\
+PAC-BENCH \cite{park2026pacbench}            & $\sim$       & $\checkmark$ & $\checkmark$ & --           & --           & --           \\
+MAGPIE \cite{juneja2025magpie}               & --           & $\checkmark$ & --           & --           & --           & $\sim$       \\
+AgentLeak \cite{yagoubi2026agentleak}        & $\checkmark$ & $\checkmark$ & --           & --           & --           & --           \\
+Agents of Chaos \cite{shapira2026chaos}      & $\checkmark$ & $\checkmark$ & --           & $\sim$       & --           & $\checkmark$ \\
 \midrule
-\textbf{Ours}      & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ \\
+\textbf{PACT (Ours)} & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ \\
 \bottomrule
 \end{tabular}%
 }
 \end{table}
 
-The central gap is that \textbf{no existing benchmark can answer the question ``is this defence worth deploying?''} To answer that, one needs: (a) dual utility and security measurement, so that the cost of a defence is visible; (b) a defence gradient with multiple levels, so that defences can be compared; and (c) multi-turn evaluation, because single-turn benchmarks dramatically underestimate real-world leakage. Our benchmark is designed to fill this gap.
+\textbf{No existing benchmark combines all six dimensions.} InjecAgent and AgentDojo measure tool-mediated attacks within single-agent contexts. ConVerse crosses trust boundaries but measures only attack success. PAC-BENCH provides dual measurement but not across genuine trust boundaries. None model how the relationship between requester and data owner affects the security-utility frontier. PACT fills this gap.
 
 
 % ============================================================================
-\section{Agentic Communication Protocols}
-\label{sec:rw_communication}
+\section{Trust and Access Control}
+\label{sec:rw_trust}
 % ============================================================================
 
-\subsection{How Agents Communicate Now}
+Classical access control operates on a principle where policy \textit{is} enforcement. RBAC assigns permissions to predefined roles; ABAC evaluates access based on subject/object/environment attributes; Bell-LaPadula~\cite{bell1973secure} formalises mandatory access control (``no read up, no write down'') for confidentiality; and Denning's lattice model~\cite{denning1976lattice} constrains information flow through a partial order on security classes. All assume deterministic enforcement and static classification hierarchies.
 
-Agent communication has evolved through three paradigms:
+Capability-based security~\cite{dennis1966programming} takes a different approach: unforgeable tokens grant specific permissions, enforcing the principle of least authority. A process receives only the capabilities it needs. Our Mountable Context Cell design is directly inspired by this model: an agent receives only the context cells relevant to the current interaction and cannot access data outside those cells regardless of its reasoning.
 
-\textbf{Classical Multi-Agent Systems.} FIPA-ACL \cite{fipa2002acl} and its reference implementation JADE \cite{bellifemine2007jade} defined standardised speech acts (REQUEST, INFORM, QUERY) with formal ontologies. These protocols enabled rigorous coordination but assumed deterministic agents operating within trusted federations---fundamentally incompatible with LLM non-determinism and zero-trust cross-organisational scenarios.
-
-\textbf{Modern protocol standards.} Google's A2A protocol \cite{google2025a2a} enables agent-to-agent task delegation and capability discovery. Anthropic's Model Context Protocol (MCP) \cite{anthropic2024mcp} standardises tool and resource interfaces for connecting LLMs to external systems. Both address important infrastructure problems but focus on \textit{connectivity}---neither provides a trust or access governance layer.
-
-\textbf{LLM-based negotiation.} Agents increasingly coordinate through natural language exchanges. While flexible, this approach is token-inefficient (requiring multiple LLM roundtrips per agreement), latency-prone, and vulnerable to hallucination cascades. Most critically, it assumes agents have unrestricted access to their owner's data---there is no access governance layer.
-
-\textbf{The gap}: current protocols handle message passing but not trust management. They answer ``how do agents talk?'' but not ``what is Agent A allowed to tell Agent B?''
-
-\subsection{Why Agentic Communication Matters}
-
-Single agents are useful; networks of agents are transformative. The value of a communication network scales superlinearly with its size---an observation formalised by Metcalfe's law for computer networks. The same principle applies to agent networks: a single agent is a productivity tool, but a network of interoperating agents can automate the coordination layer that currently consumes the majority of knowledge workers' time.
-
-However, without trust infrastructure, the network cannot form. Every cross-boundary agent interaction is a potential security incident. The coordination tax persists because we lack the protocols to make agent communication safe.
-
-\subsection{Lessons from Other Networks}
-\label{sec:rw_networks}
-
-Agent networks are not the first networks humanity has built. Drawing on analogies from established network architectures reveals design principles we should adopt:
-
-\textbf{Computer networks.} TCP/IP succeeded not by dictating what applications could run, but by providing a universal transport layer with clear separation of concerns. The analogy for agent coordination is direct: we need a trust and isolation layer that is compatible with any agent framework, not one that replaces them. Policy files in our design serve a role analogous to firewall rules---declarative access control that sits between the transport and application layers.
-
-\textbf{Economic networks.} Coase \cite{coase1937firm} and Williamson \cite{williamson1975markets} explained that firms exist because market transaction costs exceed internal coordination costs. Agent coordination today has prohibitively high transaction costs (humans mediating every cross-agent interaction). Reducing these costs---as TCP/IP did for digital communication---enables a market of agent services.
-
-\textbf{Social networks.} Granovetter \cite{granovetter1973weak} showed that weak social ties are often more valuable for novel information flow than strong ties, because they bridge otherwise disconnected clusters. Agent relationships exist on a similar spectrum: close collaborators need rich context sharing, while casual acquaintances need minimal, carefully controlled exchange. Our trust tier system encodes this spectrum.
-
-\subsection{Existing AI Coordination Layers}
-
-Several systems attempt multi-agent orchestration:
-
-\begin{itemize}
-    \item \textbf{AutoGen} \cite{wu2023autogen}: Microsoft's framework for multi-agent conversation through structured role-based patterns.
-    \item \textbf{MetaGPT} \cite{hong2023metagpt}: Simulates a software company with specialised agent roles (product manager, architect, engineer).
-    \item \textbf{CrewAI} \cite{crewai2024}: Role-based workflows where agents with defined goals collaborate on tasks.
-    \item \textbf{CAMEL} \cite{li2023camel}: Explores emergent communication behaviour between role-playing LLM agents.
-    \item \textbf{ChatDev} \cite{qian2023chatdev}: Virtual software company where agents collaborate through chat chains.
-    \item \textbf{LangGraph} \cite{langgraph2024}: Graph-based agent orchestration with conditional routing.
-\end{itemize}
-
-\textbf{The critical observation}: every existing ``multi-agent'' system is really \textit{multi-role-within-one-owner}. All agents serve a single principal and share context freely. None address the scenario where Agent A (owned by Alice) must safely coordinate with Agent B (owned by Bob), where Alice and Bob have different and potentially conflicting interests. This is the fundamental gap our work addresses.
+The key distinction in our setting is that access control is \textit{relationship-relative}: the same information may be shareable with one requester but not another. Moreover, the ``policy'' (a system prompt or permission instruction) is not enforcement. It is \textit{input to reasoning}. Under adversarial conditions, the model can reason its way around any natural-language instruction. This motivates structural enforcement: removing sensitive data from the agent's context so that compliance is an environmental constraint, not a reasoning decision.
 
 
 % ============================================================================
-\section{Pulse as a Coordination Layer}
-\label{sec:rw_niche}
+\section{Position: SharedOS at the Intersection}
+\label{sec:rw_position}
 % ============================================================================
 
-Where the previous section compared \textit{benchmarks}, this section compares \textit{systems}. \Cref{table:comparison} summarises how Pulse compares with existing agent systems and coordination frameworks.
+The realistic interaction of agents as personal delegates is not well modelled by any existing work, because each delegate holds private state on behalf of a distinct owner. Multi-agent frameworks assume shared principals. Security benchmarks measure attack success without a utility dimension. No existing benchmark combines cross-boundary interaction, tool mediation, dual metrics, multi-turn scenarios, relationship modelling, and action safety (\Cref{table:benchmark_comparison}).
 
-\begin{table}[h]
-\centering
-\caption{Comparison of Pulse with existing systems across dimensions relevant to cross-boundary agent coordination.}
-\label{table:comparison}
-\begin{tabular}{p{2.8cm} p{1.5cm} p{1.5cm} p{1.5cm} p{1.5cm} p{1.5cm} p{1.5cm}}
-\toprule
-\textbf{System} & \textbf{Multi-Owner} & \textbf{Physical Isolation} & \textbf{Real-World State} & \textbf{Network-Native} & \textbf{Relation Memory} & \textbf{Adversarial Model} \\
-\midrule
-Manus / OpenClaw  & No  & No  & Yes & No      & No  & No \\
-MemGPT / Letta    & No  & No  & Partial & No  & No  & No \\
-CrewAI / AutoGen  & No  & No  & No  & No      & No  & No \\
-FIPA-ACL / A2A    & Yes & No  & No  & Partial & No  & No \\
-Notion / Dropbox  & Yes & Yes & No  & No      & No  & Basic \\
-\textbf{Pulse}    & \textbf{Yes} & \textbf{Yes} & \textbf{Yes} & \textbf{Yes} & \textbf{Yes} & \textbf{Yes} \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-No existing system occupies all six columns. Pulse's unique contribution is being simultaneously network-native, security-first, and grounded in real-world personal context.
-
-\subsection{Relationship to Agent Frameworks}
-
-It is important to clarify what Pulse is \textit{not}. Pulse is not an agent framework---it does not compete with LangChain, CrewAI, or AutoGen. Rather, it is a \textbf{coordination layer} that sits between agents. Agent frameworks are applications; Pulse provides the trust infrastructure they lack. The analogy is direct: TCP/IP did not replace applications---it enabled them to communicate. MCP \cite{anthropic2024mcp} provides the tool-access plumbing; Pulse provides the policy layer on top.
-
-\subsection{What Is a ``Personal Agent Operating System''?}
-
-Several recent works have used the ``Agent OS'' framing:
-
-\begin{itemize}
-    \item \textbf{AIOS} \cite{mei2025aios}: Proposes OS-like abstractions (scheduler, context manager, memory manager) for managing multiple LLM agents. Closest to our concept, but focuses on resource management for agents on one machine, not cross-boundary coordination.
-    \item \textbf{OS-Copilot} \cite{wu2024oscopilot}: An agent that operates \textit{within} the OS (clicking buttons, opening apps)---an agent of the OS, not an OS for agents.
-    \item \textbf{MemGPT} \cite{packer2024memgpt}: Uses the ``OS for LLMs'' metaphor focused on memory paging. Single-tenant.
-\end{itemize}
-
-The emerging consensus is that a ``Personal Agent OS'' provides persistent state management, tool orchestration, resource scheduling, and process isolation. In this thesis, we use the more precise framing \textbf{Personal Agent Coordination Layer} to emphasise our focus on the cross-boundary coordination problem rather than the full breadth of OS abstractions. We employ the OS analogy (LLM as CPU, notes as file system, policy as capability-based security) as a \textit{design metaphor} that grounds our architectural decisions in well-understood systems principles.
+This thesis formalises the cross-boundary delegation problem, proposes SharedOS as a platform that instantiates it with persistent state, tool access, and social relationships, and investigates the security--utility frontier through systematic experimentation (PACT-PAIR, PACT-NET). Where prompt-level defences reach their ceiling, we propose two architectural solutions, Mountable Context Cells and the Escalation Protocol, that move enforcement from reasoning to structure.

@@ -1,0 +1,17 @@
+{
+  "run_id": "esc_v2_cluster_2nn_10_gpt-5.5_1779144669613",
+  "version": 2,
+  "track": "net",
+  "fraction": 0.1,
+  "scope": "cluster_2nn",
+  "model": "gpt-5.5",
+  "auto_decide": false,
+  "split_mode": "question_group",
+  "total_test": 1548,
+  "completed": 1548,
+  "errors": 1,
+  "stopped": 751,
+  "continued": 796,
+  "stop_rate": "0.4851",
+  "completed_at": "2026-05-18T23:59:49.691Z"
+}

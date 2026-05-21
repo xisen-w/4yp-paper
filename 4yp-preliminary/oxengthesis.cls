@@ -45,7 +45,7 @@
 
 \ProcessOptions\relax
 
-\LoadClass[onecolumn,twoside,final]{memoir}
+\LoadClass[onecolumn,oneside,final]{memoir}
 
 
 % ____________________________________________________________________________
@@ -720,7 +720,7 @@
     \renewcommand*{\tocheadstart}{}
     \setlength{\cftbeforechapterskip}{0.8em \@plus\p@}
     \renewcommand*{\cftappendixname}{Appendix\space}
-    \SingleSpacing
+    \DoubleSpacing
 }{}
 
 
@@ -746,7 +746,7 @@
     \pagestyle{lofpagestyle}
     \renewcommand{\listfigurename}{List of figures}
     \renewcommand*{\lofheadstart}{}
-    \SingleSpacing
+    \DoubleSpacing
 }{}
 
 
@@ -766,7 +766,7 @@
     \pagestyle{lotpagestyle}
     \renewcommand{\listtablename}{List of tables}
     \renewcommand*{\lotheadstart}{}
-    \SingleSpacing
+    \DoubleSpacing
 }{}
 
 

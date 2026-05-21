@@ -1,0 +1,76 @@
+%
+% File    : pulse_4yp_thesis_50p.tex
+% Author  : Xisen Wang
+% Created : May 19, 2026
+% ____________________________________________________________________________
+%
+% 4th Year Project Report: Condensed 50-page version
+% ____________________________________________________________________________
+
+
+\documentclass[report,11pt,review,oneside,leftmargin=20mm,bottommargin=20mm,font={Times New Roman},mathfont={STIX Two Math}]{oxengthesis}
+
+\renewcommand{\DoubleSpacing}{\setSpacing{1.8}}
+
+\usepackage{booktabs}
+\usepackage{tcolorbox}
+\tcbuselibrary{breakable}
+
+\newtcolorbox{todobox}{
+  colback=gray!5!white,
+  colframe=gray!60!black,
+  fonttitle=\bfseries,
+  title={Placeholder --- To Be Completed},
+  breakable
+}
+
+%
+% Document metadata
+%
+
+\title       {How Should Your Agent Talk to Mine? \\ The Security--Utility Frontier in Cross-Boundary Agent Delegation}
+\author      {Xisen Wang}
+\degree      {4$^{th}$-Year Project Report}
+\college     {Keble College}
+\supervisor  {Professor Philip Torr}
+\date        {Trinity Term, 2026}
+
+
+%
+% Document contents
+%
+
+\begin{document}
+
+\frontmatter
+\makefrontmatterpages
+
+\mainmatter
+
+% C1: Introduction (~4 pages)
+\include{chap_introduction_50p}
+
+% C2: Related Work (~3 pages)
+\include{chap_literature_review_50p}
+
+% C3: SharedOS Design (~8 pages)
+\include{chap_problem_setup_50p}
+
+% C4: PACT-PAIR Dyadic Evaluation (~15 pages)
+\include{chap_architecture_50p}
+
+% C5: PACT-NET Network Evaluation (~8 pages)
+\include{chap_failure_cases_50p}
+
+% C6: Architectural Solutions (~10 pages)
+\include{chap_solution_proposal_50p}
+
+% C7: Conclusion & Discussion (~5 pages)
+\include{chap_experiments_50p}
+
+\appendix
+
+\backmatter
+\listofreferences
+
+\end{document}

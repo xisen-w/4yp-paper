@@ -1,0 +1,18 @@
+{
+  "run_id": "esc_v2_cluster_2nn_10_gpt-5.5_1779144669613",
+  "version": 2,
+  "track": "net",
+  "fraction": 0.1,
+  "seed": 42,
+  "scope": "cluster_2nn",
+  "model": "gpt-5.5",
+  "deployment": "gpt-5.5",
+  "concurrency": 5,
+  "auto_decide": false,
+  "split_mode": "question_group",
+  "total_precedents": 171,
+  "total_test_items": 1548,
+  "pending_items": 1548,
+  "relationship_nn_map_size": 94,
+  "started_at": "2026-05-18T22:51:09.614Z"
+}

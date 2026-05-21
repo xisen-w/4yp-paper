@@ -1,5 +1,79 @@
-\chapter{Optical flow estimation}
-\label{appendix:appendix_2} 
+\chapter{Extended Agent Architecture Analysis}
+\label{appendix:extended_agents}
+
+This appendix provides deeper analysis of the agent architectures and frameworks discussed in \Cref{chapter:related_work}, including detailed capability comparisons and protocol specifications.
+
+\section{Single-Agent Memory Architectures}
+
+\subsection{MemGPT: OS-Inspired Memory Hierarchy}
+
+MemGPT~\cite{packer2024memgpt} proposed three memory tiers:
+
+\begin{itemize}
+    \item \textbf{Main Context}: Active LLM working memory (analogous to RAM)
+    \item \textbf{Archival Storage}: Long-term retrieval store (analogous to disk)
+    \item \textbf{Paging Mechanism}: Dynamic swapping between main context and archival storage
+\end{itemize}
+
+The key insight was that bounded-context LLMs can manage unbounded conversation histories through explicit memory management, much as operating systems manage physical memory through virtual memory abstractions. The tiered memory approach became the standard design for agents that must maintain state across sessions.
+
+\textbf{Limitation for cross-boundary settings}: Memory is globally accessible with no relationship-specific partitioning, no security boundaries (assumes trusted single-tenant execution), and no cross-agent communication primitives.
+
+\subsection{Reflexion: Verbal Reinforcement Learning}
+
+Shinn et al.~\cite{shinn2023reflexion} introduced a framework in which agents critique their own outputs, store the critique in an episodic memory buffer, and use it to improve subsequent attempts. This was among the first demonstrations that an agent could learn from its mistakes within a single deployment, without retraining the underlying model.
 
 
-\lipsum[2-9]
+\section{Multi-Agent Communication Protocols}
+
+\subsection{Classical Agent Communication: FIPA-ACL}
+
+The Foundation for Intelligent Physical Agents (FIPA) defined a standardised Agent Communication Language with speech-act-based message types:
+
+\begin{verbatim}
+(REQUEST
+  :sender agent1
+  :receiver agent2
+  :content (action (deliver package123))
+  :language FIPA-SL)
+\end{verbatim}
+
+FIPA-ACL assumes deterministic agent behaviour, trusted agent federation, and rigid ontologies---all incompatible with LLM-based agents that exhibit non-determinism, operate across trust boundaries, and communicate in natural language.
+
+\subsection{Modern Multi-Agent Frameworks: Detailed Comparison}
+
+\textbf{AutoGen}~\cite{wu2023autogen} defines agents with distinct personas and conversation protocols, enabling complex workflows through sequential, parallel, or nested chat patterns. It demonstrated that multi-agent conversation can outperform single-agent approaches on tasks requiring diverse expertise.
+
+\textbf{CrewAI}~\cite{crewai2024} abstracts ``crews'' with sequential or hierarchical process flows, where agents with defined goals, backstories, and tool access collaborate on tasks. Its rapid practitioner adoption demonstrates demand for structured multi-agent orchestration.
+
+\textbf{MetaGPT}~\cite{hong2023metagpt} simulates a software company with specialised agent roles (product manager, architect, engineer, QA). By encoding Standard Operating Procedures (SOPs) as structured communication protocols between roles, MetaGPT achieves higher-quality code generation. The key insight is that \textit{structured role separation} reduces hallucination and improves coherence.
+
+\textbf{CAMEL}~\cite{li2023camel} explores emergent communication behaviour between role-playing LLM agents through ``inception prompts'' that define each agent's role. CAMEL revealed that LLM agents develop social behaviours (flattening, role adherence, task decomposition) that mirror human collaboration patterns.
+
+All four frameworks are \textit{multi-role-within-one-owner}: agents share a single principal and context freely. None model cross-boundary privacy.
+
+
+\section{Agent Operating Systems: Extended Analysis}
+
+\textbf{AIOS}~\cite{mei2025aios} provides operating-system-like primitives for managing multiple LLM agents: a scheduler for fair execution across concurrent agent processes, a context manager for maintaining conversational state, a memory manager with tiered storage, and a tool manager for shared tool access. However, AIOS's isolation model is resource-oriented (preventing starvation, managing quotas) rather than privacy-oriented (preventing information leakage between agents belonging to different principals).
+
+\textbf{OS-Copilot}~\cite{wu2024oscopilot} operates as a single-owner agent \textit{within} the operating system, clicking buttons, opening applications, and navigating file systems. It demonstrates remarkable desktop automation capability but is fundamentally a single-agent, single-owner system with no cross-boundary considerations.
+
+
+\section{Privacy-Preserving Systems}
+
+\subsection{Federated Learning}
+
+Federated learning trains models collaboratively without centralising data: local model training on device, gradient sharing (not raw data), and central aggregation for global model updates. The philosophy---enable collaboration without full data sharing---aligns with our work, though at a different layer: federated learning targets model training, while SharedOS targets operational coordination.
+
+\subsection{Differential Privacy: Formal Definition}
+
+Differential privacy~\cite{dwork2006differential} provides the formal framework:
+\[
+P[M(D) \in S] \leq e^{\epsilon} \cdot P[M(D') \in S] + \delta
+\]
+where $D$ and $D'$ differ by one record. Yang et al.~\cite{yang2026dpagent} applied DP mechanisms to agent communication by adding calibrated noise to bound per-query information leakage. The challenge is that for operational coordination (e.g., ``When are you free?''), noisy answers degrade utility unacceptably, motivating research on selective DP that applies noise only to sensitive aggregates.
+
+\subsection{Training Data Extraction}
+
+Carlini et al.~\cite{carlini2021extracting} demonstrated that LLMs memorise and reproduce verbatim training data, including personal information, API keys, and copyrighted content. This establishes that LLMs are fundamentally unreliable as privacy-preserving components. Any system that depends on LLM behaviour for privacy guarantees inherits this unreliability---a key motivation for our architectural (rather than behavioural) approach to enforcement.

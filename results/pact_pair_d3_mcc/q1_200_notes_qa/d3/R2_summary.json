@@ -1,0 +1,14 @@
+{
+  "run_id": "d3_D3_R2_gpt-5.5_2026-05-16T03-40-18",
+  "defense": "D3",
+  "requester": "R2",
+  "requester_name": "Marcus Webb",
+  "requester_description": "Boss's delegate (EA to CEO Sarah Martinez)",
+  "model": "gpt-5.5",
+  "question_range": "1-200",
+  "total_questions": 200,
+  "avg_latency_ms": 10757.49,
+  "avg_tool_calls": 1.985,
+  "errors": 1,
+  "completed_at": "2026-05-16T04:16:14.864Z"
+}

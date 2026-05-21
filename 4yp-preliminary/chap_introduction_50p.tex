@@ -1,0 +1,79 @@
+\chapter{Introduction}
+\label{chapter:introduction}
+
+Personal agents are becoming delegates: systems that hold private data, wield tools, and act on behalf of their owners. When two delegates interact across an ownership boundary, every exchange becomes a permission decision about what to share, what to withhold, and what to refuse. This thesis investigates the security and utility consequences of cross-boundary agent delegation, proposes benchmarks to measure them, and develops architectural solutions that shift enforcement from probabilistic reasoning to deterministic structure.
+
+The central observation is simple. A delegate that refuses every cross-boundary request is perfectly safe but entirely useless. A delegate that answers every request is maximally useful but catastrophically unsafe. Between these extremes lies a frontier of achievable operating points. We call this the \textit{security-utility frontier}. The shape of this frontier, the factors that move it, and the architectural interventions that can expand it are the subject of this thesis.
+
+
+% ============================================================================
+\section{The Rise of Personal Agent Delegates}
+\label{sec:intro_rise}
+% ============================================================================
+
+The trajectory from language model to personal delegate has unfolded in three phases. \textbf{Phase One (Tools)} transformed language models into tool-users: ReAct~\cite{yao2023react} interleaves reasoning with executable actions, and Toolformer~\cite{schick2023toolformer} showed tool use could be a learned competency. \textbf{Phase Two (Assistants)} produced stateful systems with persistent long-term storage~\cite{packer2024memgpt, shinn2023reflexion}---increasingly useful, but increasingly dangerous if exposed to unauthorised parties. \textbf{Phase Three (Delegates)}, now underway, produces persistent, autonomous systems that act on behalf of a specific person~\cite{devin2024, manus2025}.
+
+Two protocol-level developments accelerate the transition. The Model Context Protocol (MCP)~\cite{anthropic2024mcp} standardises how agents connect to tools and data sources. The Agent-to-Agent protocol (A2A)~\cite{google2025a2a} addresses discovery, authentication, and communication between agents. Together they provide the infrastructure for connection. But neither addresses the operational question at the heart of every cross-boundary interaction: \textit{what should one agent be permitted to disclose about its owner to another agent?}
+
+
+% ============================================================================
+\section{The Cross-Boundary Delegation Problem}
+\label{sec:intro_cross_boundary}
+% ============================================================================
+
+Consider two agents, Agent~A and Agent~B, acting for Owner~A and Owner~B respectively. Agent~A holds a context~$C_A$ of Owner~A's private information. Agent~B initiates a request~$r$ that requires some subset of~$C_A$. The cross-boundary delegation problem is: Agent~A must decide what portion of~$C_A$ to disclose, balancing \textbf{utility} (sufficient information to fulfil the request) against \textbf{security} (no disclosure Owner~A would not sanction).
+
+As a concrete example: Alice's agent holds her calendar, including an oncology follow-up, an interview at a competing firm, and a therapy session. Bob's agent asks to schedule a meeting. The ideal response shares time-slot availability without revealing \textit{why} slots are blocked. This requires distinguishing \textit{what} information is needed from the sensitive content underneath---a distinction absent from traditional access control.
+
+
+% ============================================================================
+\section{Why This Is Different From Traditional Access Control}
+\label{sec:intro_different}
+% ============================================================================
+
+Traditional access control~\cite{bell1973secure, denning1976lattice} operates on a principle where \textbf{policy is enforcement}: a security label mechanistically determines access. LLM-based delegation violates this principle. The privacy policy is not enforcement but \textit{one input to a reasoning process that produces enforcement as an output}. The outcome is stochastic: the same agent, same policy, same query may produce different responses depending on phrasing, preceding conversation, and random seed.
+
+This has three consequences. First, the frontier \textit{cannot be predicted from policy text alone}. Second, the frontier \textit{can only be measured empirically}, which is why we need benchmarks. Third, the frontier \textit{is unstable}: implicit social norms from pretraining compose with explicit policy in ways the policy author cannot anticipate.
+
+
+% ============================================================================
+\section{Research Questions}
+\label{sec:intro_rqs}
+% ============================================================================
+
+\begin{tcolorbox}[colback=blue!3!white, colframe=blue!40!black, title={\textbf{RQ1: What moves the frontier? (Policy Specificity)}}]
+How does policy granularity shift achievable operating points? We hypothesise a non-linear relationship: increased specificity improves security at diminishing returns, beyond which utility degrades substantially.
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=blue!3!white, colframe=blue!40!black, title={\textbf{RQ2: Is the frontier stable over time? (Multi-Turn Interaction)}}]
+Do agents become more permissive under sustained conversational pressure? We test whether safety guarantees from single-turn evaluation hold across extended interactions.
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=blue!3!white, colframe=blue!40!black, title={\textbf{RQ3: Is the frontier the same for everyone? (Relationship Context)}}]
+Do agents appropriately modulate disclosure based on relationship context? We test whether modulation is consistent, appropriate, and robust against spoofing.
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=green!3!white, colframe=green!40!black, title={\textbf{RQ4: Can architectural interventions expand the frontier?}}]
+Can structural changes---removing sensitive data from context entirely---achieve operating points unreachable through prompting alone?
+\end{tcolorbox}
+
+
+% ============================================================================
+\section{Contributions}
+\label{sec:intro_contributions}
+% ============================================================================
+
+\begin{enumerate}[leftmargin=2em]
+    \item \textbf{Problem formulation.} We formalise cross-boundary delegation as emergent enforcement, define the security-utility frontier, and show why traditional access control is insufficient (\Cref{chapter:problem_formulation}).
+    \item \textbf{Platform.} We design SharedOS, a multi-agent delegation system with per-relationship context scoping, configurable policies, and tool orchestration (\Cref{chapter:problem_formulation}).
+    \item \textbf{Benchmarks.} PACT-PAIR (600 dyadic scenarios) and PACT-NET (997 network scenarios) with dual-metric evaluation measuring utility and security simultaneously (\Cref{chapter:benchmark_design,chapter:failure_cases}).
+    \item \textbf{Architectural solutions.} Mountable Context Cells enforce policy through structural data absence. The Escalation Protocol defers ambiguous decisions to human principals while learning precedents (\Cref{chapter:solution_proposal}).
+\end{enumerate}
+
+
+% ============================================================================
+\section{Thesis Organisation}
+\label{sec:intro_organisation}
+% ============================================================================
+
+\Cref{chapter:related_work} reviews agent architectures, LLM security, multi-agent protocols, and existing benchmarks. \Cref{chapter:problem_formulation} formally defines cross-boundary delegation and presents the SharedOS platform. \Cref{chapter:benchmark_design} describes PACT-PAIR and reports dyadic experimental results. \Cref{chapter:failure_cases} presents PACT-NET for network-scale evaluation. \Cref{chapter:solution_proposal} proposes Mountable Context Cells and the Escalation Protocol. \Cref{chapter:conclusion_discussion} discusses findings, limitations, and future work.

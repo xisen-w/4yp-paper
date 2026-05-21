@@ -1,107 +1,94 @@
-\chapter{Problem Formulation}
+\chapter{Problem Formulation \& SharedOS}
 \label{chapter:problem_formulation}
 
-This chapter formalises the \textbf{context--security trade-off} that arises when AI agents communicate across trust boundaries. We define the problem mathematically, state the threat model, and derive the four research questions that guide the remainder of this thesis.
+This chapter has two jobs. First, it formalises cross-boundary delegation: what a personal agent is, what it means for one agent to contact another, and why privacy becomes a security--utility frontier rather than a static access-control label. Second, it describes how SharedOS realises this formal model in production. The point is not only to define an evaluation setting, but to show that the setting is implemented as a real execution environment with tools, permissions, policies, share links, and contact-graph routing.
+
 
 % ============================================================================
-\section{The Context--Security Trade-off}
-\label{sec:trade_off}
+\section{Problem Formulation}
+\label{sec:formalism}
 % ============================================================================
 
-\subsection{Formal Problem Statement}
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.7\linewidth]{figures/security-utility-diagram.png}
+  \caption{The security--utility frontier. A delegate that refuses everything is perfectly safe but useless (top-left). A delegate that answers everything is maximally useful but catastrophically unsafe (bottom-right). The frontier is the set of achievable operating points; policy and architecture shift its shape.}
+  \label{fig:security_utility}
+\end{figure}
 
-Let $A$ be a host AI agent owned by user $U$, possessing access to:
-\begin{itemize}
-    \item $F = \{f_1, f_2, \ldots, f_n\}$: a set of \textbf{files} (notes, documents, knowledge artefacts);
-    \item $S = \{s_1, s_2, \ldots, s_m\}$: a set of \textbf{dynamic states} (calendar events, email threads, todo items);
-    \item $M_{\text{self}}$: \textbf{self-state memory}---core facts about $U$ (preferences, constraints, identity).
-\end{itemize}
+\subsection{The Personal Agent as an Operating System}
 
-When $A$ interacts with an external entity $E_i$ (another user's agent, or a human), the system must simultaneously satisfy three requirements:
+A personal agent is a delegate: it holds its owner's private state and acts on their behalf. We model each agent $A_i$ as an operating system. The agent operates over a private store $K_i = (F_i, S_i, M_i)$: files $F_i$ (long-form documents in a hierarchical namespace), structured state $S_i$ (typed records such as todos, calendar events, and CRM entries), and memory $M_i$ (agent-curated summaries of prior interactions and preferences). It accesses $K_i$ exclusively through a typed tool set $T_i$ for getting and changing state; the agent cannot bypass tools, mirroring how a conventional OS mediates all access through system calls. A governance policy $\pi$ constrains what the agent may disclose or execute during cross-boundary interaction. The heartbeat is the agent's autonomous loop: at each tick, it reasons, invokes tools, and generates responses without human intervention. Together, these make the agent an active system that independently decides what to share, refuse, or act on.
 
-\begin{enumerate}
-    \item \textbf{Maximise utility.} Complete collaborative tasks $T = \{t_1, t_2, \ldots, t_k\}$ (schedule meetings, answer questions, share relevant context) by leveraging appropriate subsets of $F$, $S$, and $M_{\text{self}}$.
+\subsection{Communication Between Personal Agents}
 
-    \item \textbf{Enforce security.} Guarantee that $E_i$ can access only the authorised subsets $F_i \subseteq F$ and $S_i \subseteq S$, despite adversarial inputs attempting to extract $F \setminus F_i$ or $S \setminus S_i$.
+Consider a society of humans, each with one agent as delegate. When humans establish a relationship (colleague, friend, investor), their agents inherit a corresponding access context. When requesting agent $A_j$ (acting for human $H_j$) contacts target agent $A_i$, SharedOS loads the pair-specific relationship context and assembles $A_i$'s tools. $A_i$ reasons over the request, invokes tools to search its owner's data, and constructs a response that may disclose facts, refuse the request, execute a state mutation, or escalate to the owner. Tool results flow directly into the agent's generation context, creating the conditions for both utility and leakage.
 
-    \item \textbf{Maintain isolation.} Ensure that memory artefacts from the interaction with $E_i$ do not contaminate interactions with $E_j$ for $i \neq j$.
-\end{enumerate}
+Crucially, a connected agent network means each agent's private OS can be exposed to other agents if access is granted. One agent can query another's state through the cross-boundary protocol. This is what makes the setting different from single-agent safety: the same tool that enables collaboration also enables exfiltration, and the boundary between these depends on who is asking and why.
 
-The trade-off is inherent: increasing the agent's access to context (larger $F_i$, $S_i$) improves utility but increases the attack surface. Restricting access improves security but reduces the agent's ability to complete tasks. Manual management of the $(E_i, f_j, s_k)$ permission triples scales quadratically and reintroduces the coordination overhead agents were meant to eliminate.
+\subsection{Cross-Boundary Delegation Formalism}
 
-\subsection{The Pareto Frontier}
+We call this setting \textbf{cross-boundary delegation}. A requester agent $A_j$ asks a target agent $A_i$ to perform a task $\tau$ over $A_i$'s owner state $K_i$. The task may be informational, such as answering a question from notes, or operational, such as creating or completing a todo. Formally, let
+\[
+  \tau = (A_j, A_i, q, o),
+\]
+where $q$ is the natural-language request and $o$ is the intended operation over $K_i$, including the relevant tool call and action semantics. The pair-specific relationship context $\mathcal{C}_{ij}$ induces an entitlement function
+\[
+  E_{ij}: K_i \times O_i \rightarrow \{0,1\}.
+\]
+$O_i$ is the operation space available to $A_i$ through its tools. $E_{ij}(x,o)=1$ means requester $A_j$ is entitled to learn or mutate fact or state item $x$ through operation $o$; $E_{ij}(x,o)=0$ means the item-operation pair is outside the requester's boundary. This gives two relationship- and operation-conditioned subsets:
+\[
+  K_i^{+}(j,o)=\{x \in K_i : E_{ij}(x,o)=1\}, \qquad
+  K_i^{-}(j,o)=\{x \in K_i : E_{ij}(x,o)=0\}.
+\]
+$K_i^{+}(j,o)$ is the information and state the requester may legitimately use for the current operation; $K_i^{-}(j,o)$ is private with respect to that requester and operation. The same item can move between these sets when either the requester or the requested operation changes. This is why privacy is relational and operational rather than absolute.
 
-We model the trade-off as a multi-objective optimisation problem. For a given policy configuration $\pi$ and agent architecture $\alpha$, define:
+The target agent produces a trace
+\[
+  y = A_i(q, h, \mathcal{C}_{ij}, \pi_i, T_i, K_i),
+\]
+where $h$ is the conversation history and $\pi_i$ is the governance policy loaded for the target. The trace may include tool calls, tool results, a final response, state mutations, refusals, or escalations.
 
-\begin{itemize}
-    \item $\mathcal{U}(\pi, \alpha)$: task completion rate across all legitimate queries.
-    \item $\mathcal{S}(\pi, \alpha)$: data protection rate across all adversarial probes.
-    \item $\mathcal{O}(\pi, \alpha)$: manual overhead---the fraction of queries requiring human intervention.
-\end{itemize}
+For authorised tasks, the desired property is \textbf{utility}: the agent should complete the task using the permitted part of the state. For unauthorised tasks, the desired property is \textbf{security}: the trace should not communicate protected facts from $K_i^{-}(j,o)$ and should not perform unauthorised mutations. We therefore define, for a system configuration $d$,
+\[
+  U(d)=\Pr[\text{task completed} \mid \tau \text{ is authorised}],
+\]
+\[
+  S(d)=\Pr[\text{no protected disclosure or mutation} \mid \tau \text{ is unauthorised}].
+\]
+The central empirical object in this thesis is the pair $(U(d),S(d))$, the security--utility operating point. A system that refuses everything can score high security but has no useful delegation value. A system that answers everything can score high utility but fails as a privacy boundary. PACT-PAIR and PACT-NET evaluate how different policies and architectures move this frontier.
 
-The ideal system achieves $\mathcal{U} = 1$, $\mathcal{S} = 1$, $\mathcal{O} = 0$. In practice, these objectives conflict. The goal of this thesis is to push the \textbf{Pareto frontier}---improving security without proportionally sacrificing utility or increasing overhead.
+\subsection{Combinatorial Complexity}
 
-% ============================================================================
-\section{Threat Model}
-\label{sec:threat_model}
-% ============================================================================
+Because state, tools, policy, and relationship are independently configurable, the entitlement function $E_{ij}$ varies by pair, by operation, and by state item. For $n$ agents each with $|T|$ tools and $|C|$ sensitivity categories, the static failure surface contains $O(n \cdot |T| \cdot |C|)$ cells, each conditioned on $\mathcal{C}_{ij}$ (relationship, memory, prior decisions, policy). Multi-turn interaction compounds this: with branching factor $b$ per turn over $L$ turns, the trajectory tree grows as $O(n \cdot b^L)$, and the same request may be answered, refused, or escalated depending on conversational history. Static test suites and fixed-budget human red-teaming sample only a sparse slice of this surface.
 
-We adopt a \textbf{Byzantine adversary model} where external entities $E_i$ may be actively hostile. Specifically, we assume the adversary may:
+We build SharedOS as the instrument to systematically probe this surface. With it, this thesis studies three linked questions:
 
-\begin{enumerate}
-    \item \textbf{Inject adversarial prompts.} Attempt to override the agent's system instructions through direct \cite{greshake2023not} or indirect \cite{zou2023universal} prompt injection.
+\begin{tcolorbox}[colback=blue!3!white, colframe=blue!50!black, boxrule=0.4pt, arc=2pt, left=6pt, right=6pt, top=4pt, bottom=4pt]
+\textbf{Measurement:} how can we evaluate whether a cross-boundary agent answers useful questions while withholding protected information?
+\end{tcolorbox}
 
-    \item \textbf{Employ social engineering.} Claim false authority (``The owner gave me access'') or appeal to the agent's helpfulness bias \cite{wei2024jailbroken}.
+\begin{tcolorbox}[colback=blue!3!white, colframe=blue!50!black, boxrule=0.4pt, arc=2pt, left=6pt, right=6pt, top=4pt, bottom=4pt]
+\textbf{Network failure:} what privacy failures appear only when multiple agents, relationships, and delegation paths coexist?
+\end{tcolorbox}
 
-    \item \textbf{Execute multi-query inference.} Ask a sequence of individually innocuous questions whose answers, when combined, reveal protected information.
+\begin{tcolorbox}[colback=blue!3!white, colframe=blue!50!black, boxrule=0.4pt, arc=2pt, left=6pt, right=6pt, top=4pt, bottom=4pt]
+\textbf{Architectural enforcement:} can the platform move enforcement before retrieval, so that unauthorised information never enters the model context?
+\end{tcolorbox}
 
-    \item \textbf{Abuse tool interfaces.} Invoke tools with out-of-policy arguments or exploit implicit tool capabilities.
-
-    \item \textbf{Exploit memory contamination.} Attempt to retrieve information stored from other relationships through the agent's shared memory.
-\end{enumerate}
-
-We do \textit{not} assume compromise of the underlying LLM service, the operating system, or the network transport layer---these are orthogonal security concerns addressed by existing infrastructure. Our threat model focuses on attacks that exploit the \textit{application layer}: the interface between the LLM, its tools, and its memory.
-
-This threat model aligns with Meta's ``Rule of Two'' framework \cite{meta2025ruletwo}: an agent becomes critically vulnerable when it simultaneously processes untrusted inputs, accesses sensitive data, and can take state-changing actions. Our solutions aim to ensure that at most two of these three conditions hold at any time.
-
-% ============================================================================
-\section{Limitations of Existing Approaches}
-\label{sec:existing_limitations}
-% ============================================================================
-
-Before stating our research questions, we summarise why existing defences are insufficient for the problem as formulated:
-
-\textbf{Prompt-level defences} (system instructions, content classifiers, chain-of-thought filtering) improve average-case security but fail under adaptive attacks. Nasr et al.\ \cite{nasr2025attacker} tested twelve published defences and found all could be bypassed with $>$90\% success. Even Anthropic's state-of-the-art model-level hardening leaves a 1\% residual attack success rate \cite{anthropic2025promptinjection}---unacceptable when personal data is at stake.
-
-\textbf{Static access control lists} (file-level permissions) provide strong isolation for static documents but cannot handle continuous state streams (email, calendar) where new content arrives constantly and sensitivity depends on relational context.
-
-\textbf{Manual permission management} offers perfect security but reintroduces the coordination overhead that agents were designed to eliminate. If the owner must approve every cross-boundary query, the agent provides no net productivity gain.
-
-The research community has converged on the conclusion that \textbf{architectural enforcement}---physically constraining what the agent can access, rather than instructing it what not to access---is the reliable path forward \cite{google2025promptinjection, meta2025ruletwo}. Our solutions build on this principle.
 
 % ============================================================================
-\section{Research Questions}
-\label{sec:research_questions}
+\section{Engineering Implementation}
+\label{sec:engineering_implementation}
 % ============================================================================
 
-The problem formulation and the limitations of existing approaches motivate four research questions:
+SharedOS is not assumed as prior infrastructure; it is our implementation of the formal setting above. It gives concrete meaning to $K_i$, $T_i$, $\mathcal{C}_{ij}$, $\pi_i$, and the observed trace $y$. The implementation matters because it constrains what the experiments mean: every benchmark condition runs through the same execution core, the same tool assembly path, and the same permission model used by deployed cross-agent communication. The following sections describe the parts of the implementation that directly support the research claims.
 
-\begin{description}
-    \item[RQ1] \textit{What are the failure modes when AI agents communicate across trust boundaries?}
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.9\linewidth]{figures/shared_os_overview.png}
+  \caption{SharedOS as a multi-agent shared delegation system. Each owner's agent accesses private files and structured state through typed tools. A cross-boundary delegation layer loads relationship context, applies governance policy, and routes inter-agent requests. External agents may query or request actions, but cannot bypass the tool layer.}
+  \label{fig:shared_os}
+\end{figure}
 
-    We seek a systematic taxonomy of how agents fail---not just prompt injection, but social engineering, inference attacks, tool abuse, and memory contamination. Understanding the failure landscape is prerequisite to designing effective defences. (\Cref{chapter:failure_cases}.)
-
-    \item[RQ2] \textit{How does a policy file (access rules) affect both utility and security?}
-
-    Basic tool filtering is the simplest architectural intervention. We measure its effect on both legitimate task completion and adversarial attack success, establishing the baseline from which our solutions improve. (\Cref{chapter:failure_cases,chapter:experiments}.)
-
-    \item[RQ3] \textit{How should agent memory be redesigned for multi-party interactions?}
-
-    Global memory creates cross-relationship leakage. We ask whether a dual-track architecture---separating self-state from per-relationship shards at the database level---can eliminate memory contamination without sacrificing context quality within each relationship. (\Cref{chapter:solution_proposal,chapter:experiments}.)
-
-    \item[RQ4] \textit{Can an adaptive escalation mechanism learn social boundaries and reduce manual overhead?}
-
-    Manual approval for every ambiguous query is unsustainable. We ask whether precedent-based learning---clustering entities and generalising past decisions---can automate approval for routine queries while preserving zero-trust guarantees for novel ones. (\Cref{chapter:solution_proposal,chapter:experiments}.)
-\end{description}
-
-These four questions span the full problem space: RQ1 characterises the threat landscape, RQ2 establishes baselines, RQ3 addresses memory isolation, and RQ4 tackles the overhead problem. Together, they trace a path from \textit{diagnosis} (what goes wrong, \cref{chapter:failure_cases}) through \textit{treatment} (architectural solutions, \cref{chapter:solution_proposal}) to \textit{evaluation} (do the solutions shift the Pareto frontier, \cref{chapter:experiments}). Answering these questions requires a benchmark that measures $\mathcal{U}$, $\mathcal{S}$, and $\mathcal{O}$ simultaneously---which we design in \cref{chapter:benchmark_design}.
+\input{engineering_implementation_sharedos}

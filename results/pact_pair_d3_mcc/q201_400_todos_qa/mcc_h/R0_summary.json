@@ -1,0 +1,21 @@
+{
+  "run_id": "mcc_MCC_H_R0_gpt-5.5_2026-05-17T21-43-34",
+  "defense": "MCC_H",
+  "requester": "R0",
+  "requester_name": "Tina Rodriguez",
+  "requester_description": "Stranger (no relationship context)",
+  "model": "gpt-5.5",
+  "question_range": "201-400",
+  "mcc_enabled": true,
+  "folders_mounted": [
+    5412
+  ],
+  "calendar_scope": "none",
+  "todo_access": false,
+  "policy_file": "none",
+  "total_questions": 200,
+  "avg_latency_ms": 17245.025,
+  "avg_tool_calls": 3.275,
+  "errors": 16,
+  "completed_at": "2026-05-17T22:41:17.184Z"
+}

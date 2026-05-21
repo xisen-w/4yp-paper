@@ -1,0 +1,23 @@
+{
+  "run_id": "mcc_MCC_H_R1_gpt-5.5_2026-05-17T22-38-51",
+  "defense": "MCC_H",
+  "requester": "R1",
+  "requester_name": "Tina Rodriguez",
+  "requester_description": "Colleague (PM, works with Alex on Project Alpha)",
+  "model": "gpt-5.5",
+  "question_range": "1-200",
+  "mcc_enabled": true,
+  "folders_mounted": [
+    5405,
+    5406,
+    5412
+  ],
+  "calendar_scope": "full",
+  "todo_access": true,
+  "policy_file": "none",
+  "total_questions": 200,
+  "avg_latency_ms": 13235.89,
+  "avg_tool_calls": 2.26,
+  "errors": 3,
+  "completed_at": "2026-05-17T23:23:04.890Z"
+}

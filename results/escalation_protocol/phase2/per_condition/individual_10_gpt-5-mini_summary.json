@@ -1,0 +1,17 @@
+{
+  "run_id": "esc_v2_individual_10_gpt-5-mini_1779127535265",
+  "version": 2,
+  "track": "net",
+  "fraction": 0.1,
+  "scope": "individual",
+  "model": "gpt-5-mini",
+  "auto_decide": false,
+  "split_mode": "question_group",
+  "total_test": 1548,
+  "completed": 1489,
+  "errors": 0,
+  "stopped": 745,
+  "continued": 744,
+  "stop_rate": "0.5003",
+  "completed_at": "2026-05-18T18:58:28.036Z"
+}

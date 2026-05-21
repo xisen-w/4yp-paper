@@ -1,0 +1,76 @@
+\chapter{Related Work}
+\label{chapter:related_work}
+
+This chapter reviews four bodies of literature and positions SharedOS at their intersection.
+
+
+% ============================================================================
+\section{AI Agent Architectures}
+\label{sec:rw_agents}
+% ============================================================================
+
+\textbf{Single-agent systems.} ReAct~\cite{yao2023react} established the reasoning-action loop. MemGPT~\cite{packer2024memgpt} introduced an OS-inspired memory hierarchy giving agents persistent long-term storage. These advances translated into commercial systems such as Devin~\cite{devin2024} (autonomous software engineering) and Manus~\cite{manus2025} (desktop automation).
+
+\textbf{Multi-agent frameworks.} AutoGen~\cite{wu2023autogen}, CrewAI~\cite{crewai2024}, MetaGPT~\cite{hong2023metagpt}, and CAMEL~\cite{li2023camel} enable multi-agent coordination. The critical observation is that every existing multi-agent system is \textit{multi-role-within-one-owner}: all agents share a single principal. None address the scenario where agents representing \textit{different owners} with potentially conflicting privacy interests must coordinate.
+
+\textbf{Agent operating systems.} AIOS~\cite{mei2025aios} proposes OS-level primitives for managing multiple agents, but its isolation is resource-oriented, not privacy-oriented. No existing agent OS addresses information flow control across trust boundaries. SharedOS occupies this gap.
+
+
+% ============================================================================
+\section{LLM Security and Privacy}
+\label{sec:rw_security}
+% ============================================================================
+
+\textbf{Attacks.} Zou et al.~\cite{zou2023universal} demonstrated gradient-based adversarial suffixes that transfer across models. PAIR~\cite{chao2025pair} uses an attacker LLM to iteratively refine prompts against a black-box target. PAP~\cite{zeng2024pap} applies 40 social-science persuasion techniques to achieve $>$90\% attack success on GPT-4. Crescendo~\cite{russinovich2025crescendo} demonstrates multi-turn escalation through individually innocuous turns. Most critically, Nasr et al.~\cite{nasr2025attacker} tested twelve published defences under adaptive attacks and found that \textit{every defence} could be bypassed with $>$90\% success. This motivates our architectural approach: security must be enforced by controlling what information is \textit{present} rather than instructing the model not to reveal it.
+
+\textbf{Defences.} Instruction hierarchy~\cite{wallace2024instruction}, spotlighting~\cite{hines2024spotlighting}, Llama Guard~\cite{inan2023llamaguard}, and NeMo Guardrails~\cite{rebedea2023nemo} all operate at the prompt level: necessary but insufficient under adaptive attack.
+
+\textbf{Privacy.} Carlini et al.~\cite{carlini2021extracting} demonstrated that LLMs memorise and reproduce verbatim training data, establishing that LLMs are fundamentally unreliable as privacy-preserving components. Yang et al.~\cite{yang2026dpagent} applied differential privacy to agent communication at a utility cost our work measures empirically.
+
+
+% ============================================================================
+\section{Agent Security Benchmarks}
+\label{sec:rw_benchmarks}
+% ============================================================================
+
+\begin{table}[ht]
+\centering
+\caption{Comparison of agent security benchmarks. $\checkmark$\ = fully supported, $\sim$ = partially, -- = not supported.}
+\label{table:benchmark_comparison}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Benchmark} & \textbf{Cross-boundary} & \textbf{Tool-mediated} & \textbf{Dual metric} & \textbf{Multi-turn} & \textbf{Relationship} & \textbf{Action safety} \\
+\midrule
+InjecAgent \cite{zhan2024injecagent}          & --           & $\checkmark$ & --           & --           & --           & $\checkmark$ \\
+AgentDojo \cite{debenedetti2024agentdojo}     & --           & $\checkmark$ & $\sim$       & --           & --           & $\sim$       \\
+AgentSocialBench \cite{wang2026agentsocialbench} & $\checkmark$ & --       & --           & --           & --           & --           \\
+ConVerse \cite{gomaa2025converse}             & $\checkmark$ & --           & --           & $\checkmark$ & --           & --           \\
+PAC-BENCH \cite{park2026pacbench}            & $\sim$       & $\checkmark$ & $\checkmark$ & --           & --           & --           \\
+AgentLeak \cite{yagoubi2026agentleak}        & $\checkmark$ & $\checkmark$ & --           & --           & --           & --           \\
+\midrule
+\textbf{PACT (Ours)} & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+No existing benchmark combines all six dimensions critical to cross-boundary privacy evaluation. PACT fills this gap.
+
+
+% ============================================================================
+\section{Trust and Access Control}
+\label{sec:rw_trust}
+% ============================================================================
+
+Classical access control (RBAC, ABAC, Bell-LaPadula~\cite{bell1973secure}, Denning's lattice~\cite{denning1976lattice}) assumes deterministic enforcement and static classification. Capability-based security~\cite{dennis1966programming} grants unforgeable tokens for specific permissions, enforcing least authority. Our Mountable Context Cell design is directly inspired by this model---an agent receives only the context cells relevant to the current interaction.
+
+The key distinction in our setting is that access control is \textit{relationship-relative} and the ``policy'' is not enforcement but \textit{input to reasoning}. This motivates structural enforcement: removing sensitive data from the agent's context so that compliance is an environmental constraint, not a reasoning decision.
+
+
+% ============================================================================
+\section{Position: SharedOS at the Intersection}
+\label{sec:rw_position}
+% ============================================================================
+
+The literature reveals a gap. Agent capability papers do not measure privacy. Security papers do not model delegation relationships. Benchmark papers cover subsets of the evaluation space but none covers all six dimensions (\Cref{table:benchmark_comparison}). SharedOS bridges these communities with: (i) a platform for cross-boundary coordination with persistent state, tool access, and social relationships; (ii) a benchmark (PACT) evaluating across all six dimensions; and (iii) architectural solutions moving enforcement from reasoning to structure.

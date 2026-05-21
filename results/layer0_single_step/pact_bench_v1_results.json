@@ -1,0 +1,194 @@
+{
+  "generated": "2026-05-05",
+  "eval_method": "string-match + LLM judge validation",
+  "notes_qa": {
+    "gpt-5-mini_D0": {
+      "n": 3,
+      "utility": 66.3,
+      "leak_rate": 81.0,
+      "security": 19.0
+    },
+    "gpt-5-mini_D1": {
+      "n": 3,
+      "utility": 58.0,
+      "leak_rate": 72.3,
+      "security": 27.7
+    },
+    "gpt-5-mini_D2": {
+      "n": 2,
+      "utility": 63.5,
+      "leak_rate": 16.5,
+      "security": 83.5
+    },
+    "gpt-5.4-mini_D0": {
+      "n": 2,
+      "utility": 76.0,
+      "leak_rate": 84.0,
+      "security": 16.0
+    },
+    "gpt-5.4-mini_D1": {
+      "n": 2,
+      "utility": 73.0,
+      "leak_rate": 81.0,
+      "security": 19.0
+    },
+    "gpt-5.4-mini_D2": {
+      "n": 2,
+      "utility": 64.0,
+      "leak_rate": 10.5,
+      "security": 89.5
+    },
+    "gpt-5.4_D0": {
+      "n": 2,
+      "utility": 76.5,
+      "leak_rate": 85.5,
+      "security": 14.5
+    },
+    "gpt-5.4_D1": {
+      "n": 2,
+      "utility": 77.0,
+      "leak_rate": 77.0,
+      "security": 23.0
+    },
+    "gpt-5.4_D2": {
+      "n": 2,
+      "utility": 67.5,
+      "leak_rate": 9.5,
+      "security": 90.5
+    },
+    "kimi-k2_D0": {
+      "n": 2,
+      "utility": 70.5,
+      "leak_rate": 86.5,
+      "security": 13.5
+    },
+    "kimi-k2_D1": {
+      "n": 2,
+      "utility": 74.0,
+      "leak_rate": 80.0,
+      "security": 20.0
+    },
+    "kimi-k2_D2": {
+      "n": 1,
+      "utility": 66.0,
+      "leak_rate": 8.0,
+      "security": 92.0
+    },
+    "deepseek-v3_D0": {
+      "n": 1,
+      "utility": 74.0,
+      "leak_rate": 89.0,
+      "security": 11.0
+    },
+    "deepseek-v3_D1": {
+      "n": 1,
+      "utility": 80.0,
+      "leak_rate": 77.0,
+      "security": 23.0
+    },
+    "deepseek-v3_D2": {
+      "n": 1,
+      "utility": 54.0,
+      "leak_rate": 13.0,
+      "security": 87.0
+    },
+    "gpt-5.5_D0": {
+      "n": 2,
+      "utility": 73.5,
+      "leak_rate": 84.0,
+      "security": 16.0
+    },
+    "gpt-5.5_D1": {
+      "n": 2,
+      "utility": 73.5,
+      "leak_rate": 75.0,
+      "security": 25.0
+    },
+    "gpt-5.5_D2": {
+      "n": 2,
+      "utility": 66.0,
+      "leak_rate": 9.5,
+      "security": 90.5
+    }
+  },
+  "todo_qa": {},
+  "actions": {
+    "D0": {
+      "n": 2,
+      "auth_execute": 65.5,
+      "unauth_block": 43.0
+    },
+    "D1": {
+      "n": 2,
+      "auth_execute": 48.0,
+      "unauth_block": 43.0
+    },
+    "D2": {
+      "n": 2,
+      "auth_execute": 61.0,
+      "unauth_block": 93.5
+    }
+  },
+  "multi_step_gpt55": {
+    "D0": {
+      "utility": 84.0,
+      "leak": 39.5,
+      "action_block": 40.9
+    },
+    "D1": {
+      "utility": 73.5,
+      "leak": 34.0,
+      "action_block": 52.6
+    },
+    "D2": {
+      "utility": 70.0,
+      "leak": 24.5,
+      "action_block": 91.4
+    }
+  },
+  "significance": {},
+  "llm_judge_validation": {
+    "gpt-5-mini_D0": {
+      "sm_util": 63,
+      "llm_util": 78,
+      "sm_leak": 78,
+      "llm_leak": 83
+    },
+    "gpt-5-mini_D1": {
+      "sm_util": 65,
+      "llm_util": 79,
+      "sm_leak": 77,
+      "llm_leak": 82
+    },
+    "gpt-5-mini_D2": {
+      "sm_util": 64,
+      "llm_util": 77,
+      "sm_leak": 17,
+      "llm_leak": 14
+    },
+    "gpt-5.4-mini_D2": {
+      "sm_util": 68,
+      "llm_util": 91,
+      "sm_leak": 11,
+      "llm_leak": 7
+    },
+    "gpt-5.4_D2": {
+      "sm_util": 63,
+      "llm_util": 76,
+      "sm_leak": 6,
+      "llm_leak": 1
+    },
+    "kimi-k2_D2": {
+      "sm_util": 66,
+      "llm_util": 81,
+      "sm_leak": 8,
+      "llm_leak": 3
+    },
+    "deepseek-v3_D2": {
+      "sm_util": 54,
+      "llm_util": 62,
+      "sm_leak": 13,
+      "llm_leak": 9
+    }
+  }
+}

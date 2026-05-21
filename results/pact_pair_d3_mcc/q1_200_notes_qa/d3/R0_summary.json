@@ -1,0 +1,14 @@
+{
+  "run_id": "d3_D3_R0_gpt-5.5_2026-05-16T03-40-12",
+  "defense": "D3",
+  "requester": "R0",
+  "requester_name": "Tina Rodriguez",
+  "requester_description": "Stranger (no relationship context)",
+  "model": "gpt-5.5",
+  "question_range": "1-200",
+  "total_questions": 200,
+  "avg_latency_ms": 13721.425,
+  "avg_tool_calls": 2.53,
+  "errors": 22,
+  "completed_at": "2026-05-16T04:26:01.870Z"
+}

@@ -1,0 +1,84 @@
+\chapter{Conclusion \& Discussion}
+\label{chapter:conclusion_discussion}
+
+SharedOS is not merely a research prototype: the deployed platform (Pulse/Aicoo) hosts thousands of active agents with thousands of real cross-agent communications daily, grounding our findings in production-scale evidence.
+
+
+% ============================================================================
+\section{The Frontier Cannot Be Flattened By Prompt Engineering}
+\label{sec:prompt_ceiling}
+% ============================================================================
+
+Under the best prompt configuration, 27--38\% of protected information still leaks in dyadic evaluation. At network scale, transitive leaks persist at 77.7\%. Three forces prevent prompt engineering from eliminating the residual:
+
+\begin{description}[nosep]
+  \item[Implicit social norms.] Models resolve ambiguous cases by defaulting to social convention rather than strict policy compliance. No prompt specificity can override a training signal pervading the entire pretraining corpus.
+  \item[Semantic properties of natural language.] A response revealing no single protected fact may collectively reveal protected information through implication or elimination.
+  \item[Conversational dynamics.] Multi-turn interaction creates pressure toward disclosure. PACT-PAIR's 3$\times$ gap between single-turn and multi-turn leakage quantifies this.
+\end{description}
+
+Architectural solutions (MCC, Escalation) break through by operating at a different layer: removing data from context or gating tool execution before protected data is retrieved.
+
+
+% ============================================================================
+\section{Implications for Agent System Design}
+\label{sec:design_implications}
+% ============================================================================
+
+\textbf{Safety training is not privacy governance.} Safety addresses universal harms (toxic content is harmful regardless of context). Privacy governance addresses contextual harms (the same content is harmful for one requester and appropriate for another).
+
+\textbf{Relationship context is a feature, not a bug.} Systems treating privacy as a property of data objects will fail. Governance must be parameterised by requester identity (MCCs embody this).
+
+\textbf{Over-refusal is the dominant real-world failure.} Over-refusal accounts for 18--25\% of utility failures under D2. Users abandon agents that refuse too often. Security and utility must be optimised jointly.
+
+\textbf{Read trust $\neq$ write trust.} PACT-NET's cross-surface plant results (+94pp defence with policy) reveal that a single ``trust level'' granting both read and write access will systematically fail.
+
+
+% ============================================================================
+\section{Limitations}
+\label{sec:limitations}
+% ============================================================================
+
+\begin{description}[nosep]
+  \item[Synthetic data.] Cannot capture the full complexity of real personal data.
+  \item[Same-model attacker/defender.] May underestimate adversarial capability.
+  \item[Organic multi-turn only.] Does not employ formal adversarial techniques (PAIR, Crescendo, TAP).
+  \item[Partial MCC validation.] Folder-level, not field-level. Todos use coarse on/off gating.
+  \item[Single ecosystem.] Technology startup context; cannot claim generalisation to healthcare or government.
+\end{description}
+
+
+% ============================================================================
+\section{Summary of Contributions}
+\label{sec:summary}
+% ============================================================================
+
+\begin{enumerate}[nosep]
+  \item \textbf{SharedOS}: First platform for systematic study of cross-boundary agent privacy with persistent state, tool-mediated interactions, and configurable defence mechanisms.
+  \item \textbf{PACT-PAIR}: 600-task dyadic benchmark revealing the specificity threshold (RQ1), bounded multi-turn erosion (RQ2), and relationship-dependent frontiers (RQ3).
+  \item \textbf{PACT-NET}: 997-task network benchmark revealing transitive leakage ($\mathcal{T}=77.7\%$), network amplification ($\mathcal{A}>1.5$), and the efficacy of structural enforcement.
+  \item \textbf{Mountable Context Cells}: Structural governance reducing aggregate leaks from 15.5\% to 8.0\% (combined with prompt policy).
+  \item \textbf{Intelligent Escalation Protocol}: Pre-tool gate achieving 90.8--94.2\% PStop with sparse same-pair precedents; same-owner relationship transfer improves utility by 4.1--6.9pp, but direct pair-specific labels remain the utility ceiling.
+\end{enumerate}
+
+
+% ============================================================================
+\section{Future Work}
+\label{sec:future_work}
+% ============================================================================
+
+\begin{description}[nosep]
+  \item[Formal attack integration.] PAIR, Crescendo, PAP as automated red-teamers within PACT.
+  \item[Per-field MCC.] Sub-document granularity (e.g., calendar event time without title).
+  \item[Formal verification.] Model checking for non-interference guarantees on MCC isolation.
+  \item[User study.] Real participants, genuine relationships, authentic personal information.
+  \item[Network-scale MCC.] Distributed policy propagation maintaining provenance transitively.
+\end{description}
+
+
+% ============================================================================
+\section{Closing Statement}
+\label{sec:closing}
+% ============================================================================
+
+The central thesis: \textit{do not ask the delegate to refrain from accessing sensitive data; ensure the sensitive data is not in the room.} This transforms privacy from a behavioural property (dependent on LLM compliance) into a structural property (enforced by the execution environment). The coordination problem facing AI agents will not be solved by more capable individual agents---a more capable agent is also a more capable adversary. The solution lies in trust infrastructure between agents: mechanisms enabling safe coordination without requiring perfect alignment, perfect robustness, or perfect obedience. SharedOS is a step toward that infrastructure.

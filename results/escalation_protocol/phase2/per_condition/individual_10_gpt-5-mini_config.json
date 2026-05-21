@@ -1,0 +1,18 @@
+{
+  "run_id": "esc_v2_individual_10_gpt-5-mini_1779127535265",
+  "version": 2,
+  "track": "net",
+  "fraction": 0.1,
+  "seed": 42,
+  "scope": "individual",
+  "model": "gpt-5-mini",
+  "deployment": "gpt-5-mini-1",
+  "concurrency": 5,
+  "auto_decide": false,
+  "split_mode": "question_group",
+  "total_precedents": 171,
+  "total_test_items": 1548,
+  "pending_items": 1489,
+  "relationship_nn_map_size": 94,
+  "started_at": "2026-05-18T18:05:35.267Z"
+}

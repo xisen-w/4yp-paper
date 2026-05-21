@@ -1,0 +1,170 @@
+\chapter{Architectural Solutions}
+\label{chapter:solution_proposal}
+
+The preceding chapters established what goes wrong. This chapter proposes architectural solutions that address failures not by asking the model to try harder but by restructuring the execution environment so that violations become structurally impossible.
+
+The governing philosophy: \textit{do not ask the agent to refrain from disclosing data; ensure the data is not in the room.}
+
+\begin{table}[h]
+  \caption{Failure modes and their architectural remedies.}
+  \label{tab:failure_remedy}
+  \centering
+  \small
+  \begin{tabular}{lll}
+    \toprule
+    \textbf{Failure mode} & \textbf{Root cause} & \textbf{Remedy} \\
+    \midrule
+    Direct information leak & Data present in context & Mountable Context Cells \\
+    Transitive leakage & Co-located sensitive data & Mountable Context Cells \\
+    Confused deputy & No delegation verification & Escalation Protocol \\
+    Over-refusal & Binary access model & Per-requester MCC \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+
+% ============================================================================
+\section{Relationship-Specific Policy (D3)}
+\label{sec:relationship_policy}
+% ============================================================================
+
+Information sensitivity is relational: the same fact may be appropriate for one requester and harmful for another. D3 parameterises governance by requester identity, assembling a tailored system prompt per relationship type. Results (\Cref{tab:three_condition}) show D3 achieves 15.5\% aggregate leak with 70.9\% utility---substantially outperforming flat D2 for misaligned requesters. But within-scope leakage persists (38.7\% for Close Friend), motivating the structural solutions below.
+
+
+% ============================================================================
+\section{Mountable Context Cells}
+\label{sec:mcc_design}
+% ============================================================================
+
+\subsection{Concept}
+
+A Mountable Context Cell (MCC) is a capability-based execution sandbox assembled per-requester. The analogy is containerisation versus file permissions: containers construct a filesystem view in which unauthorised files \textit{do not exist}. The agent cannot access what is not mounted.
+
+\begin{tcolorbox}[colback=gray!5!white, colframe=gray!60!black, fonttitle=\bfseries, title={MCC Specification}]
+\small\ttfamily
+allowedNoteIds: \normalfont [list of accessible document IDs]\\
+calendarScope: \normalfont "full" | "busy\_only" | "none"\\
+todoFilter: \normalfont \{projects: [...], priorities: [...]\}\\
+allowedTools: \normalfont [list of invocable tool names]\\
+memoryShards: \normalfont [list of accessible memory shard IDs]
+\end{tcolorbox}
+
+Different requesters receive different MCCs. Engineer~A sees sprint notes and tech docs with full calendar access. Investor~B sees financial summaries with busy-only calendar. The MCC eliminates transitive leakage (co-located data not mounted), over-refusal (agent freely uses everything in context), and cross-cluster conflation (domain-specific access regardless of closeness).
+
+\subsection{Implementation}
+
+MCCs use namespace-based permissions (folder-level access control). Assembly pipeline: (1) relationship identification, (2) policy resolution to MCC template, (3) concrete MCC construction, (4) context injection. Access is granted at folder level; new documents inherit the folder's access profile.
+
+
+% ============================================================================
+\section{MCC Experiments \& Results}
+\label{sec:mcc_validation}
+% ============================================================================
+
+Three-condition factorial design using PACT-PAIR tasks (GPT-5.5, 5 requesters, 400 QA tasks each):
+
+\begin{itemize}[nosep]
+  \item \textbf{D3 (prompt only)}: Full data loaded, per-requester policy in system prompt.
+  \item \textbf{MCC\_H (structure only)}: Folder-scoped access, no policy prompt.
+  \item \textbf{MCC\_H\_D3 (both)}: Folder-scoped access + per-requester policy.
+\end{itemize}
+
+\begin{table}[h]
+  \caption{Three-condition comparison (6,000 judged responses total).}
+  \label{tab:three_condition}
+  \centering
+  \footnotesize
+  \setlength{\tabcolsep}{3pt}
+  \begin{tabular}{l l cc cc cc}
+    \toprule
+    & & \multicolumn{2}{c}{\textbf{D3 (prompt)}} & \multicolumn{2}{c}{\textbf{MCC\_H (structure)}} & \multicolumn{2}{c}{\textbf{MCC\_H+D3 (both)}} \\
+    \cmidrule(lr){3-4} \cmidrule(lr){5-6} \cmidrule(lr){7-8}
+    \textbf{Requester} & \textbf{Role} & Util & Leak & Util & Leak & Util & Leak \\
+    \midrule
+    R0 & Stranger      & 21.0 & 1.2  & 23.8 & 1.6  & 23.9 & 0.6 \\
+    R1 & Colleague     & 87.4 & 8.0  & 82.9 & 20.3 & 83.3 & 6.3 \\
+    R2 & Delegate      & 87.1 & 12.6 & 86.6 & 17.9 & 85.9 & 12.6 \\
+    R3 & Close Friend  & 63.3 & 38.7 & 26.2 & 22.0 & 27.1 & 18.1 \\
+    R4 & Investor      & 87.4 & 16.9 & 59.7 & 1.6  & 60.6 & 2.7 \\
+    \midrule
+    \multicolumn{2}{l}{\textbf{Aggregate}} & 70.9 & 15.5 & 57.6 & 12.4 & 58.5 & 8.0 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\textbf{Four findings:}
+
+\begin{enumerate}[nosep]
+  \item Structure alone reduces leaks for misaligned requesters (R3: $-$16.7pp, R4: $-$15.3pp) but \textit{increases} them for aligned ones (R1: +12.3pp) because the agent freely discloses everything within mounted folders.
+  \item The combined MCC\_H+D3 dominates for misaligned requesters: R3 38.7\%$\to$18.1\%, R4 16.9\%$\to$2.7\%.
+  \item Prompt policy provides within-scope discrimination that structure cannot (R1: 20.3\%$\to$6.3\% from adding D3 to MCC\_H).
+  \item Structural and behavioural governance are complementary, not substitutes.
+\end{enumerate}
+
+
+% ============================================================================
+\section{Intelligent Escalation Protocol}
+\label{sec:escalation_protocol}
+% ============================================================================
+
+\subsection{Design}
+
+MCCs address data-absence enforcement but cannot resolve within-scope boundary cases. The Escalation Protocol operates as a \textit{pre-tool gate}: before any read/write tool executes, the gate classifies the operation as \textsc{Continue} or \textsc{Stop}. \textsc{Stop} prevents execution and creates an escalation record for the owner.
+
+\textbf{Precedent-based learning.} Each owner decision becomes a structured precedent for future gate decisions. The final evaluation removes auto-decision shortcuts and asks whether an LLM gate can use sparse precedents as context for a new tool-call decision.
+
+\subsection{Results}
+
+The final ablation uses PACT-NET only, question-group splits, no auto-decision, and no final-answer judging. \texttt{BLOCKED} non-contact probes are excluded because they are routing-layer failures, not escalation-gate cases.
+
+\begin{table}[h]
+  \caption{Escalation gate Phase~2 ablation on PACT-NET. PStop is private-request recall; Utility is legitimate-request recall.}
+  \label{tab:escalation_gate_results}
+  \centering
+  \footnotesize
+  \setlength{\tabcolsep}{3pt}
+  \begin{tabular}{llrrrr}
+    \toprule
+    Model & Scope & Frac. & PStop & Utility & Err. \\
+    \midrule
+    GPT-5-mini & individual & 10\% & 90.8 & 69.8 & 0 \\
+    GPT-5-mini & cluster-2NN & 10\% & 88.5 & 76.7 & 0 \\
+    GPT-5-mini & rich cluster-2NN & 10\% & 91.3 & 78.0 & 0 \\
+    GPT-5-mini & individual & 30\% & 87.7 & 91.0 & 0 \\
+    GPT-5.5 & individual & 10\% & 94.2 & 67.1 & 0 \\
+    GPT-5.5 & cluster-2NN & 10\% & 92.7 & 71.3 & 1 \\
+    GPT-5.5 & rich cluster-2NN & 10\% & 94.4 & 68.1 & 0 \\
+    GPT-5.5 & individual & 30\% & 92.1 & 87.4 & 0 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Sparse same-pair precedents are secure but conservative: individual-10 stops 90.8--94.2\% of private requests but only continues 67.1--69.8\% of legitimate requests. Same-owner cluster transfer improves utility by 4.1--6.9pp, but does not match the 30\% same-pair baseline. Rich cards improve GPT-5-mini on both axes and improve GPT-5.5 security, but make GPT-5.5 more conservative. The supported claim is therefore narrower than ``cluster transfer solves sparse labelling'': precedent-conditioned tool gating can learn high-security relationship boundaries, but utility depends on direct pair-specific labels and on precedent-card representation.
+
+
+% ============================================================================
+\section{Production Deployment}
+\label{sec:production_deployment}
+% ============================================================================
+
+The solutions are deployed in production (Pulse/Aicoo):
+
+\begin{table}[h]
+  \caption{Deployment status of architectural solutions.}
+  \label{tab:deployment_status}
+  \centering
+  \small
+  \begin{tabular}{lll}
+    \toprule
+    \textbf{Component} & \textbf{Status} & \textbf{Limitation} \\
+    \midrule
+    Folder-scoped MCC & Deployed & Document-level, not field-level \\
+    Per-requester tool scoping & Deployed & Manual configuration \\
+    Relationship memory shards & Deployed & L2 only \\
+    Pre-tool escalation gate & Deployed & Gate-only, not final-answer \\
+    Precedent learning & Prototype & Rich cards and retrieval calibration \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+MCCs are realised as folder-scoped share links: each link encodes an MCC specification. The retrieval index is rebuilt per-link to contain only permitted documents. This is not a permission check after retrieval but a scoping constraint before retrieval.

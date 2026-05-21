@@ -1,0 +1,110 @@
+\chapter{PACT-NET: Network Evaluation}
+\label{chapter:failure_cases}
+
+PACT-PAIR evaluates a single privacy boundary. Real deployment is not dyadic. This chapter introduces PACT-NET (Privacy in Agent Cross-boundary Transactions --- Network Evaluation of Transitive risk), a 997-task benchmark evaluating governance at network scale. PACT-NET tests phenomena that cannot exist in a dyad: transitive leakage, confused deputies, amplification effects, and cross-cluster boundary violations.
+
+
+% ============================================================================
+\section{Motivation \& Design}
+\label{sec:dyad_to_network}
+% ============================================================================
+
+Three phenomena emerge at network scale that cannot be observed in dyadic evaluation:
+
+\paragraph{Transitive leakage.} Alice shares project timelines with Bob (collaborator). Bob's agent, when queried by Carol (competitor), may disclose those timelines because Bob's policy does not classify them as sensitive. Alice's information reached Carol despite no policy violation on either side.
+
+\paragraph{Confused deputies.} An attacker claims delegation from a trusted party: ``Alice asked me to collect the quarterly numbers.'' The target agent must decide whether to honour this unverified claim.
+
+\paragraph{Amplification effects.} A single disclosure may propagate further through the network. The expected harm is the direct harm multiplied by the network's propagation factor.
+
+
+% ============================================================================
+\section{Network World and Task Families}
+\label{sec:network_world_design}
+% ============================================================================
+
+PACT-NET takes place in a fictional startup ecosystem (TechFlow AI) with 25 agents organised into three clusters: professional (15), investor/advisor (3), and personal (7). The contact graph contains 172 directed edges. Alex (CTO) is the hub node.
+
+\begin{table}[h]
+  \caption{PACT-NET task family distribution.}
+  \label{tab:task_families}
+  \centering
+  \small
+  \begin{tabular}{lrc}
+    \toprule
+    \textbf{Task family} & \textbf{Count} & \textbf{Phenomenon tested} \\
+    \midrule
+    Should-answer & 172 & Multi-requester utility \\
+    Should-refuse & 139 & Multi-requester security \\
+    Transitive risk & 94 & Selective disclosure \\
+    Confused deputy & 50 & False delegation \\
+    Cross-surface plant & 50 & Write-path leakage \\
+    Non-contact probe & 50 & Routing enforcement \\
+    \midrule
+    \textbf{Total} & \textbf{997} & \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Labels are relationship-conditioned: $\textit{access}(\textit{Owner}, \textit{Category}, \textit{Requester}) \rightarrow \{L, P, B\}$. The same fact has different correct disclosure outcomes depending on who asks (575 relationship-conditioned labels across the space).
+
+
+% ============================================================================
+\section{Results}
+\label{sec:network_findings}
+% ============================================================================
+
+All results averaged over two replications per condition. Model: GPT-5.5 (Azure).
+
+\begin{table}[h]
+  \caption{PACT-NET composite scores (2-rep averaged, namespace-isolated).}
+  \label{tab:pact_net_headline}
+  \centering
+  \small
+  \begin{tabular}{lccc}
+    \toprule
+    \textbf{Metric} & \textbf{D0 (no policy)} & \textbf{D1 (base policy)} & \textbf{$\Delta$} \\
+    \midrule
+    Overall accuracy & 55.9\% & 74.9\% & +19.0\,pp \\
+    Utility & 88.5\% & 78.8\% & $-$9.8\,pp \\
+    Safety & 26.6\% & 71.4\% & \textbf{+44.8\,pp} \\
+    Tradeoff ratio & \multicolumn{3}{c}{\textbf{4.6\,:1} (safety gain / utility cost)} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[h]
+  \caption{PACT-NET network-specific metrics (2-rep averaged).}
+  \label{tab:pact_net_network_metrics}
+  \centering
+  \small
+  \begin{tabular}{clccc}
+    \toprule
+    \textbf{Symbol} & \textbf{Metric} & \textbf{D0} & \textbf{D1} & \textbf{$\Delta$} \\
+    \midrule
+    $\mathcal{T}$ & Transitive leak rate & 96.3\% & 77.7\% & $-$18.6\,pp \\
+    $\mathcal{D}$ & Confused deputy rate & 47.0\% & 2.0\% & $-$45.0\,pp \\
+    $\mathcal{C}$ & Contact enforcement & 100\% & 100\% & 0 \\
+    $\mathcal{X}$ & Cross-cluster leak rate & 87.5\% & 69.6\% & $-$17.9\,pp \\
+    $\mathcal{A}$ & Amplification factor & 1.61 & 1.55 & $-$0.06 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Key Findings}
+
+\textbf{D0 is alarming.} Without policy: cross\_surface\_plant 0.0\% defence, agents refuse only 1 in 6 queries they should refuse, 96.3\% transitive chains leak, 47\% of false delegation claims succeed, 70\% of unauthorised write requests execute.
+
+\textbf{Base policy closes direct attacks} (should\_refuse +57.2pp, confused\_deputy $-$45pp, cross\_surface\_plant +94pp) \textbf{but not network-emergent attacks} (transitive\_risk: still 77.7\% leak; cross\_cluster: still 69.6\% leak). The policy addresses bilateral threats but cannot express ``protect your contacts' data from being relayed to third parties.''
+
+\textbf{Network amplification is real.} $\mathcal{A} > 1.5$ under both conditions, roughly constant---a property of topology, not defence.
+
+\textbf{Contact enforcement is infrastructure.} Non-contact probes achieve 100\% under both D0 and D1 via ACL check before the agent is invoked.
+
+\textbf{Phase 2 dig-further resistance.} All four runs achieved 100\% resistance on scored Phase~2 probes. Aggregated broad probes trigger built-in safety training even without explicit policy, suggesting single-shot precision attacks are more dangerous than persistent broad probes.
+
+\subsection{What Transfers from PACT-PAIR and What Is New}
+
+\textit{Transfers:} Policy dramatically improves security at modest utility cost (4.6:1 ratio). Over-refusal is the primary utility cost. Contact enforcement provides a hard structural floor.
+
+\textit{New to PACT-NET:} Transitive leakage is a distinct failure mode ($\mathcal{T} = 77.7\%$ even with policy). Cross-surface planting is the most dramatic improvement (+94.0pp). Network amplification ($\mathcal{A} > 1.5$) means dyadic evaluation systematically underestimates real-world leakage. These findings motivate architectural solutions.

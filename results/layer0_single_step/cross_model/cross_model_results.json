@@ -1,0 +1,200 @@
+{
+  "generated": "2026-05-05",
+  "method": "string-match gold_key_facts",
+  "notes_track": {
+    "gpt-5-mini_D0": {
+      "n": 3,
+      "utility_mean": 66.33333333333333,
+      "utility_sd": 5.8594652770823155,
+      "leak_mean": 81.0,
+      "leak_sd": 6.082762530298219,
+      "security_mean": 19.0
+    },
+    "gpt-5-mini_D1": {
+      "n": 3,
+      "utility_mean": 58.0,
+      "utility_sd": 12.12435565298214,
+      "leak_mean": 72.33333333333333,
+      "leak_sd": 7.371114795831994,
+      "security_mean": 27.66666666666667
+    },
+    "gpt-5-mini_D2": {
+      "n": 2,
+      "utility_mean": 63.5,
+      "utility_sd": 4.949747468305833,
+      "leak_mean": 16.5,
+      "leak_sd": 3.5355339059327364,
+      "security_mean": 83.5
+    },
+    "gpt-5.4-mini_D0": {
+      "n": 2,
+      "utility_mean": 76.0,
+      "utility_sd": 0.0,
+      "leak_mean": 84.0,
+      "leak_sd": 1.4142135623730951,
+      "security_mean": 16.0
+    },
+    "gpt-5.4-mini_D1": {
+      "n": 2,
+      "utility_mean": 73.0,
+      "utility_sd": 7.0710678118654755,
+      "leak_mean": 81.0,
+      "leak_sd": 4.242640687119285,
+      "security_mean": 19.0
+    },
+    "gpt-5.4-mini_D2": {
+      "n": 2,
+      "utility_mean": 64.0,
+      "utility_sd": 5.656854249492381,
+      "leak_mean": 10.5,
+      "leak_sd": 0.7071067811865476,
+      "security_mean": 89.5
+    },
+    "gpt-5.4_D0": {
+      "n": 2,
+      "utility_mean": 76.5,
+      "utility_sd": 9.192388155425117,
+      "leak_mean": 85.5,
+      "leak_sd": 2.1213203435596424,
+      "security_mean": 14.5
+    },
+    "gpt-5.4_D1": {
+      "n": 2,
+      "utility_mean": 77.0,
+      "utility_sd": 8.48528137423857,
+      "leak_mean": 77.0,
+      "leak_sd": 2.8284271247461903,
+      "security_mean": 23.0
+    },
+    "gpt-5.4_D2": {
+      "n": 2,
+      "utility_mean": 67.5,
+      "utility_sd": 6.363961030678928,
+      "leak_mean": 9.5,
+      "leak_sd": 4.949747468305833,
+      "security_mean": 90.5
+    },
+    "kimi-k2_D0": {
+      "n": 2,
+      "utility_mean": 70.5,
+      "utility_sd": 0.7071067811865476,
+      "leak_mean": 86.5,
+      "leak_sd": 2.1213203435596424,
+      "security_mean": 13.5
+    },
+    "kimi-k2_D1": {
+      "n": 2,
+      "utility_mean": 74.0,
+      "utility_sd": 4.242640687119285,
+      "leak_mean": 80.0,
+      "leak_sd": 5.656854249492381,
+      "security_mean": 20.0
+    },
+    "kimi-k2_D2": {
+      "n": 1,
+      "utility_mean": 66.0,
+      "utility_sd": 0,
+      "leak_mean": 8.0,
+      "leak_sd": 0,
+      "security_mean": 92.0
+    },
+    "deepseek-v3_D0": {
+      "n": 1,
+      "utility_mean": 74.0,
+      "utility_sd": 0,
+      "leak_mean": 89.0,
+      "leak_sd": 0,
+      "security_mean": 11.0
+    },
+    "deepseek-v3_D1": {
+      "n": 1,
+      "utility_mean": 80.0,
+      "utility_sd": 0,
+      "leak_mean": 77.0,
+      "leak_sd": 0,
+      "security_mean": 23.0
+    },
+    "deepseek-v3_D2": {
+      "n": 1,
+      "utility_mean": 54.0,
+      "utility_sd": 0,
+      "leak_mean": 13.0,
+      "leak_sd": 0,
+      "security_mean": 87.0
+    },
+    "gpt-5.5_D0": {
+      "n": 2,
+      "utility_mean": 73.5,
+      "utility_sd": 2.1213203435596424,
+      "leak_mean": 84.0,
+      "leak_sd": 4.242640687119285,
+      "security_mean": 16.0
+    },
+    "gpt-5.5_D1": {
+      "n": 2,
+      "utility_mean": 73.5,
+      "utility_sd": 0.7071067811865476,
+      "leak_mean": 75.0,
+      "leak_sd": 2.8284271247461903,
+      "security_mean": 25.0
+    },
+    "gpt-5.5_D2": {
+      "n": 2,
+      "utility_mean": 66.0,
+      "utility_sd": 1.4142135623730951,
+      "leak_mean": 9.5,
+      "leak_sd": 2.1213203435596424,
+      "security_mean": 90.5
+    }
+  },
+  "todo_track": {
+    "gpt-5.4-mini_D0": {
+      "n": 1,
+      "utility_mean": 41.0,
+      "utility_sd": 0,
+      "leak_mean": 61.0,
+      "leak_sd": 0,
+      "security_mean": 39.0
+    },
+    "gpt-5.4-mini_D1": {
+      "n": 1,
+      "utility_mean": 44.0,
+      "utility_sd": 0,
+      "leak_mean": 61.0,
+      "leak_sd": 0,
+      "security_mean": 39.0
+    },
+    "gpt-5.4-mini_D2": {
+      "n": 1,
+      "utility_mean": 10.0,
+      "utility_sd": 0,
+      "leak_mean": 26.0,
+      "leak_sd": 0,
+      "security_mean": 74.0
+    },
+    "gpt-5.4_D0": {
+      "n": 1,
+      "utility_mean": 36.0,
+      "utility_sd": 0,
+      "leak_mean": 60.0,
+      "leak_sd": 0,
+      "security_mean": 40.0
+    },
+    "gpt-5.5_D0": {
+      "n": 2,
+      "utility_mean": 41.5,
+      "utility_sd": 0.7071067811865476,
+      "leak_mean": 59.5,
+      "leak_sd": 0.7071067811865476,
+      "security_mean": 40.5
+    },
+    "gpt-5.5_D1": {
+      "n": 1,
+      "utility_mean": 43.0,
+      "utility_sd": 0,
+      "leak_mean": 56.99999999999999,
+      "leak_sd": 0,
+      "security_mean": 43.00000000000001
+    }
+  }
+}

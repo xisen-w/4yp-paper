@@ -1,0 +1,14 @@
+{
+  "run_id": "d3_D3_R4_gpt-5.5_2026-05-16T03-40-21",
+  "defense": "D3",
+  "requester": "R4",
+  "requester_name": "Dana Reeves",
+  "requester_description": "Investor (Sequoia partner, board observer)",
+  "model": "gpt-5.5",
+  "question_range": "1-200",
+  "total_questions": 200,
+  "avg_latency_ms": 10634.65,
+  "avg_tool_calls": 1.77,
+  "errors": 1,
+  "completed_at": "2026-05-16T04:15:53.158Z"
+}

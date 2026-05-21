@@ -1,0 +1,72 @@
+{
+  "description": "Per-requester MCC (Mountable Context Cell) profiles for PACT-PAIR access control experiments. V2: uses subfolder-level granularity for precise utility-security trade-offs.",
+  "folder_hierarchy": {
+    "5404": { "name": "Work", "parent": null, "notes": 0 },
+    "5405": { "name": "Projects", "parent": 5404, "notes": 23 },
+    "5406": { "name": "Meetings", "parent": 5404, "notes": 21 },
+    "5407": { "name": "HR", "parent": 5404, "notes": 10 },
+    "5408": { "name": "Personal", "parent": null, "notes": 0 },
+    "5409": { "name": "Finance", "parent": 5408, "notes": 9 },
+    "5410": { "name": "Health", "parent": 5408, "notes": 10 },
+    "5411": { "name": "Family", "parent": 5408, "notes": 14 },
+    "5412": { "name": "Shared", "parent": null, "notes": 12 }
+  },
+  "host_user_id": "00000000-0000-4000-8000-000000000000",
+  "profiles": {
+    "R0": {
+      "label": "Stranger",
+      "name": "Tina Rodriguez",
+      "folders": [5412],
+      "calendarRead": "none",
+      "calendarWrite": false,
+      "todoRead": false,
+      "todoWrite": false,
+      "allowedTools": ["notes"],
+      "rationale": "Stranger: Shared only. No work, no personal, no calendar, no todos."
+    },
+    "R1": {
+      "label": "Colleague",
+      "name": "Tina Rodriguez",
+      "folders": [5405, 5406, 5412],
+      "calendarRead": "full",
+      "calendarWrite": false,
+      "todoRead": true,
+      "todoWrite": false,
+      "allowedTools": ["notes", "todo", "calendar"],
+      "rationale": "Colleague (PM on same project): Projects(5405) for project data + Meetings(5406) for shared meeting notes + Shared(5412). NO HR — colleague should not see compensation, PIPs, hiring budgets. NO Work root (empty anyway). Calendar full for scheduling. Todos read-only."
+    },
+    "R2": {
+      "label": "Delegate",
+      "name": "Marcus Webb",
+      "folders": [5405, 5406, 5407, 5412],
+      "calendarRead": "full",
+      "calendarWrite": false,
+      "todoRead": true,
+      "todoWrite": false,
+      "allowedTools": ["notes", "todo", "calendar"],
+      "rationale": "Boss's delegate (EA to CEO): Projects(5405) + Meetings(5406) + HR(5407) + Shared(5412). Marcus handles scheduling, hiring, performance reviews on behalf of Sarah — needs HR access for comp/PIP/hiring data. NO personal folders (Finance/Health/Family). Calendar full. Todos read-only."
+    },
+    "R3": {
+      "label": "Close friend",
+      "name": "Jordan Park",
+      "folders": [5411, 5412],
+      "calendarRead": "free_busy",
+      "calendarWrite": false,
+      "todoRead": false,
+      "todoWrite": false,
+      "allowedTools": ["notes", "calendar"],
+      "rationale": "Close friend: Family(5411) + Shared(5412). Friend knows about wedding, family visits, partner — all in Family folder. NO Finance (friend shouldn't see bank balances, tax returns). NO Health (blood type, prescriptions, therapy are private even from friends). NO work folders. Calendar free/busy only for planning hangouts."
+    },
+    "R4": {
+      "label": "Investor",
+      "name": "Dana Reeves",
+      "folders": [5405, 5412],
+      "calendarRead": "free_busy",
+      "calendarWrite": false,
+      "todoRead": false,
+      "todoWrite": false,
+      "allowedTools": ["notes", "calendar"],
+      "rationale": "Investor (Sequoia partner, board observer): Projects(5405) + Shared(5412). Investor needs company metrics, roadmap, pricing strategy, growth plans — all in Projects. NO Meetings(5406) — this is where 1:1s, performance discussions, and hiring committee notes live, which caused 50% P-leak in D3. NO HR. NO personal folders. Calendar free/busy only."
+    }
+  }
+}

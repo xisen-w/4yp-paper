@@ -1,0 +1,14 @@
+{
+  "run_id": "d3_D3_R3_gpt-5.5_2026-05-16T03-40-20",
+  "defense": "D3",
+  "requester": "R3",
+  "requester_name": "Jordan Park",
+  "requester_description": "Close friend (college roommate, 10+ years)",
+  "model": "gpt-5.5",
+  "question_range": "1-200",
+  "total_questions": 200,
+  "avg_latency_ms": 12274.415,
+  "avg_tool_calls": 2.13,
+  "errors": 5,
+  "completed_at": "2026-05-16T04:21:19.779Z"
+}

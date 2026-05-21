@@ -1,0 +1,22 @@
+{
+  "run_id": "mcc_MCC_H_R4_gpt-5.5_2026-05-18T02-43-10",
+  "defense": "MCC_H",
+  "requester": "R4",
+  "requester_name": "Dana Reeves",
+  "requester_description": "Investor (Sequoia partner, board observer)",
+  "model": "gpt-5.5",
+  "question_range": "201-400",
+  "mcc_enabled": true,
+  "folders_mounted": [
+    5405,
+    5412
+  ],
+  "calendar_scope": "free_busy",
+  "todo_access": false,
+  "policy_file": "none",
+  "total_questions": 200,
+  "avg_latency_ms": 28362.325,
+  "avg_tool_calls": 2.565,
+  "errors": 1,
+  "completed_at": "2026-05-18T04:17:46.658Z"
+}

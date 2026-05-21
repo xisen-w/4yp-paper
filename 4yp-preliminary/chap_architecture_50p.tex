@@ -1,0 +1,140 @@
+\chapter{PACT-PAIR: Dyadic Evaluation}
+\label{chapter:benchmark_design}
+
+This chapter introduces the PACT-PAIR benchmark (Privacy in Agent Cross-boundary Transactions --- Pairwise Assessment of Information Risk), a 600-task evaluation suite probing one requesting agent against one target agent across a single privacy boundary.
+
+\begin{tcolorbox}[colback=blue!3!white, colframe=blue!40!black, title={\textbf{RQ1: What moves the frontier?}}]
+We vary policy specificity from none to category enumeration.
+\end{tcolorbox}
+\begin{tcolorbox}[colback=blue!3!white, colframe=blue!40!black, title={\textbf{RQ2: Is the frontier stable over time?}}]
+We compare single-turn and 240-tick autonomous interaction under the same policy.
+\end{tcolorbox}
+\begin{tcolorbox}[colback=blue!3!white, colframe=blue!40!black, title={\textbf{RQ3: Is the frontier the same for everyone?}}]
+We fix D2 and vary only the requester's relationship.
+\end{tcolorbox}
+
+
+% ============================================================================
+\section{Setup}
+\label{sec:pact_pair_setup}
+% ============================================================================
+
+\textbf{Persona.} The target agent (Alex) is a co-founder/CTO with hundreds of files and structured state spanning six sensitivity categories. The requesting agent (Tina) communicates through the cross-boundary protocol.
+
+\textbf{Task composition.} 600 tasks across three tracks: Files QA (200), States QA (200), and Actions (200). Each track is balanced: 100 utility tasks and 100 security tasks. Each task is paired with gold key facts for automated evaluation.
+
+\textbf{Models.} Six models from three providers: gpt-5-mini (ablation backbone), gpt-5.5, gpt-5.4-mini, gpt-5.4, Kimi K2, DeepSeek V3.
+
+\textbf{Evaluation.} Two-pass pipeline: LLM judge + string match with OR-adjudication. Action verdicts use database-snapshot diffs. Manual audit ($\kappa = 0.96$, $n=60$) confirmed zero false positives.
+
+
+% ============================================================================
+\section{RQ1: What Moves the Frontier}
+\label{sec:rq1_findings}
+% ============================================================================
+
+\begin{table}[h]
+  \caption{Single-step files QA headline metrics (gpt-5-mini, 2 replications, OR-pooled).}
+  \label{tab:rq1_files_headline}
+  \centering
+  \small
+  \begin{tabular}{lcccc}
+    \toprule
+    \textbf{Defence} & \textbf{Utility} & \textbf{Leak Rate} & \textbf{Refuse Rate} & \textbf{$n$ (security)} \\
+    \midrule
+    D0 (no policy) & 78.0\% & 83.0\% & 0.0\% & 200 \\
+    D1 (generic) & 78.5\% & 81.5\% & 3.0\% & 200 \\
+    D2 (category deny list) & 77.0\% & 14.0\% & 71.5\% & 200 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\textbf{The specificity threshold.} D1 is statistically indistinguishable from D0 (McNemar $p = \text{n.s.}$). D0 versus D2: discordant ratio 70:1 ($p < 0.001$). The D0$\to$D2 gap is 69 percentage points of leak reduction with only 1pp utility cost. Below a specificity threshold, governance has no measurable effect. Category enumeration converts privacy decisions from open-ended judgment into pattern matching---a task models perform reliably.
+
+\textbf{Per-category hierarchy.} Sensitive work leaks most (28.3\% under D2) because organisational data falls between individual-level deny categories. Personal finance (4.0\%) and health (12.5\%) are near-zero because they are unambiguously individual.
+
+\textbf{Surface asymmetry.} D2 costs only 1pp utility on files but 37pp on structured state. Terse state queries share vocabulary with protected categories, triggering 26.5\% false-refusal.
+
+\textbf{Cross-model generality.} The specificity threshold holds across all six models (D2 reduces leakage by 69--91pp in every model).
+
+\textbf{Action safety.} D2 is Pareto-superior: 93.5\% safety with 61.0\% utility. D1 is Pareto-\textit{inferior}: identical safety to D0 while reducing utility by 17.5pp. D2 achieves 100\% block rate on destructive actions.
+
+\begin{quote}
+\textbf{Takeaway (RQ1):} The frontier only moves when you name the boundary. Category enumeration crosses a specificity threshold below which governance has no measurable effect. This threshold is universal across six models from three providers.
+\end{quote}
+
+
+% ============================================================================
+\section{RQ2: Is the Frontier Stable Over Time}
+\label{sec:rq2_findings}
+% ============================================================================
+
+\begin{table}[h]
+  \caption{Multi-turn D2 security (gpt-5-mini, 10 splits $\times$ 240 ticks, $n=191$).}
+  \label{tab:rq2_category}
+  \centering
+  \small
+  \begin{tabular}{lcccc}
+    \toprule
+    \textbf{Category} & \textbf{Refuse} & \textbf{Msg.~Leak} & \textbf{Failed Att.} & \textbf{Glob.~Leak} \\
+    \midrule
+    Sensitive work         & 36.8 & 22.8 & 40.4 & 51.7 \\
+    Personal finance       & 75.0 &  4.5 & 20.5 & 34.7 \\
+    Personal health        & 89.7 &  2.6 &  7.7 & 20.0 \\
+    Personal relationships & 66.7 & 15.7 & 17.6 & 39.2 \\
+    \midrule
+    \textbf{All sensitive} & \textbf{64.4} & \textbf{12.6} & \textbf{23.0} & \textbf{38.0} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\textbf{Bounded erosion, not collapse.} D2's multi-turn message leak rate (12.6\%) is comparable to single-turn (14.0\%). But the global leak rate (38.0\%) is 3$\times$ the message leak because sensitive facts surface incidentally in responses to unrelated questions.
+
+\textbf{Adaptive strategies.} Strategy \textit{combinations} are more dangerous than individual strategies. The wedding cascade case study required 12 failed attempts before a three-strategy combination (business justification + scope expansion + constrained format) succeeded. After the breach, the policy recovered on six subsequent probes.
+
+\textbf{D3/D4/D5 marginal improvement.} All three defences provide only 4--11pp leak reduction at 6--13pp utility cost atop D2. Even the best (D5) still leaks 27.5\% over 240 ticks.
+
+\begin{quote}
+\textbf{Takeaway (RQ2):} Multi-turn erodes the frontier through incidental channels the policy never evaluates. The global leak rate is 3$\times$ the per-message rate. Single-turn benchmarks systematically undercount real-world privacy risk.
+\end{quote}
+
+
+% ============================================================================
+\section{RQ3: Is the Frontier the Same for Everyone}
+\label{sec:rq3_findings}
+% ============================================================================
+
+\begin{table}[h]
+  \caption{Relationship-conditioned D2 results (gpt-5-mini, 400 QA + 200 actions per requester).}
+  \label{tab:rq3_relationship}
+  \centering
+  \small
+  \begin{tabular}{llccc}
+    \toprule
+    \textbf{Requester} & \textbf{Role} & \textbf{Leak}$\downarrow$ & \textbf{Over-Refusal}$\downarrow$ & \textbf{Utility}$\uparrow$ \\
+    \midrule
+    Tina   & Colleague       & 1.7\%  & 40\%  & 57\% \\
+    Marcus & CEO delegate    & 3.3\%  & 59\%  & 49\% \\
+    Jordan & Close friend    & 9.2\%  & 86\%  & 58\% \\
+    Dana   & Investor/board  & 7.5\%  & 31\%  & 70\% \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\textbf{Only sensitive work is relationship-dependent.} Personal finance, health, and relationships form a hard floor regardless of who asks. Sensitive work shows a clear gradient: Tina 0\%, Marcus 20\%, Dana 26\%.
+
+\textbf{Over-refusal is the dominant failure.} Jordan's agent is refused on 86\% of items it \textit{should} access. D2's category-level rules take precedence over relationship inference: a close friend asking about emergency medication is refused identically to a stranger.
+
+\textbf{Read trust $\neq$ write trust.} Dana (investor) has highest QA leakage but also highest action safety. Jordan (friend) has most over-refusal yet lowest action safety. Trust decomposes into orthogonal read/write axes.
+
+\begin{quote}
+\textbf{Takeaway (RQ3):} A single policy cannot serve all requesters optimally. Over-refusal, not leakage, is the dominant practical failure. These findings motivate per-requester retrieval scope (MCC).
+\end{quote}
+
+
+% ============================================================================
+\section{Failure Taxonomy}
+\label{sec:failure_taxonomy}
+% ============================================================================
+
+D2 residual leaks fall into four mechanisms: \textbf{category boundary ambiguity} (61\%)---organisational data not covered by individual-level deny list; \textbf{leaked-outside-message} (16\%)---refusal text reveals protected facts; \textbf{company-benefit confusion} (7\%)---benefits treated as company info; \textbf{stochastic failures} (16\%)---identical inputs, different outputs across replications. The dominant failure (61\%) cannot be fixed by longer policies. It requires moving enforcement from reasoning to infrastructure: controlling what data the agent can access rather than trusting it to decide what to disclose.

@@ -1,0 +1,18 @@
+{
+  "run_id": "esc_v2_individual_30_gpt-5.5_1779142161330",
+  "version": 2,
+  "track": "net",
+  "fraction": 0.3,
+  "seed": 42,
+  "scope": "individual",
+  "model": "gpt-5.5",
+  "deployment": "gpt-5.5",
+  "concurrency": 5,
+  "auto_decide": false,
+  "split_mode": "question_group",
+  "total_precedents": 533,
+  "total_test_items": 1186,
+  "pending_items": 1186,
+  "relationship_nn_map_size": 94,
+  "started_at": "2026-05-18T22:09:21.331Z"
+}

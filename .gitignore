@@ -20,6 +20,18 @@
 # Compiled PDF (uncomment if you want to track the final PDF)
 # *.pdf
 
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Archives and engine intermediates
+*.zip
+*.xdv
+
+# Nested local repos
+pact-bench-submission/
+
 # Sample output
 sample_dphil_thesis-sample_output.pdf
 

@@ -1,0 +1,17 @@
+{
+  "run_id": "esc_v2_cluster_2nn_10_gpt-5-mini_1779133143662",
+  "version": 2,
+  "track": "net",
+  "fraction": 0.1,
+  "scope": "cluster_2nn",
+  "model": "gpt-5-mini",
+  "auto_decide": false,
+  "split_mode": "question_group",
+  "total_test": 1548,
+  "completed": 1548,
+  "errors": 0,
+  "stopped": 674,
+  "continued": 874,
+  "stop_rate": "0.4354",
+  "completed_at": "2026-05-18T20:32:46.445Z"
+}

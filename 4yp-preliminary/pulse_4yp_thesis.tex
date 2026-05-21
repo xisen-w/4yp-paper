@@ -4,24 +4,48 @@
 % Created : March 23, 2026
 % ____________________________________________________________________________
 %
-% DESCRIPTION :
-%
-% 4th Year Project Report: Pulse - Secure Cross-Boundary Agent Coordination
+% 4th Year Project Report: SharedOS - Privacy Governance in
+% Multi-Agent Shared Delegation Systems
 % ____________________________________________________________________________
 
 
-\documentclass[report]{oxengthesis}
+\documentclass[report,11pt,review,oneside,leftmargin=20mm,bottommargin=20mm,font={Times New Roman},mathfont={STIX Two Math}]{oxengthesis}
 
+\renewcommand{\DoubleSpacing}{\setSpacing{1.8}}
+
+\usepackage{booktabs}
+\usepackage{tcolorbox}
+\usepackage[ruled,lined,linesnumbered]{algorithm2e}
+\tcbuselibrary{breakable}
+
+\providecommand{\citep}[1]{\cite{#1}}
+\providecommand{\citet}[1]{\cite{#1}}
+
+\newtcolorbox{findingbox}[1][]{
+  colback=blue!3!white,
+  colframe=blue!45!black,
+  fonttitle=\bfseries,
+  title={#1},
+  breakable
+}
+
+\newtcolorbox{todobox}{
+  colback=gray!5!white,
+  colframe=gray!60!black,
+  fonttitle=\bfseries,
+  title={Placeholder: To Be Completed},
+  breakable
+}
 
 %
 % Document metadata
 %
 
-\title       {Pulse: A Personal Agent Coordination Layer for Secure Cross-Boundary AI Communication}
+\title       {How Should Your Agent Talk to Mine? \\ The Security--Utility Frontier in Cross-Boundary Agent Delegation}
 \author      {Xisen Wang}
-\degree      { {\huge 4$^{th}$-Year Project Report} }
+\degree      {4$^{th}$-Year Project Report}
 \college     {Keble College}
-\supervisor  {Professor Philip Torr}
+\supervisor  {Professor Philip Torr, Dr Adel Bibi, and Dr Jindong Gu}
 \date        {Trinity Term, 2026}
 
 
@@ -29,7 +53,7 @@
 % Document contents
 %
 
-\makeglossaries
+% \makeglossaries  % Disabled until makeglossaries is run externally
 
 \begin{document}
 
@@ -38,34 +62,40 @@
 
 \mainmatter
 
+% Part I: Problem Formulation
 % C1: Introduction
 \include{chap_introduction}
 
 % C2: Related Work
 \include{chap_literature_review}
 
-% C3: Problem Formulation
+% Part II: SharedOS Construction
+% C3: SharedOS Design, Architecture, and Implementation
 \include{chap_problem_setup}
 
-% C4: Benchmark Design
+% Part III: Benchmarking
+% C4: PACT-PAIR Dyadic Evaluation
 \include{chap_architecture}
 
-% C5: Failure Cases, Insights, and Baseline Results
+% C5: PACT-NET Network Evaluation
 \include{chap_failure_cases}
 
-% C6: Solution Proposal
+% Part IV: Solutions
+% C6: Architectural Solutions
 \include{chap_solution_proposal}
 
-% C7: Experiments and Results
+% Part V: Discussion and Conclusion
+% C7: Discussion
 \include{chap_experiments}
 
-% C8: Conclusion
-\include{chap_conclusion}
+% C8: Conclusion and Future Work (merged into chap_experiments)
+%\include{chap_conclusion}
 
 \appendix
 
-\include{appendix_technical}
-\include{appendix_related_works}
+%\include{appendix_technical}
+%\include{appendix_1}
+%\include{appendix_2}
 
 \backmatter
 \listofreferences

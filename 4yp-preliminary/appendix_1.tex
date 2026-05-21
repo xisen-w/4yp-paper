@@ -1,32 +1,62 @@
-\chapter{Bayesian change point detection}
-\label{appendix:appendix_1} 
+\chapter{Extended Introduction: Scenarios and Analysis}
+\label{appendix:extended_intro}
+
+This appendix contains extended discussion of cross-boundary delegation scenarios and the traditional access control comparison that support the arguments in \Cref{chapter:introduction}. These sections provide additional depth for readers seeking worked examples and more detailed theoretical grounding.
+
+\section{Detailed Cross-Boundary Scenario}
+\label{appendix:calendar_scenario}
+
+Consider a concrete instantiation of the cross-boundary delegation problem. Alice's agent holds her full calendar, including the following entries for next week:
+
+\begin{itemize}[leftmargin=2em]
+    \item Monday 10:00: Team standup (work, non-sensitive)
+    \item Tuesday 14:00: Oncology follow-up (health, highly sensitive)
+    \item Wednesday 09:00: Interview at competing firm (career, sensitive)
+    \item Thursday 16:00: Therapy session (mental health, sensitive)
+    \item Friday 11:00: Coffee with mutual friend (social, non-sensitive)
+\end{itemize}
+
+Bob's agent contacts Alice's agent: ``I'd like to schedule a 30-minute meeting with Alice next week. When is she available?''
+
+The ideal response shares Alice's availability without revealing the nature of her commitments. It should indicate that Tuesday afternoon, Wednesday morning, and Thursday afternoon are unavailable, but it should not explain \textit{why}. The response ``Alice is free Monday after 11:00, Tuesday morning, Wednesday afternoon, Thursday morning, and all day Friday'' discloses the temporal structure of her week without revealing sensitive content.
+
+But this ideal response requires sophisticated reasoning. The agent must distinguish between \textit{what} information is needed (time slots) and \textit{why} those slots are blocked (the sensitive content). It must recognise that ``I can't do Tuesday afternoon because of a medical appointment'' over-shares, while ``Tuesday afternoon doesn't work'' is appropriate. This distinction is not specified anywhere in a traditional access control policy, which operates on documents and labels, not on the semantic content of natural language responses.
 
 
-To estimate the location of a step change, a Bayesian change point detection algorithm based on \cite{Ruanaidh1996} and \cite{adams2007bayesian} is used in the thesis. Given a data sequence $x$ of $N$ samples with Gaussian noise added:
+\section{The Scope of Cross-Boundary Interactions}
+\label{appendix:scope}
 
-\begin{equation}
-    \centering
-      x_i=\begin{cases}
-          \mu_1 + \epsilon_i, & \text{if $i<m$}.\\
-          \mu_2 + \epsilon_i, & \text{otherwise}.
-          \end{cases}
-    \label{eq:app:cp:5.1}
-\end{equation}
+The cross-boundary delegation problem is not limited to scheduling. It arises in every cross-boundary interaction:
 
-where the noise samples $\epsilon_i$ are assumed to be independent and $m$ is the step change location. The likelihood of the data is given by the joint probability of the noise samples $\epsilon_i$: 
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{Project status updates.} A colleague's agent asks yours for a status update. Your agent must share progress without revealing internal team conflicts or performance issues.
+    \item \textbf{Career discussions.} A recruiter's agent asks yours about career interests. Your agent must balance openness (useful for your job search) against discretion (your current employer's agent might ask the same recruiter's agent what it learned).
+    \item \textbf{Social coordination.} A friend's agent asks yours to coordinate a surprise party. Your agent must participate in planning without revealing the secret to the birthday person's agent if it subsequently interacts with that agent.
+    \item \textbf{Business negotiation.} A vendor's agent asks yours about budget and timeline. Your agent must negotiate without revealing your true budget ceiling or deadline flexibility.
+\end{itemize}
 
-\begin{equation}
-    \centering
-    P(x|\{\mu_1\mu_2\sigma m\}) = \prod\limits_{i=1}^N P(\epsilon_i)
-    \label{eq:app:cp:5.2}
-\end{equation}
+Each scenario requires the agent to reason about disclosure in context---to understand not only what information is requested but why it is being requested, who will have access to the response, and what downstream consequences disclosure might produce.
 
-where $\sigma$ is the standard deviation of the Gaussian noise;  $\mu_1, \mu_2$ and $\sigma m$ are the known time series parameters. The probability density function for the noise samples is defined by:
 
-\begin{equation}
-    \centering
-    P(\epsilon) = \frac{1}{\sigma \sqrt{2 \pi} }  e ^{ - \frac{ (\epsilon - \mu)^2 } {2\sigma^2} }
-    \label{eq:app:cp:noise_pdf}
-\end{equation}
+\section{Traditional Access Control: Extended Analysis}
+\label{appendix:access_control}
 
-\lipsum[12-17]
+\subsection{Policy as Enforcement}
+
+Traditional access control, as formalised by Bell and LaPadula~\cite{bell1973secure} and the lattice model of Denning~\cite{denning1976lattice}, operates on a fundamental principle: \textbf{policy is enforcement}. A security label attached to a resource determines, mechanistically, which principals can access it. The reference monitor is deterministic. If a file is labelled TOP SECRET and a user holds only SECRET clearance, access is denied. Always. Without exception. Without reasoning about whether the denial is appropriate in this particular context.
+
+This principle has served the security community well for fifty years. It enables formal verification: one can prove that a system satisfies the *-property (no write-down) or the simple security property (no read-up) by examining the system's state transition rules. The gap between the policy specification and the system's behaviour is, by construction, zero.
+
+\subsection{LLM Delegation: Policy as Input to Reasoning}
+
+LLM-based delegation violates this principle entirely. In a delegate system, the privacy policy is not enforcement. It is \textit{one input to a reasoning process that produces enforcement as an output}. The agent receives the policy (``do not share health information with non-family contacts''), receives the query (``why is Alice unavailable Tuesday?''), and then \textit{reasons} about what to do. The reasoning process considers the policy, but also considers the conversational context, the apparent intent of the query, the relationship between the parties, and the model's own pretraining distribution over appropriate social behaviour.
+
+The outcome of this reasoning is stochastic. The same agent, given the same policy and the same query, may produce different responses depending on the preceding conversation, the exact phrasing of the system prompt, the temperature setting, and even the random seed. This is categorically different from a reference monitor that returns the same access decision for the same inputs every time.
+
+\subsection{Three Consequences}
+
+\textbf{First, the frontier cannot be predicted from policy text alone.} Two policies that appear equivalent in intent may produce different enforcement boundaries in practice because the model interprets them differently. ``Protect Alice's privacy'' and ``Do not disclose personal information about Alice to external agents'' express similar intent but activate different reasoning pathways in the model. The second is more specific, which may make it more effective---or may make it more brittle if the model interprets ``personal information'' narrowly.
+
+\textbf{Second, the frontier can only be measured empirically.} Because enforcement emerges from reasoning rather than mechanism, the only way to determine where the boundary falls is to probe it systematically with requests and observe the outcomes. This is why we need benchmarks: not because benchmarking is fashionable, but because empirical measurement is the only tool available for characterising an emergent boundary.
+
+\textbf{Third, the frontier is unstable.} The model carries implicit social norms from its pretraining distribution. These norms compose with the explicit policy in ways that the policy author cannot fully anticipate. A model trained on internet text has learned that it is socially acceptable to share someone's general availability but not their medical details. This implicit knowledge may reinforce the explicit policy (both say ``don't share health information'') or may conflict with it (the policy says ``share nothing'' but the model's social training suggests that sharing availability is fine). The interaction between explicit policy and implicit norms produces a boundary that shifts depending on context, phrasing, and conversational dynamics.

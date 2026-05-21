@@ -164,3 +164,128 @@ npx tsx --require ./research/scripts/env-preload.js \
 - [ ] E1-E4, F1-F4
 
 **Result**: (pending)
+
+---
+
+## 10-Split Multi-Step: GPT-5.5 (g3000-g3029)
+
+**Date**: 2026-05-03
+**Model**: GPT-5.5 for BOTH Alex (defender) and Tina (attacker)
+**Benchmark**: PART-Dyad v1 — 10 splits × 3 defense levels = 30 runs
+**Tick budget**: 240 ticks per run (same as gpt-5-mini baseline)
+**Manifest**: `research/runs/v2/msplit10_gpt55_manifest.json`
+
+### Group Layout
+| Defense | Groups | Splits |
+|---------|--------|--------|
+| D0 (m0) | g3000-g3009 | s01-s10 |
+| D1 (m1) | g3010-g3019 | s01-s10 |
+| D2 (m2) | g3020-g3029 | s01-s10 |
+
+### Seeding
+- **Seed command**: `npx tsx research/scripts/seed_experiment_groups.ts --start 3000 --groups 30 --config m0×10,m1×10,m2×10`
+- **Seed date**: 2026-05-03 02:27 UTC
+- **DB**: ep-old-feather (research)
+- **Notes**: 100 data notes + system notes per user, 50 todos, 12 folders
+- **Model routing**: `EXPERIMENT_MODEL=gpt-5.5` env var overrides Alex's model in `contact_agent`; `--model gpt-5.5` flag overrides Tina's model
+
+### Pre-run checklist
+- [x] A1. seed_experiment_groups.ts used
+- [x] A2-A8. Standard seeding (same template as g1000-g1029)
+- [x] B1. POLICY.md set per m-level (m0=empty, m1=generic, m2=explicit deny-list)
+- [x] D2. Not production DB (ep-old-feather)
+- [ ] C1. Model: gpt-5.5 (both agents)
+
+### Launch
+```bash
+zsh research/scripts/launch_msplit10_gpt55.sh
+```
+
+### Status
+- [x] D0 (10 splits): 16/30 running (2026-05-03)
+- [x] D1 (10 splits): running
+- [x] D2 (10 splits): running
+
+---
+
+## Single-Step Rep-2: Cross-Model (g2001-g2035 odd)
+
+**Date**: 2026-05-03
+**Purpose**: Second replication for all non-gpt-5-mini models (n=1 → n=2 per cell)
+**Scope**: 4 models × 3 defenses = 12 runs, single-step, 200 questions each
+**DB**: ep-old-feather (research)
+
+### Group Layout
+| Model | D0 | D1 | D2 |
+|-------|----|----|-----|
+| gpt-5.4-mini | g2001 | g2003 | g2005 |
+| gpt-5.4 | g2011 | g2013 | g2015 |
+| kimi-k2 | g2021 | g2023 | g2025 |
+| deepseek-v3 | g2031 | g2033 | g2035 |
+
+### Seeding
+- Already seeded during rep-1 batch (same `seed_experiment_groups.ts` run)
+- IDs from `groups_manifest_pre_gpt55.json`
+
+### Pre-run checklist
+- [x] A1. Seeds exist in DB (verified via manifest)
+- [x] B1. POLICY.md per m-level (same template as rep-1)
+- [x] D2. Not production DB (ep-old-feather)
+- [x] EXPERIMENT_MODEL env var routes Alex to correct model
+
+### Launch
+```bash
+zsh research/scripts/launch_ss_rep2.sh
+```
+
+### Status
+- [x] gpt-5.4-mini (g2001/g2003/g2005): launched 2026-05-03 21:00
+- [x] gpt-5.4 (g2011/g2013/g2015): launched 2026-05-03 21:00
+- [ ] kimi-k2 (g2021/g2023/g2025): queued (waiting for slot)
+- [ ] deepseek-v3 (g2031/g2033/g2035): queued (waiting for slot)
+
+---
+
+## Single-Step: GPT-5.5 (g2040-g2045)
+
+**Date**: 2026-05-03
+**Purpose**: GPT-5.5 single-step baseline (missing from cross-model matrix)
+**Model**: GPT-5.5 for Alex (via EXPERIMENT_MODEL env var)
+**Scope**: 3 defenses × 2 reps = 6 runs, single-step, 200 questions each
+**DB**: ep-old-feather (research)
+
+### Group Layout
+| Defense | Rep 1 | Rep 2 |
+|---------|-------|-------|
+| D0 (m0) | g2040 | g2041 |
+| D1 (m1) | g2042 | g2043 |
+| D2 (m2) | g2044 | g2045 |
+
+### IDs (from DB)
+| Group | Alex ID | Tina ID |
+|-------|---------|---------|
+| g2040 | 00000000-0000-4000-87f8-000000000000 | 00000000-0000-4000-87f8-100000000001 |
+| g2041 | 00000000-0000-4000-87f9-000000000000 | 00000000-0000-4000-87f9-100000000001 |
+| g2042 | 00000000-0000-4000-87fa-000000000000 | 00000000-0000-4000-87fa-100000000001 |
+| g2043 | 00000000-0000-4000-87fb-000000000000 | 00000000-0000-4000-87fb-100000000001 |
+| g2044 | 00000000-0000-4000-87fc-000000000000 | 00000000-0000-4000-87fc-100000000001 |
+| g2045 | 00000000-0000-4000-87fd-000000000000 | 00000000-0000-4000-87fd-100000000001 |
+
+### Pre-run checklist
+- [x] A1. Users seeded in DB (verified via direct query)
+- [x] B1. POLICY.md set at runtime via --config flag (overrides any seeded value)
+- [x] D2. Not production DB (ep-old-feather)
+- [x] EXPERIMENT_MODEL=gpt-5.5
+
+### Launch
+```bash
+zsh research/scripts/launch_ss_gpt55.sh
+```
+
+### Status
+- [ ] D0 rep1 (g2040): pending
+- [ ] D0 rep2 (g2041): pending
+- [ ] D1 rep1 (g2042): pending
+- [ ] D1 rep2 (g2043): pending
+- [ ] D2 rep1 (g2044): pending
+- [ ] D2 rep2 (g2045): pending
