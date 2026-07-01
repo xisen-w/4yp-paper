@@ -47,7 +47,7 @@
   title         = {Devin: The First {AI} Software Engineer},
   author        = {{Cognition Labs}},
   year          = {2024},
-  howpublished  = {\url{https://www.cognition.ai/devin}}
+  howpublished  = {\url{https://cognition.com/blog/introducing-devin}}
 }
 
 @misc{manus2025,
@@ -160,10 +160,10 @@
 }
 
 @inproceedings{schulhoff2024hackaprompt,
-  title         = {HackAPrompt: An Adversarial Prompt Engineering Competition},
-  author        = {Schulhoff, Sander and Pinto, Jeremy and Khan, Anaum and Bouchard, Louis-Fran{\c{c}}ois and Si, Chenglei and Anati, Sidahmed and Tagber, Naty and Karpinska, Marzena and Dolan, Brieuc and Boyd-Graber, Jordan},
-  booktitle     = {Findings of the Association for Computational Linguistics: EMNLP 2023},
-  year          = {2024}
+  title         = {Ignore This Title and {HackAPrompt}: Exposing Systemic Vulnerabilities of {LLMs} Through a Global Prompt Hacking Competition},
+  author        = {Schulhoff, Sander and Pinto, Jeremy and Khan, Anaum and Bouchard, Louis-Fran{\c{c}}ois and Si, Chenglei and Anati, Svetlina and Tagliabue, Valen and Kost, Anson and Carnahan, Christopher and Boyd-Graber, Jordan},
+  booktitle     = {Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing},
+  year          = {2023}
 }
 
 @article{nasr2025attacker,
@@ -210,7 +210,7 @@
   title         = {Agent2Agent Protocol: Enabling Agent Interoperability},
   author        = {{Google}},
   year          = {2025},
-  howpublished  = {\url{https://github.com/google/A2A}}
+  howpublished  = {\url{https://github.com/a2aproject/A2A}}
 }
 
 @misc{anthropic2024mcp,
@@ -286,13 +286,6 @@
 % ============================================================================
 % Agent OS Literature
 % ============================================================================
-
-@article{mei2025aios,
-  title         = {{AIOS}: {LLM} Agent Operating System},
-  author        = {Mei, Kai and Li, Zelong and Xu, Shuyuan and Ye, Ruosong and Ge, Yingqiang and Zhang, Yongfeng},
-  journal       = {arXiv preprint arXiv:2403.16971},
-  year          = {2025}
-}
 
 @article{wu2024oscopilot,
   title         = {OS-Copilot: Towards Generalist Computer Agents with Self-Improvement},
@@ -457,8 +450,7 @@
 @inproceedings{toyer2024tensortrust,
   title         = {Tensor Trust: Interpretable Prompt Injection Attacks from an Online Game},
   author        = {Toyer, Sam and Watkins, Olivia and Mendes, Ethan and Svegliato, Justin and Bailey, Luke and Wang, Tiffany and Ong, Isaac and Elmaaroufi, Karim and Abbeel, Pieter and Darrell, Trevor and Ritter, Alan and Russell, Stuart},
-  booktitle     = {Advances in Neural Information Processing Systems},
-  volume        = {37},
+  booktitle     = {International Conference on Learning Representations},
   year          = {2024}
 }
 
@@ -505,10 +497,12 @@
 }
 
 @article{yagoubi2026agentleak,
-  title         = {{AgentLeak}: A Full-Stack Benchmark for Privacy Leakage in Multi-Agent {LLM} Systems},
+  title         = {{AgentLeak}: A Benchmark for Internal-Channel Privacy Leakage in Multi-Agent {LLM} Systems},
   author        = {El Yagoubi, Faouzi and Badu-Marfo, Godwin and Al Mallah, Ranwa},
-  journal       = {arXiv preprint arXiv:2602.11510},
-  year          = {2026}
+  journal       = {IEEE Access},
+  year          = {2026},
+  doi           = {10.1109/ACCESS.2026.3704541},
+  note          = {arXiv:2602.11510}
 }
 
 @article{patil2025sumleaks,
@@ -569,6 +563,82 @@
   author        = {Yang, Ya-Ting and Zhu, Quanyan},
   journal       = {arXiv preprint arXiv:2603.17902},
   year          = {2026}
+}
+
+% ============================================================================
+% Context, Calibration, and Escalation
+% ============================================================================
+
+@article{liu2024lostmiddle,
+  title         = {Lost in the Middle: How Language Models Use Long Contexts},
+  author        = {Liu, Nelson F. and Lin, Kevin and Hewitt, John and Paranjape, Ashwin and Bevilacqua, Michele and Petroni, Fabio and Liang, Percy},
+  journal       = {Transactions of the Association for Computational Linguistics},
+  volume        = {12},
+  pages         = {157--173},
+  year          = {2024}
+}
+
+@article{laban2025llmslost,
+  title         = {{LLMs} Get Lost In Multi-Turn Conversation},
+  author        = {Laban, Philippe and Hayashi, Hiroaki and Zhou, Yingbo and Neville, Jennifer},
+  journal       = {arXiv preprint arXiv:2505.06120},
+  year          = {2025}
+}
+
+@article{ghalebikesabi2024ci,
+  title         = {Operationalizing Contextual Integrity in Privacy-Conscious Assistants},
+  author        = {Ghalebikesabi, Sahra and Bagdasaryan, Eugene and Yi, Ren and Yona, Itay and Shumailov, Ilia and Pappu, Aneesh and Shi, Chongyang and Weidinger, Laura and Stanforth, Robert and Berrada, Leonard and Kohli, Pushmeet and Huang, Po-Sen and Balle, Borja},
+  journal       = {arXiv preprint arXiv:2408.02373},
+  year          = {2024}
+}
+
+@article{mireshghallah2025cimemories,
+  title         = {{CIMemories}: A Compositional Benchmark for Contextual Integrity of Persistent Memory in {LLMs}},
+  author        = {Mireshghallah, Niloofar and Mangaokar, Neal and Kokhlikyan, Narine and Zharmagambetov, Arman and Zaheer, Manzil and Mahloujifar, Saeed and Chaudhuri, Kamalika},
+  journal       = {arXiv preprint arXiv:2511.14937},
+  year          = {2025}
+}
+
+@article{debenedetti2025camel,
+  title         = {Defeating Prompt Injections by Design},
+  author        = {Debenedetti, Edoardo and Shumailov, Ilia and Fan, Tianqi and Hayes, Jamie and Carlini, Nicholas and Fabian, Daniel and Kern, Christoph and Shi, Chongyang and Terzis, Andreas and Tramer, Florian},
+  journal       = {arXiv preprint arXiv:2503.18813},
+  year          = {2025}
+}
+
+@inproceedings{ong2025routellm,
+  title         = {{RouteLLM}: Learning to Route {LLMs} from Preference Data},
+  author        = {Ong, Isaac and Almahairi, Amjad and Wu, Vincent and Wu, Tianhao and Chiang, Wei-Lin and Gonzalez, Joseph E. and Kadous, M. Waleed and Stoica, Ion},
+  booktitle     = {International Conference on Learning Representations},
+  year          = {2025}
+}
+
+@article{yu2026recal,
+  title         = {{ReCal}: Reward Calibration for {RL}-based {LLM} Routing},
+  author        = {Yu, Qihang and Tong, Hanwen and Zhang, Zhengqi and Zheng, Bo and Wei, Feng and Zhang, Shengyu and Liu, Zemin and Wu, Fei},
+  journal       = {arXiv preprint arXiv:2606.12479},
+  year          = {2026}
+}
+
+@inproceedings{geng2024confidence,
+  title         = {A Survey of Confidence Estimation and Calibration in Large Language Models},
+  author        = {Geng, Jiahui and Cai, Fengyu and Wang, Yuxia and Koeppl, Heinz and Nakov, Preslav and Gurevych, Iryna},
+  booktitle     = {Proceedings of the 2024 Conference of the North American Chapter of the Association for Computational Linguistics},
+  year          = {2024}
+}
+
+@article{jung2024trustescalate,
+  title         = {Trust or Escalate: {LLM} Judges with Provable Guarantees for Human Agreement},
+  author        = {Jung, Jaehun and Brahman, Faeze and Choi, Yejin},
+  journal       = {arXiv preprint arXiv:2407.18370},
+  year          = {2024}
+}
+
+@article{wen2025knowyourlimits,
+  title         = {Know Your Limits: A Survey of Abstention in Large Language Models},
+  author        = {Wen, Bingbing and Yao, Jihan and Feng, Shangbin and Xu, Chenjun and Tsvetkov, Yulia and Howe, Bill and Wang, Lucy Lu},
+  journal       = {Transactions of the Association for Computational Linguistics},
+  year          = {2025}
 }
 
 % ============================================================================
@@ -646,9 +716,10 @@
 
 @article{mei2024aios,
   title={AIOS: LLM Agent Operating System},
-  author={Mei, Kai and Li, Zelong and Xu, Shuyuan and Ye, Ruosong and Ge, Yingqiang and Zhang, Yongfeng},
+  author={Mei, Kai and Zhu, Xi and Xu, Wujiang and Hua, Wenyue and Jin, Mingyu and Li, Zelong and Xu, Shuyuan and Ye, Ruosong and Ge, Yingqiang and Zhang, Yongfeng},
   journal={arXiv preprint arXiv:2403.16971},
-  year={2024}
+  year={2024},
+  note={Published as a full paper at COLM 2025}
 }
 
 @article{xie2024osworld,
