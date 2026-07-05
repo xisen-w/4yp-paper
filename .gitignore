@@ -37,3 +37,6 @@ sample_dphil_thesis-sample_output.pdf
 
 # OS files
 .DS_Store
+
+# Local scratch
+icml_aiwild_template/tmp/

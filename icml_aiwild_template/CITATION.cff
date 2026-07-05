@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+message: "If you use this project, please cite this work."
+title: "How Should Your Agent Talk to Mine? Measuring the Utility-Security Frontier of Cross-Boundary Agentic Delegation"
+authors:
+  - family-names: Wang
+    given-names: Xisen
+    email: xisen.wang@keble.ox.ac.uk
+  - family-names: Bibi
+    given-names: Adel
+  - family-names: Lin
+    given-names: Qinghong
+  - family-names: Torr
+    given-names: Philip
+  - family-names: Gu
+    given-names: Jindong
+keywords:
+  - multi-agent systems
+  - privacy
+  - security
+  - LLM agents
+  - agentic delegation
+conference:
+  name: ICML 2026 AIWILD Workshop
+date-released: "2026-05-23"
+license: CC-BY-4.0

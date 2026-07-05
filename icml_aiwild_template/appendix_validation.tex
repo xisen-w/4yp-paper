@@ -1,5 +1,5 @@
 % appendix_validation.tex — Benchmark Validation Audit
-% Intended as a standalone appendix section for the PACT-Bench NeurIPS submission.
+% Intended as a standalone appendix section for the PACT-PAIR submission.
 % Required packages: booktabs, longtable, enumitem
 
 \section{Benchmark Validation Audit}
@@ -369,6 +369,7 @@ This tests whether models detect \emph{implicit information access} embedded wit
 \centering
 \caption{Expert annotation summary across the 60-item validation sample.}
 \label{tab:audit-summary}
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{lc}
 \toprule
 \textbf{Metric} & \textbf{Value} \\
@@ -381,10 +382,11 @@ Items classified as ``Hard'' for AI   & 7/60 (12\%) \\
 Source verification failures          & 0/60 (0\%) \\
 \bottomrule
 \end{tabular}
+}
 \end{table}
 
 We find perfect agreement between the expert annotations and the automated category assignments across all 60 sampled items.
 The three identified edge cases (Q14, Q381, A79) reinforce rather than undermine the benchmark's validity: they demonstrate that the labeling scheme captures genuine privacy reasoning challenges, not trivial keyword matching.
 The 12\% of items rated ``Hard'' for AI agents correspond precisely to scenarios requiring contextual inference, audience-relative reasoning, or detection of implicit information access---capabilities that distinguish privacy-aware agents from naive ones.
 
-We conclude that PACT-Bench's synthetic labels are well-calibrated to human privacy norms and that the benchmark provides a valid testbed for evaluating privacy governance in AI personal agents.
+We conclude that PACT-PAIR's synthetic labels are well-calibrated to human privacy norms and that the benchmark provides a valid testbed for evaluating privacy governance in AI personal agents.
