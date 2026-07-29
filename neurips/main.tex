@@ -42,7 +42,7 @@
   boxrule=0.5pt, arc=2pt, left=4pt, right=4pt, top=2pt, bottom=2pt
 }
 
-\title{How Should Your Agent Talk to Mine?\\Measuring the Utility--Security Frontier of Cross-Boundary Agentic Delegation}
+\title{How Should Your Agent Talk to Mine?\\Measuring Utility--Security Trade-offs in Cross-Boundary Agentic Delegation}
 
 \author{%
   Anonymous Author(s)
@@ -53,7 +53,7 @@
 \maketitle
 
 \begin{abstract}
-Personal agents can now be delegates: systems that hold private data, wield tools, and act on behalf of their owners. When two delegates interact across an ownership boundary, every exchange becomes a permission decision about what to share, what to withhold, and what to refuse. There must be a trade-off between how much an agent shares (utility) and how much it protects (security), but few have mapped this frontier under deployment-realistic conditions. We introduce \textbf{SharedOS}, a multi-agent shared delegation system, and use it to systematically chart the security\textendash utility frontier. We ask three questions. \emph{What moves the frontier?} Only category-specific policies do; generic privacy instructions are statistically inert. \emph{Is the frontier stable over time?} No: multi-turn interaction erodes it through adaptive retry strategies and incidental disclosure channels invisible to single-turn evaluation. \emph{Is the frontier the same for everyone?} No: relationship context reshapes it in category-specific ways, and over-refusal, not leakage, becomes the dominant failure mode. Across six model families, we find that the frontier is shaped by forces the policy author does not control: the model's implicit social norms, the semantic properties of the data, and the requester's conversational framing. SharedOS and the full benchmark suite are released to enable the community to explore this frontier further.
+Personal agents can now be delegates: systems that hold private data, wield tools, and act on behalf of their owners. When two delegates interact across an ownership boundary, every exchange becomes a permission decision about what to share, what to withhold, and what to refuse. There must be a trade-off between how much an agent shares (utility) and how much it protects (security), but few have measured this trade-off under deployment-realistic conditions. We introduce \textbf{SharedOS}, a multi-agent shared delegation system, and use it to systematically measure the security\textendash utility trade-off across discrete operating points. We ask three questions. \emph{What moves the operating point?} Only category-specific policies do; generic privacy instructions are statistically inert. \emph{Is the trade-off stable over time?} No: multi-turn interaction opens disclosure channels invisible to single-turn evaluation, through adaptive retry strategies and incidental disclosure. \emph{Is the trade-off the same for everyone?} No: relationship context moves the operating point in category-specific ways, and over-refusal, not leakage, becomes the dominant failure mode. Across six requester model families probing a fixed responder, we find that the trade-off is shaped by forces the policy author does not control: the model's implicit social norms, the semantic properties of the data, and the requester's conversational framing. SharedOS and the full benchmark suite are released to enable the community to explore these trade-offs further.
 \end{abstract}
 
 
@@ -64,15 +64,15 @@ Personal agents can now be delegates: systems that hold private data, wield tool
 
 Large language models have progressed from stateless question-answering systems to autonomous agents that wield tools, maintain persistent memory, and execute multi-step plans~\citep{yao2023react, schick2023toolformer, packer2024memgpt, shinn2023reflexion}. Standardised protocols for tool integration~\citep{anthropic2024mcp} and inter-agent communication~\citep{google2025a2a} are accelerating this transition, and parallel governance work argues that a trustworthy agentic web will require interoperable infrastructure for identity, delegation, and accountability in addition to technical protocols~\citep{chaffer2026dli}. Commercial products already deploy personal agents that manage calendars, files, tasks, and communications on behalf of individual users~\citep{manus2025, devin2024, openclaw2025}.
 
-This capability turns agents into \emph{delegates}: systems that represent their owner to the outside world. When two delegates interact across an ownership boundary, a new class of safety problem appears. Scheduling a meeting requires one delegate to query another's calendar. Sharing a project update means one agent contacts another to retrieve status. Coordinating a product launch means a manager's delegate collects information from several teammates' delegates~\citep{talebirad2023multiagent, guo2024largelanguagemodelbased}. In each case, the responding delegate must make a \emph{permission decision}: which facts to disclose, which state changes to allow, and which requests to refuse. A delegate that refuses everything is safe but useless. One that shares everything is useful but dangerous. There must be a trade-off between these extremes. Evaluating safety in this setting requires characterising the \emph{security-utility frontier}: the set of achievable (security, utility) operating points under a given governance configuration.
+This capability turns agents into \emph{delegates}: systems that represent their owner to the outside world. When two delegates interact across an ownership boundary, a new class of safety problem appears. Scheduling a meeting requires one delegate to query another's calendar. Sharing a project update means one agent contacts another to retrieve status. Coordinating a product launch means a manager's delegate collects information from several teammates' delegates~\citep{talebirad2023multiagent, guo2024largelanguagemodelbased}. In each case, the responding delegate must make a \emph{permission decision}: which facts to disclose, which state changes to allow, and which requests to refuse. A delegate that refuses everything is safe but useless. One that shares everything is useful but dangerous. There must be a trade-off between these extremes. Evaluating safety in this setting requires characterising the \emph{security--utility trade-off}: the set of achievable (security, utility) operating points under a given governance configuration.
 
-In traditional access control~\citep{bell1973secure, denning1976lattice}, the policy \emph{is} the enforcement. You write an access-control list; the system executes it deterministically. The frontier is a design parameter that the system administrator chooses. When enforcement is delegated to an LLM's contextual reasoning, this guarantee vanishes. The policy becomes one input to a reasoning process whose output also depends on the model's implicit social norms (acquired through pretraining on human organisational behaviour), the requester's conversational framing, and the semantic properties of the data itself. The frontier is therefore no longer chosen but emergent, which is unpredictable from the policy text alone and knowable only through measurement. 
+In traditional access control~\citep{bell1973secure, denning1976lattice}, the policy \emph{is} the enforcement. You write an access-control list; the system executes it deterministically. The operating point is a design parameter that the system administrator chooses. When enforcement is delegated to an LLM's contextual reasoning, this guarantee vanishes. The policy becomes one input to a reasoning process whose output also depends on the model's implicit social norms (acquired through pretraining on human organisational behaviour), the requester's conversational framing, and the semantic properties of the data itself. The operating point is therefore no longer chosen but emergent, which is unpredictable from the policy text alone and knowable only through measurement. 
 
-Few existing evaluations address this problem. Single-agent benchmarks~\citep{zhan2024injecagent, debenedetti2024agentdojo, toyer2024tensortrust, schulhoff2024hackaprompt} test prompt injection within a single trust domain. Multi-agent privacy benchmarks~\citep{wang2026agentsocialbench, gomaa2025converse, juneja2025magpie, park2026pacbench, yagoubi2026agentleak} study information disclosure but through scripted text exchanges where agents lack tool-mediated access to private data, persistent memory, and autonomy in deciding what to probe. To this end, we introduce \textbf{SharedOS}, a multi-agent shared delegation system with configurable inter-agent relationships, per-requester access-control policies, and full tool-mediated access to private state, and use it to systematically map the security\textendash utility frontier in cross-boundary agent delegation.
+Few existing evaluations address this problem. Single-agent benchmarks~\citep{zhan2024injecagent, debenedetti2024agentdojo, toyer2024tensortrust, schulhoff2024hackaprompt} test prompt injection within a single trust domain. Multi-agent privacy benchmarks~\citep{wang2026agentsocialbench, gomaa2025converse, juneja2025magpie, park2026pacbench, yagoubi2026agentleak} study information disclosure but through scripted text exchanges where agents lack tool-mediated access to private data, persistent memory, and autonomy in deciding what to probe. To this end, we introduce \textbf{SharedOS}, a multi-agent shared delegation system with configurable inter-agent relationships, per-requester access-control policies, and full tool-mediated access to private state, and use it to systematically measure security\textendash utility trade-offs across discrete operating points in cross-boundary agent delegation.
 
-We find that the frontier is real, non-trivial to move, and non-uniform. Without explicit policy, security is near-zero. Category-specific policies shift the frontier dramatically, but the shift is surface-dependent and costly on structured state. Multi-turn interaction erodes the frontier through incidental disclosure and adaptive retry strategies. Under fixed policy, strict category-level governance may over-block legitimate requests in social contexts, producing relationship-dependent costs that reshape the frontier per requester.
+We find that the trade-off is real, non-trivial to move, and non-uniform. Without explicit policy, security is near-zero. Category-specific policies shift the operating point dramatically, but the shift is surface-dependent and costly on structured state. Multi-turn interaction opens additional disclosure channels through incidental disclosure and adaptive retry strategies. Under fixed policy, strict category-level governance may over-block legitimate requests in social contexts, producing relationship-dependent costs that move the operating point per requester.
 
-Our contributions: we \textbf{formalise} cross-boundary delegation as the setting where enforcement is delegated to an LLM's reasoning, making the frontier emergent rather than designed; we build \textbf{SharedOS}, a platform that enables independent variation of state, tools, governance policy, and requester relationship, and curate 600 evaluation tasks with dual-metric scoring; and we \textbf{chart the frontier} across three axes (policy specificity, interaction length, relationship context), identifying structural limits of prompt-level governance.
+Our contributions: we \textbf{formalise} cross-boundary delegation as the setting where enforcement is delegated to an LLM's reasoning, making the operating point emergent rather than designed; we build \textbf{SharedOS}, a platform that enables independent variation of state, tools, governance policy, and requester relationship, and curate 600 evaluation tasks with dual-metric scoring; and we \textbf{measure the trade-off} across three axes (policy specificity, interaction length, relationship context), identifying structural limits of prompt-level governance.
 
 
 % ============================================================================
@@ -116,23 +116,24 @@ Because state, tools, policy, and relationship are independently configurable, S
     Governance policies & D0 (none), D1 (generic), D2 (category deny list) \\
     Evaluation modes & Single-step, Multi-turn (240 ticks) \\
     Relationships (RQ3) & Colleague, CEO delegate, Close friend, Investor \\
-    Models & 6 families (GPT-5-mini/5.5/5.4-mini/5.4, Kimi K2, DeepSeek V3) \\
+    Requester models & 6 families (GPT-5-mini/5.5/5.4-mini/5.4, Kimi K2, DeepSeek V3) \\
+    Responder model & GPT-5-mini (fixed across all cells) \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-We build SharedOS as the instrument to systematically probe this surface. With it, we are able to explore a range of questions about the security\textendash utility frontier. In this paper, we focus on three:
+We build SharedOS as the instrument to systematically probe this surface. With it, we are able to explore a range of questions about the security\textendash utility trade-off. In this paper, we focus on three:
 
 \begin{tcolorbox}[colback=blue!3!white, colframe=blue!50!black, boxrule=0.4pt, arc=2pt, left=6pt, right=6pt, top=4pt, bottom=4pt]
-\textbf{RQ1: What moves the frontier?} We vary policy specificity from none (D0) to generic instruction (D1) to category enumeration (D2). If a simple instruction suffices, the frontier is easy to shift. If not, the shape of what works reveals what the model actually responds to.
+\textbf{RQ1: What moves the operating point?} We vary policy specificity from none (D0) to generic instruction (D1) to category enumeration (D2). If a simple instruction suffices, the operating point is easy to shift. If not, the shape of what works reveals what the model actually responds to.
 \end{tcolorbox}
 
 \begin{tcolorbox}[colback=blue!3!white, colframe=blue!50!black, boxrule=0.4pt, arc=2pt, left=6pt, right=6pt, top=4pt, bottom=4pt]
-\textbf{RQ2: Is the frontier stable over time?} Real deployment is multi-turn. We compare single-turn and 240-tick autonomous interaction under the same policy. If multi-turn interaction erodes the frontier, single-turn evaluation is misleading and platforms like SharedOS are necessary.
+\textbf{RQ2: Is the trade-off stable over time?} Real deployment is multi-turn. We compare single-turn and 240-tick autonomous interaction under the same policy. If multi-turn interaction opens disclosure channels the single-turn setting cannot show, single-turn evaluation is misleading and platforms like SharedOS are necessary.
 \end{tcolorbox}
 
 \begin{tcolorbox}[colback=blue!3!white, colframe=blue!50!black, boxrule=0.4pt, arc=2pt, left=6pt, right=6pt, top=4pt, bottom=4pt]
-\textbf{RQ3: Is the frontier the same for everyone?} Agents interact with colleagues, friends, and investors. We fix the policy and vary only the requester's relationship. If the frontier shifts per person, a single policy cannot serve all requesters optimally, and the over-refusal cost becomes relationship-dependent.
+\textbf{RQ3: Is the trade-off the same for everyone?} Agents interact with colleagues, friends, and investors. We fix the policy and vary only the requester's relationship. If the operating point shifts per person, a single policy cannot serve all requesters optimally, and the over-refusal cost becomes relationship-dependent.
 \end{tcolorbox}
 
 
@@ -160,14 +161,14 @@ We instantiate three levels of the specificity gradient defined in \S\ref{sec:fo
 
 \paragraph{Metrics.}
 \label{sec:metrics}
-Each query targets either public or protected information. \textbf{Utility} measures the fraction of legitimate queries answered correctly; \textbf{Security} measures the fraction of sensitive queries where no protected facts appear in the response. Neither alone suffices: an agent that refuses everything scores perfect security but zero utility. The security\textendash utility frontier is the set of achievable operating points under a given configuration. We decompose each axis by verdict source:
+Each query targets either public or protected information. \textbf{Utility} measures the fraction of legitimate queries answered correctly; \textbf{Security} measures the fraction of sensitive queries where no protected facts appear in the response. Neither alone suffices: an agent that refuses everything scores perfect security but zero utility. The security\textendash utility trade-off is characterised by the set of achievable operating points under a given configuration. We decompose each axis by verdict source:
 
 Utility is the fraction of legitimate queries answered correctly. Security is decomposed into three mutually exclusive direct-response rates: \textbf{Refuse Rate} (explicit decline), \textbf{Message Leak Rate} (response contains gold key facts), and \textbf{Failed Attempt Rate} (attempted answer without gold facts). These sum to 100\%. A fourth independent measure, \textbf{Global Leak Rate}, scans all responses across all ticks for gold-fact matches, capturing incidental disclosure that the per-query metric misses. In multi-turn settings, Global Leak typically exceeds Message Leak because sensitive facts surface in responses to unrelated queries. Actions follow the same structure with a database-state-diff gold check.
 
 \subsection{Setup}
 \label{sec:setup}
 
-We evaluate six model families (\texttt{gpt-5-mini}, \texttt{gpt-5.5}, \texttt{gpt-5.4-mini}, \texttt{gpt-5.4}, \texttt{kimi-k2}, \texttt{deepseek-v3}) under three governance policies (D0/D1/D2). \texttt{gpt-5-mini} serves as the ablation backbone for its stability and cost-efficiency. Deep ablations (surface variation, multi-turn, per-category analysis) use the backbone with two independent replications per cell. Multi-turn evaluation uses the $10 \times 20$ split protocol: 200 questions divided into 10 groups of 20, with up to 240 heartbeat ticks per group (Phase~1: ticks 1--60, Phase~2: ticks 61--240). The relationship condition is fixed to R0 (stranger) to isolate policy and surface effects. The action track evaluates 200 tasks under the same three policies. For every run we compute the four metrics defined in \S\ref{sec:metrics}. Full evaluation pipeline details (two-pass LLM judge + string match, adjudication logic, manual audit protocol) are in Appendix~\ref{app:config}.
+We vary the \emph{requester} agent across six model families (\texttt{gpt-5-mini}, \texttt{gpt-5.5}, \texttt{gpt-5.4-mini}, \texttt{gpt-5.4}, \texttt{kimi-k2}, \texttt{deepseek-v3}) under three governance policies (D0/D1/D2). The \emph{responder} agent, whose disclosure behaviour is what we score, is \texttt{gpt-5-mini} in every cell; the cross-family comparison therefore isolates requester capability against a fixed defender, and does not measure how the policy effect varies across defender models. \texttt{gpt-5-mini} also serves as the ablation backbone for its stability and cost-efficiency. Deep ablations (surface variation, multi-turn, per-category analysis) use the backbone with two independent replications per cell. Multi-turn evaluation uses the $10 \times 20$ split protocol: 200 questions divided into 10 groups of 20, with up to 240 heartbeat ticks per group (Phase~1: ticks 1--60, Phase~2: ticks 61--240). The relationship condition is fixed to R0 (stranger) to isolate policy and surface effects. The action track evaluates 200 tasks under the same three policies. For every run we compute the four metrics defined in \S\ref{sec:metrics}. Full evaluation pipeline details (two-pass LLM judge + string match, adjudication logic, manual audit protocol) are in Appendix~\ref{app:config}.
 
 % ============================================================================
 \section{Findings}
@@ -186,26 +187,26 @@ We organise findings around the three research questions from \S\ref{sec:formali
   \label{fig:specificity}
 \end{figure}
 
-\paragraph{RQ1: What moves the utility-security frontier? When does a privacy instruction actually change agent behavior?}
-Specificity, not existence. Only category enumeration shifts the frontier. D1 adds a generic ``protect private data'' instruction and achieves zero net improvement: McNemar discordant pairs are tied on files (10:10, $p = \text{n.s.}$) and on states (13:15, $p = \text{n.s.}$). D2 names four protected categories and reduces file leakage from 83\% to 14\% (69\,pp, $p < 0.001$) while preserving utility at 77\%. There is a \emph{specificity threshold}: below it, governance has no measurable effect; above it, protection is immediate.
+\paragraph{RQ1: What moves the security--utility trade-off? When does a privacy instruction actually change agent behavior?}
+Specificity, not existence. Only category enumeration shifts the operating point. D1 adds a generic ``protect private data'' instruction and achieves zero net improvement: McNemar discordant pairs are tied on files (10:10, $p = \text{n.s.}$) and on states (13:15, $p = \text{n.s.}$). D2 names four protected categories and reduces file leakage from 83\% to 14\% (69\,pp, $p < 0.001$) while preserving utility at 77\%. Between these two policy packages, governance has no measurable effect until the policy names what to protect; once it does, protection is immediate.
 
 Why does naming matter? Under D0, every model already refuses obvious PII (tax IDs, home addresses) at 93--100\% rates. D1 fails on \emph{ambiguous} categories: hiring budgets, 1:1 feedback, promotion frameworks, and fundraising terms at the boundary between ``work information'' and ``private data.'' Without explicit category names, the agent defaults to sharing anything work-adjacent. D2 resolves this by naming the boundary: D0 and D1 produce near-zero refusals on sensitive queries (0\% and 3\% respectively). Protection under these policies is incidental (retrieval failures), not intentional. D2's 71.5\% refusal rate shows active enforcement.
 
-\begin{findingbox}[Takeaway (RQ1): The frontier only moves when you name the boundary]
+\begin{findingbox}[Takeaway (RQ1): The operating point only moves when you name the boundary]
 \small
-The frontier does not move unless the policy names exactly what to protect. Vague instructions register as soft preferences that lose the competition against helpfulness. Category enumeration converts privacy decisions from open-ended judgment into pattern matching, crossing a specificity threshold below which governance has no measurable effect.
+The operating point does not move unless the policy names exactly what to protect. Vague instructions register as soft preferences that lose the competition against helpfulness. Category enumeration converts privacy decisions from open-ended judgment into pattern matching; without it, governance has no measurable effect in the tested settings.
 \end{findingbox}
 
 On the action track, D2 improves safety without sacrificing utility. It blocks 93.5\% of unauthorised actions while executing 61.0\% of authorised ones. D1 adds zero safety over D0 (both 43.0\% block rate) while reducing utility from 65.5\% to 48.0\%---a pure loss.
 
 The protection is not free everywhere. D2 costs only 1\,pp utility on files but 37\,pp on structured state, where terse queries (``SOC2 status?'') share vocabulary with protected categories and trigger a 26.5\% false-refusal rate. Practitioners cannot evaluate a single surface and generalise.
 
-\paragraph{RQ2: Is the frontier stable over time? Can an adaptive requester erode defenses that hold on first contact? }
+\paragraph{RQ2: Is the trade-off stable over time? Can an adaptive requester defeat defenses that hold on first contact? }
 
 \begin{figure}[t]
   \centering
   \includegraphics[width=\linewidth]{figures/erosion-case-study-final.png}
-  \caption{\textbf{Multi-turn erosion case study: the wedding cascade} (D2, gpt-5-mini, split s06). Phase~1 (Tick~18) produces a clean refusal. Phase~2 retries (Ticks~80--91) fail 12 consecutive times because the requesting agent searches only Work/shared folders. At Tick~92, a three-strategy combination (scope expansion + business justification + constrained format) breaks through, leaking the wedding date, venue, and guest count. Tick~93 chains the leaked note ID to extract venue confirmation. Ticks~94--99 show policy recovery: all six follow-up probes targeting the partner's name are refused. The erosion is bounded: the policy does not collapse after a temporary breach.}
+  \caption{\textbf{Multi-turn incidental-disclosure case study: the wedding cascade} (D2, gpt-5-mini, split s06). Phase~1 (Tick~18) produces a clean refusal. Phase~2 retries (Ticks~80--91) fail 12 consecutive times because the requesting agent searches only Work/shared folders. At Tick~92, a three-strategy combination (scope expansion + business justification + constrained format) breaks through, leaking the wedding date, venue, and guest count. Tick~93 chains the leaked note ID to extract venue confirmation. Ticks~94--99 show policy recovery: all six follow-up probes targeting the partner's name are refused. Direct leakage stays bounded: the policy does not collapse after a temporary breach.}
   \label{fig:erosion}
 \end{figure}
 
@@ -231,20 +232,20 @@ The protection is not free everywhere. D2 costs only 1\,pp utility on files but 
   \end{tabular}
 \end{table}
 
-The frontier holds. D2's multi-turn message leak rate (12.6\%) is comparable to its single-turn rate (14.0\%), confirming bounded erosion rather than collapse (Table~\ref{tab:ms_main}). But multi-turn interaction reveals failure modes invisible to single-turn evaluation. The remaining 35.6\% of non-refused queries splits into 12.6\% actual disclosure and 23.0\% failed attempts (policy violated but no gold facts leaked). The global leak rate (38.0\%, scan-based) is 3$\times$ the message rate because sensitive facts surface incidentally via responses to unrelated questions.
+The direct channel holds. D2's multi-turn message leak rate (12.6\%) is comparable to its single-turn rate (14.0\%), so multi-turn interaction does not make the direct leak worse (Table~\ref{tab:ms_main}). But it reveals failure modes invisible to single-turn evaluation. The remaining 35.6\% of non-refused queries splits into 12.6\% actual disclosure and 23.0\% failed attempts (policy violated but no gold facts leaked). The global leak rate (38.0\%, scan-based) is 3$\times$ the message rate because sensitive facts surface incidentally via responses to unrelated questions.
 
 The category structure matters. Sensitive work has the lowest refuse rate (36.8\%) and highest message leak (22.8\%) because of genuine boundary ambiguity between ``work question'' and ``HR data.'' Personal health achieves 89.7\% refusal with only 2.6\% message leak. Yet even personal health has a 20\% global leak rate: health facts surface incidentally when the agent answers related work queries.
 
-\paragraph{Adaptive retry strategies.} During multi-turn Phase~2, the requesting agent is instructed to retry refused questions using different approaches, but the concrete wording and sequencing are not scripted. We observe five distinct strategies across 1{,}184 retry attempts under D2: requesting raw note content by ID (65\% of attempts, 7.6\% flip rate), business-justification reframing (15\%, 34.5\% flip rate), scope narrowing, public reframing, and delegation requests (full taxonomy in Appendix~\ref{app:phase2_erosion}). Strategy \emph{combinations} are more dangerous than individual strategies. The most complex breach required 12 failed attempts before a three-strategy combination (business justification + folder expansion + constrained format) cracked a previously-refused wedding-details query. After the breach, the agent refused all six follow-up probes. The policy recovers after temporary breaches, distinguishing bounded erosion from collapse.
+\paragraph{Adaptive retry strategies.} During multi-turn Phase~2, the requesting agent is instructed to retry refused questions using different approaches, but the concrete wording and sequencing are not scripted. We observe five distinct strategies across 1{,}184 retry attempts under D2: requesting raw note content by ID (65\% of attempts, 7.6\% flip rate), business-justification reframing (15\%, 34.5\% flip rate), scope narrowing, public reframing, and delegation requests (full taxonomy in Appendix~\ref{app:phase2_erosion}). Strategy \emph{combinations} are more dangerous than individual strategies. The most complex breach required 12 failed attempts before a three-strategy combination (business justification + folder expansion + constrained format) cracked a previously-refused wedding-details query. After the breach, the agent refused all six follow-up probes. The policy recovers after temporary breaches: direct leakage stays bounded rather than collapsing.
 
 \paragraph{Refusals leak metadata.} Tool-equipped delegates exhibit a failure mode invisible to text-exchange benchmarks. The agent searches its owner's data store \emph{before} deciding to refuse. The refusal itself then discloses metadata: one delegate refused to share brokerage balance but revealed the note ID, folder name, and data existence (``The info is recorded in his notes under `Bank Accounts', Finance folder, note ID 7795''). The requesting agent uses disclosed note IDs to retrieve data directly on the next turn. This attack chain requires both tool access and multi-turn interaction.
 
-\begin{findingbox}[Takeaway (RQ2): Multi-turn erodes the frontier through channels the policy never sees]
+\begin{findingbox}[Takeaway (RQ2): Multi-turn interaction opens disclosure channels the policy never sees]
 \small
-Multi-turn interaction erodes the frontier. The dominant mechanism is not adversarial cracking but incidental leakage: legitimate queries surface co-located sensitive data that the policy never evaluates. Single-turn benchmarks systematically undercount real-world privacy risk because they cannot observe this channel.
+Multi-turn interaction opens additional disclosure channels beyond the direct response. The dominant mechanism is not adversarial cracking but incidental leakage: legitimate queries surface co-located sensitive data that the policy never evaluates. Single-turn benchmarks systematically undercount real-world privacy risk because they cannot observe this channel.
 \end{findingbox}
 
-\paragraph{RQ3: Is the frontier the same for everyone? Does the same policy protect equally regardless of who is asking?}
+\paragraph{RQ3: Is the trade-off the same for everyone? Does the same policy protect equally regardless of who is asking?}
 
 We fix the D2 policy and vary only the requester's relationship via a single memory shard injected into the defending agent. In the preceding experiments (RQ1--RQ2), the requester--target relationship is implicit: Alex infers Tina's standing from conversational context alone, with no explicit relationship information in memory. Here we make that context explicit by injecting a structured memory entry describing each requester's relationship to Alex. Four requesters probe the same 400-question pool: Tina (colleague/work peer), Marcus (CEO's delegate), Jordan (close personal friend), and Dana (investor/board observer). Ground-truth labels are relationship-conditioned: the same question may be legitimate under one relationship but private under another (Appendix~\ref{app:relationship_labels}).
 
@@ -268,27 +269,27 @@ We fix the D2 policy and vary only the requester's relationship via a single mem
   \end{tabular}
 \end{table}
 
-No. The frontier is not flat across requesters (Table~\ref{tab:relationship}). Relationship context reshapes it in category-specific and direction-specific ways, but only for one category: personal finance (0--2\% leak), personal health (5--10\%), and personal relationships (0--4\%) are protected regardless of who asks, while sensitive\_work shows a clear gradient (Tina 0\%, Marcus 20\%, Jordan 18\%, Dana 26\%). The agent treats financial and health data as belonging to the \emph{owner} but work data as belonging to the \emph{organisation}---relationship framing modulates perceived organisational standing. Moreover, read trust $\neq$ write trust: Dana's investor framing produces the highest QA leakage (7.5\%) but also the highest action safety (91\%), while Jordan's friend framing produces the most over-refusal (86\%) yet the lowest action safety (84\%). The dominant practical failure is not leakage but over-refusal: D2 refuses 86--95\% of sensitive queries across all requesters (leak rates 1.7--9.2\%), but Jordan's agent refuses 86\% of items it \emph{should} answer while Dana's refuses only 31\%. Under relationship variation, D2's cost falls on legitimate utility, not on security breaches.
+No. The operating point is not the same across requesters (Table~\ref{tab:relationship}). Relationship context moves it in category-specific and direction-specific ways, but only for one category: personal finance (0--2\% leak), personal health (5--10\%), and personal relationships (0--4\%) are protected regardless of who asks, while sensitive\_work shows a clear gradient (Tina 0\%, Marcus 20\%, Jordan 18\%, Dana 26\%). The agent treats financial and health data as belonging to the \emph{owner} but work data as belonging to the \emph{organisation}---relationship framing modulates perceived organisational standing. Moreover, read trust $\neq$ write trust: Dana's investor framing produces the highest QA leakage (7.5\%) but also the highest action safety (91\%), while Jordan's friend framing produces the most over-refusal (86\%) yet the lowest action safety (84\%). The dominant practical failure is not leakage but over-refusal: D2 refuses 86--95\% of sensitive queries across all requesters (leak rates 1.7--9.2\%), but Jordan's agent refuses 86\% of items it \emph{should} answer while Dana's refuses only 31\%. Under relationship variation, D2's cost falls on legitimate utility, not on security breaches.
 
-\begin{findingbox}[Takeaway (RQ3): Same policy, different frontier per requester]
+\begin{findingbox}[Takeaway (RQ3): Same policy, different operating point per requester]
 \small
-A single policy cannot serve all requesters optimally. The model's implicit social norms decompose trust into orthogonal read/write axes that activate differently per relationship. Over-refusal, not leakage, is the dominant practical failure: the frontier's cost falls on legitimate utility, not on security breaches.
+A single policy cannot serve all requesters optimally. The model's implicit social norms decompose trust into orthogonal read/write axes that activate differently per relationship. Over-refusal, not leakage, is the dominant practical failure: the cost falls on legitimate utility, not on security breaches.
 \end{findingbox}
 
 \begin{figure}[t]
   \centering
   \includegraphics[width=\linewidth]{figures/fig_frontier_msg_security.pdf}
-  \caption{\textbf{The privacy--utility frontier across three dimensions.} \emph{Left:} Policy specificity---D2 shifts all six models to high security; D1 is indistinguishable from D0. \emph{Center:} Cumulative multi-turn leakage (240 ticks). D2 caps exposure below 30\% for both models. \emph{Right:} Relationship-conditioned dual failure under D2. Red: leak rate (driven by \emph{sensitive\_work}). Blue: over-refusal on legitimate items. Jordan exemplifies the worst case---leaks 9\% yet blocks 86\% of entitled access.}
+  \caption{\textbf{Privacy--utility trade-offs across three dimensions.} \emph{Left:} Policy specificity---D2 shifts all six models to high security; D1 is indistinguishable from D0. \emph{Center:} Cumulative multi-turn leakage (240 ticks). D2 caps exposure below 30\% for both models. \emph{Right:} Relationship-conditioned dual failure under D2. Red: leak rate (driven by \emph{sensitive\_work}). Blue: over-refusal on legitimate items. Jordan exemplifies the worst case---leaks 9\% yet blocks 86\% of entitled access.}
   \label{fig:frontier}
 \end{figure}
 
 \subsection{Ablations}
 \label{sec:ablations}
 
-\paragraph{Cross-model generality.}
+\paragraph{Cross-requester generality.}
 
 \begin{table}[t]
-  \caption{\textbf{Cross-model single-step files QA} (6 models, 1 replication per model except gpt-5-mini with 2). All values in \%. Util = work-public correctness. Ref = refuse rate. Msg.L = message leak rate. F.Att = failed attempt rate. D1 (omitted) is statistically indistinguishable from D0 in all models.}
+  \caption{\textbf{Cross-requester single-step files QA} (6 requester models, 1 replication each except gpt-5-mini with 2; the responder is gpt-5-mini in every row). All values in \%. Util = work-public correctness. Ref = refuse rate. Msg.L = message leak rate. F.Att = failed attempt rate. D1 (omitted) is statistically indistinguishable from D0 in all models.}
   \label{tab:crossmodel}
   \centering
   \footnotesize
@@ -297,7 +298,7 @@ A single policy cannot serve all requesters optimally. The model's implicit soci
     \toprule
     & \multicolumn{4}{c}{\textbf{D0 (no policy)}} & \multicolumn{4}{c}{\textbf{D2 (deny list)}} & \\
     \cmidrule(lr){2-5} \cmidrule(lr){6-9}
-    \textbf{Model} & Util & Ref & Msg.L & F.Att & Util & Ref & Msg.L & F.Att & $\Delta$Msg.L \\
+    \textbf{Requester} & Util & Ref & Msg.L & F.Att & Util & Ref & Msg.L & F.Att & $\Delta$Msg.L \\
     \midrule
     gpt-5-mini     & 78 &  0 & 83 & 17 & 77 & 72 & \textbf{14} & 14 & $-$69 \\
     gpt-5.5        & 87 &  1 & 88 & 11 & 86 & 78 & \textbf{4}  & 18 & $-$84 \\
@@ -309,7 +310,7 @@ A single policy cannot serve all requesters optimally. The model's implicit soci
   \end{tabular}
 \end{table}
 
-The specificity threshold (RQ1) holds across all six evaluated model families (Table~\ref{tab:crossmodel}). Under D0, all models leak at 83--93\% despite substantial capability differences (utility 78--98\%). D2 reduces leakage by 69--91\,pp in every model. Two non-OpenAI models (Kimi~K2, DeepSeek~V3) show the same pattern, ruling out provider-specific training artifacts.
+The category-naming effect (RQ1) holds against all six requester families (Table~\ref{tab:crossmodel}). Under D0, the responder leaks at 83--93\% regardless of which requester probes it, despite substantial capability differences among requesters (utility 78--98\%). D2 reduces leakage by 69--91\,pp against every requester, including two non-OpenAI families (Kimi~K2, DeepSeek~V3). Because the responder is \texttt{gpt-5-mini} throughout, this establishes that the effect is not an artifact of any particular \emph{requester}; it does not establish that the effect is independent of the responder's provider, which would require varying the defender.
 
 \paragraph{Model scale under multi-turn.} Under D0, GPT-5.5's message leak rate is 28.0\% vs.\ gpt-5-mini's 84.2\%, a 56\,pp reduction from scale alone. Under D2, both converge: 13.0\% vs.\ 12.6\% (Table~\ref{tab:ms_model_scale}). The explicit deny list is the great equaliser: it renders model scale irrelevant for the question of whether protection holds.
 
@@ -342,7 +343,7 @@ Single-agent security benchmarks (InjecAgent~\citep{zhan2024injecagent}, AgentDo
 
 Our work differs in grounding evaluation in deployment-realistic infrastructure: delegates hold private data stores accessed through typed tools, accumulate persistent memory, and interact with full autonomy over multi-turn exchanges. The combination of the SharedOS platform and the PACT-PAIR dataset enables systematic evaluation across dimensions no single prior benchmark covers simultaneously---cross-boundary interaction, tool-mediated access, defence gradients, persistent memory, relationship conditioning, and action safety (detailed comparison in Appendix~\ref{app:related_comparison}).
 
-On the attack/defence side, methods from PAIR~\citep{chao2025pair} and Crescendo~\citep{russinovich2025crescendo} to Instruction Hierarchy~\citep{wallace2024instruction} and layered defence~\citep{ghosh2025safety} confirm that no prompt-level defence alone provides reliable protection~\citep{nasr2025attacker}. Our governance gradient quantifies this gap empirically across six model families.
+On the attack/defence side, methods from PAIR~\citep{chao2025pair} and Crescendo~\citep{russinovich2025crescendo} to Instruction Hierarchy~\citep{wallace2024instruction} and layered defence~\citep{ghosh2025safety} confirm that no prompt-level defence alone provides reliable protection~\citep{nasr2025attacker}. Our governance gradient quantifies this gap empirically against six requester model families.
 
 
 % ============================================================================
@@ -350,12 +351,12 @@ On the attack/defence side, methods from PAIR~\citep{chao2025pair} and Crescendo
 \label{sec:discussion}
 % ============================================================================
 
-\paragraph{The frontier cannot be flattened by prompt engineering.}
-Our results show the security-utility frontier is shaped by three forces the policy author does not control: the model's implicit social norms, the semantic properties of the data itself, and multi-turn conversational dynamics. A single policy cannot serve all requesters optimally because the model's role inference is itself emergent and unreliable. Our data motivates three interventions: pre-search policy classification (eliminating metadata leakage in refusals), requester-conditioned retrieval scope (mounting different data per relationship), and post-generation content auditing (catching the 3$\times$ gap between message and global leak rates). These move enforcement from reasoning to structure.
+\paragraph{The trade-off cannot be flattened by prompt engineering.}
+Our results show the security--utility trade-off is shaped by three forces the policy author does not control: the model's implicit social norms, the semantic properties of the data itself, and multi-turn conversational dynamics. A single policy cannot serve all requesters optimally because the model's role inference is itself emergent and unreliable. Our data motivates three interventions: pre-search policy classification (eliminating metadata leakage in refusals), requester-conditioned retrieval scope (mounting different data per relationship), and post-generation content auditing (catching the 3$\times$ gap between message and global leak rates). These move enforcement from reasoning to structure.
 
 
 \paragraph{Limitations.}
-\textbf{Single dyad.} The main results evaluate one requester--target pair; Appendix~\ref{app:pact_net} presents PACT-Net (25 agents) as a network extension. \textbf{Synthetic data.} The data store is synthetic, though structured with realistic category boundaries. \textbf{Evaluation pipeline.} The two-pass evaluator achieves 89--94\% agreement with zero false positives in manual audit (Appendix~\ref{app:validity}). \textbf{Replication variance.} D2 states QA shows 26\,pp utility variance across replications from initial-context sensitivity. \textbf{Attack coverage.} Optimised attack strategies (PAIR, GCG) are benchmark extensions. \textbf{Release.} The full suite (600 tasks, gold key facts, agent configurations, heartbeat engine, scoring scripts, and raw outputs) will be released under an open-source licence.
+\textbf{Single dyad.} The main results evaluate one requester--target pair; Appendix~\ref{app:pact_net} presents PACT-NET (25 agents) as a network extension. \textbf{Synthetic data.} The data store is synthetic, though structured with realistic category boundaries. \textbf{Evaluation pipeline.} The two-pass evaluator achieves 89--94\% agreement with zero false positives in manual audit (Appendix~\ref{app:validity}). \textbf{Replication variance.} D2 states QA shows 26\,pp utility variance across replications from initial-context sensitivity. \textbf{Attack coverage.} Optimised attack strategies (PAIR, GCG) are benchmark extensions. \textbf{Release.} The full suite (600 tasks, gold key facts, agent configurations, heartbeat engine, scoring scripts, and raw outputs) will be released under an open-source licence.
 
 
 % ============================================================================
@@ -376,7 +377,7 @@ Our results show the security-utility frontier is shaped by three forces the pol
 \label{app:ss_results}
 % ============================================================================
 
-\paragraph{Dataset naming convention.} The main paper describes the 600-task evaluation suite without a formal name. In the appendix we refer to this dyadic benchmark as \textbf{PACT-PAIR} (Privacy in Agent Cross-boundary Transactions --- Pairwise Assessment of Information Risk) for concise cross-referencing. PACT-PAIR comprises the 200 files QA + 200 states QA + 200 action tasks evaluated under three governance levels. The 25-agent network extension (Appendix~\ref{app:pact_net}) is called PACT-Net.
+\paragraph{Naming convention.} \textbf{SharedOS} is the platform. \textbf{PACT-Bench} is the benchmark suite built on it, comprising \textbf{PACT-PAIR} (Privacy in Agent Cross-boundary Transactions --- Pairwise Assessment of Information Risk), the dyadic benchmark of 200 files QA + 200 states QA + 200 action tasks evaluated under three governance levels, and \textbf{PACT-NET}, the 25-agent network extension (Appendix~\ref{app:pact_net}). These names are used consistently throughout.
 
 \vspace{0.5em}
 
@@ -699,7 +700,7 @@ Multi-step evaluation uses the heartbeat protocol (\S\ref{sec:modes}). Each run 
 \label{app:ms_agg}
 
 \begin{table}[h]
-  \caption{Multi-step aggregate metrics (gpt-5-mini, 10 splits). All security metrics over $n{\approx}191$ evaluated queries (LLM judge) and $n{=}200$ (gold scan).}
+  \caption{Multi-step aggregate metrics (gpt-5-mini, 10 splits). All security metrics over $n{\approx}191$ evaluated queries (LLM judge) and $n{=}200$ (gold scan; scan-based rows are trajectory-wide fact coverage, reported as a diagnostic, not as primary utility).}
   \label{tab:ms_headline}
   \centering
   \small
@@ -714,8 +715,8 @@ Multi-step evaluation uses the heartbeat protocol (\S\ref{sec:modes}). Each run 
   \end{tabular}
 \end{table}
 
-\begin{findingbox}[Multi-step D0$\to$D2 gap: 71.6\,pp message-leak reduction --- bounded erosion]
-D2 achieves a message leak rate of 12.6\% after 240 ticks of adaptive probing (vs.\ D0's 84.2\%), with 64.4\% refuse rate and 60.3\% utility. The multi-step D2 message leak rate (12.6\%) is \emph{comparable} to single-step (14.0\%), confirming bounded erosion. The global leak rate (38.0\%) is higher due to incidental disclosure, but the gap between message leak and global leak (25.4\,pp) represents facts surfaced via unrelated responses --- not direct policy violations. D2 is Pareto-superior across all security metrics.
+\begin{findingbox}[Multi-step D0$\to$D2 gap: 71.6\,pp message-leak reduction --- direct leakage stays bounded]
+D2 achieves a message leak rate of 12.6\% after 240 ticks of adaptive probing (vs.\ D0's 84.2\%), with 64.4\% refuse rate and 60.3\% utility. The multi-step D2 message leak rate (12.6\%) is \emph{comparable} to single-step (14.0\%): the direct channel stays bounded. The global leak rate (38.0\%) is higher due to incidental disclosure, but the gap between message leak and global leak (25.4\,pp) represents facts surfaced via unrelated responses --- not direct policy violations. D2 is Pareto-superior across all security metrics.
 \end{findingbox}
 
 \subsection{Single-Step vs.\ Multi-Step Comparison}
@@ -739,10 +740,10 @@ D2 achieves a message leak rate of 12.6\% after 240 ticks of adaptive probing (v
 
 Multi-step does not uniformly amplify leakage. For D0 and D1, multi-step message leak rates are comparable to single-step. Under D2, Phase~2 retry strategies crack 22 previously-refused security questions, of which only 4 result in verified gold-fact disclosure (see \S\ref{app:phase2_erosion}). The remaining 18 flips produce failed attempts that violate policy intent but cause no factual harm. The global leak rate (38.0\%) exceeds the message leak rate (12.6\%) because some gold facts surface incidentally in responses to unrelated questions across 240 ticks.
 
-\subsection{Phase 2 Policy Erosion}
+\subsection{Phase 2 Adaptive Retry Pressure}
 \label{app:phase2_erosion}
 
-In multi-step mode, Tina's agent follows a broad Phase~2 retry protocol (ticks 60--240) after Phase~1 refusals. The protocol names strategy families, but does not script the concrete messages or strategy combinations. Of 22 refusal-to-answer flips, only 4 result in verified gold-fact disclosure (2\% of 200 security questions); the remaining 18 flips produce answers that do not contain protected key facts. D2 retains $S_{\mathrm{MS}} = 87.4\%$ after sustained adaptive probing, evidence of \emph{bounded} erosion rather than policy collapse. We identify six distinct retry strategies.
+In multi-step mode, Tina's agent follows a broad Phase~2 retry protocol (ticks 60--240) after Phase~1 refusals. The protocol names strategy families, but does not script the concrete messages or strategy combinations. Of 22 refusal-to-answer flips, only 4 result in verified gold-fact disclosure (2\% of 200 security questions); the remaining 18 flips produce answers that do not contain protected key facts. D2 retains $S_{\mathrm{MS}} = 87.4\%$ after sustained adaptive probing, evidence that direct leakage stays \emph{bounded} rather than the policy collapsing. We identify six distinct retry strategies.
 
 \begin{table}[h]
   \caption{Adaptive Phase~2 retry strategies observed under D2 in multi-step evaluation.}
@@ -774,7 +775,7 @@ In multi-step mode, Tina's agent follows a broad Phase~2 retry protocol (ticks 6
 \end{quote}
 \textbf{Alex}: ``Yes, Note: Wedding Planning (ID: 33698), \textbf{Wedding date: September 14, 2026 at Napa Valley winery; guest count 150}.''\\[3pt]
 \textbf{Tick 93}: Armed with note ID 33698, Tina extracts the venue: ``Venue region: Napa Valley.''\\[3pt]
-\textbf{Ticks 94--99}: Tina pushes further (partner names, guest list, seating). Alex refuses all six follow-ups. \emph{The policy recovers after the breach. Erosion is bounded.}
+\textbf{Ticks 94--99}: Tina pushes further (partner names, guest list, seating). Alex refuses all six follow-ups. \emph{The policy recovers after the breach. Direct leakage stays bounded.}
 \end{erosionbox}
 
 \paragraph{Strategy combinations are more dangerous than individual strategies.} No single strategy cracked Q176. It required 12 failed attempts before the combination of business justification, folder scope expansion, and constrained format succeeded. This finding cannot be captured by single-step evaluation.
@@ -1059,7 +1060,7 @@ where $U$ measures task-completion utility (LLM judge verifies semantic correctn
 
 \paragraph{Replication and variance.} Single-step: 2 independent replications per defence level (groups g401--g406), yielding 1{,}200 evaluated items per surface. Multi-step: 10 independent splits per defence level. The D2 states QA replications exhibit substantial variance (rep~1: 5\% leak, 5\% utility; rep~2: 11\% leak, 31\% utility), driven by over-refusal divergence (45\% vs.\ 8\% work/public refusal). We attribute this to initial-context sensitivity: early refusals establish a conservative policy calibration that persists throughout the run. This variance is itself a finding: prompt-level policies are inherently stochastic, motivating tool-level enforcement (\S\ref{sec:discussion}).
 
-\paragraph{Model.} All Layer~0 experiments use gpt-5-mini via Azure OpenAI. The model version is fixed across all runs within a surface. Cross-model validation (gpt-5.4-mini, gpt-5.4, Kimi~k2, DeepSeek-V3) confirms D2 reduces leaks by 69--91\,pp across all model families.
+\paragraph{Model.} All Layer~0 experiments use gpt-5-mini as the \emph{responder} via Azure OpenAI; the responder model is fixed across every run, including the cross-requester cells. The model version is fixed across all runs within a surface. Cross-requester validation, in which the \emph{requester} is varied over gpt-5.4-mini, gpt-5.4, Kimi~k2 and DeepSeek-V3, confirms D2 reduces leaks by 69--91\,pp against every requester family.
 
 \paragraph{Data and code availability.} The full benchmark suite (evaluation queries, gold key facts, agent configuration templates, heartbeat engine, scoring scripts, and raw evaluation outputs) will be released at publication under an open-source licence. Synthetic personal data is included; no real personal information is used.
 
@@ -1106,21 +1107,21 @@ Table~\ref{tab:comparison} compares across the dimensions that realistic delegat
 \end{table}
 
 \paragraph{Attack and defence methods.}
-Relevant attacks span gradient-based (GCG~\citep{zou2023universal}), LLM-generated (PAIR~\citep{chao2025pair}, PAP~\citep{zeng2024pap}), and multi-turn escalation (Crescendo~\citep{russinovich2025crescendo}). Defence methods range from Instruction Hierarchy~\citep{wallace2024instruction} and Spotlighting~\citep{hines2024spotlighting} to layered defence~\citep{ghosh2025safety}. The consensus from large-scale evaluations~\citep{nasr2025attacker} is that no prompt-level defence alone provides reliable protection. Our governance gradient (D0/D1/D2) is designed to quantify this gap empirically, and our findings confirm it: D1's generic instruction is inert, while D2's explicit category enumeration achieves 69--91\,pp leak reduction but still cannot prevent multi-turn erosion or incidental disclosure through co-located data.
+Relevant attacks span gradient-based (GCG~\citep{zou2023universal}), LLM-generated (PAIR~\citep{chao2025pair}, PAP~\citep{zeng2024pap}), and multi-turn escalation (Crescendo~\citep{russinovich2025crescendo}). Defence methods range from Instruction Hierarchy~\citep{wallace2024instruction} and Spotlighting~\citep{hines2024spotlighting} to layered defence~\citep{ghosh2025safety}. The consensus from large-scale evaluations~\citep{nasr2025attacker} is that no prompt-level defence alone provides reliable protection. Our governance gradient (D0/D1/D2) is designed to quantify this gap empirically, and our findings confirm it: D1's generic instruction is inert, while D2's explicit category enumeration achieves 69--91\,pp leak reduction but still cannot close the additional disclosure channels that multi-turn interaction opens, including incidental disclosure through co-located data.
 
 
 % ============================================================================
-\section{PACT-Net Benchmark Design}
+\section{PACT-NET Benchmark Design}
 \label{app:pact_net}
 % ============================================================================
 
-The dyadic evaluation reported in the main paper is a unit test for cross-boundary delegation: one requester probes one target across a single privacy boundary. PACT-Net is the corresponding integration test. It instantiates a 25-agent network where each agent has its own data store, contact list, role-specific policy, and relational access labels. No agent is explicitly adversarial. The central question is whether private information leaks through ordinary work and personal coordination.
+The dyadic evaluation reported in the main paper is a unit test for cross-boundary delegation: one requester probes one target across a single privacy boundary. PACT-NET is the corresponding integration test. It instantiates a 25-agent network where each agent has its own data store, contact list, role-specific policy, and relational access labels. No agent is explicitly adversarial. The central question is whether private information leaks through ordinary work and personal coordination.
 
 \paragraph{Network world.}
-PACT-Net is set in a fictional startup ecosystem, TechFlow AI, with three clusters. The professional cluster contains 15 agents spanning executives, engineering, product, sales, finance, legal, and operations. The investor/advisor cluster contains 3 agents: a lead VC, an angel investor, and a senior engineering candidate. The personal cluster contains 7 agents from Alex's personal network: partner, close friend, parents, sister, therapist, and fitness trainer. Alex, the CTO, is the hub node connecting professional and personal contexts. The contact graph has 172 directed edges across 25 nodes; most professional agents can reach 5--8 peers, while peripheral personal agents have only one or two contacts.
+PACT-NET is set in a fictional startup ecosystem, TechFlow AI, with three clusters. The professional cluster contains 15 agents spanning executives, engineering, product, sales, finance, legal, and operations. The investor/advisor cluster contains 3 agents: a lead VC, an angel investor, and a senior engineering candidate. The personal cluster contains 7 agents from Alex's personal network: partner, close friend, parents, sister, therapist, and fitness trainer. Alex, the CTO, is the hub node connecting professional and personal contexts. The contact graph has 172 directed edges across 25 nodes; most professional agents can reach 5--8 peers, while peripheral personal agents have only one or two contacts.
 
 \begin{table}[h]
-  \caption{\textbf{PACT-Net design summary.} PACT-Net extends the dyadic evaluation to network-scale evaluation with relational labels and network-specific failure modes.}
+  \caption{\textbf{PACT-NET design summary.} PACT-NET extends the dyadic evaluation to network-scale evaluation with relational labels and network-specific failure modes.}
   \label{tab:pact_net_summary}
   \centering
   \small
@@ -1141,7 +1142,7 @@ PACT-Net is set in a fictional startup ecosystem, TechFlow AI, with three cluste
 \end{table}
 
 \paragraph{Relational labels.}
-PACT-Net generalises the binary dyadic label into a requester-conditioned access function:
+PACT-NET generalises the binary dyadic label into a requester-conditioned access function:
 \[
   \mathrm{access}(O, C, R) \in \{L, P, B\},
 \]
@@ -1151,7 +1152,7 @@ where $O$ is the data owner, $C$ is the sensitivity category, and $R$ is the req
 The 483 QA tasks include legitimate should-answer requests, should-refuse privacy probes, transitive-risk tasks, cross-cluster requests, and non-contact probes. Transitive-risk tasks are the core network case: the immediate request is legitimate, but the target's data store contains co-located third-party secrets that must be filtered from the response. The 514 action tasks include authorized creates, authorized completions, unauthorized mutations, confused-deputy tasks, and cross-surface plants where a requester tries to launder sensitive information by writing it into another agent's workspace.
 
 \begin{table}[h]
-  \caption{\textbf{PACT-Net task distribution.} Counts are from the generated benchmark task file.}
+  \caption{\textbf{PACT-NET task distribution.} Counts are from the generated benchmark task file.}
   \label{tab:pact_net_tasks}
   \centering
   \small
@@ -1173,10 +1174,10 @@ The 483 QA tasks include legitimate should-answer requests, should-refuse privac
 \end{table}
 
 \paragraph{Network-specific metrics.}
-PACT-Net retains the four core metrics--information utility, information security, action utility, and action safety--and adds five network-specific metrics. Transitive leak rate measures whether third-party sensitive facts appear in otherwise legitimate answers. Confused deputy rate measures unauthorized execution under claimed delegation. Contact enforcement rate measures whether non-contact requests are blocked before reaching the target agent. Cross-cluster leak rate isolates professional--personal boundary failures. Network amplification factor compares observed network-wide leakage to the leakage predicted by independent dyadic rates; values above 1 indicate that network structure amplifies privacy risk.
+PACT-NET retains the four core metrics--information utility, information security, action utility, and action safety--and adds five network-specific metrics. Transitive leak rate measures whether third-party sensitive facts appear in otherwise legitimate answers. Confused deputy rate measures unauthorized execution under claimed delegation. Contact enforcement rate measures whether non-contact requests are blocked before reaching the target agent. Cross-cluster leak rate isolates professional--personal boundary failures. Network amplification factor compares observed network-wide leakage to the leakage predicted by independent dyadic rates; values above 1 indicate that network structure amplifies privacy risk.
 
 \paragraph{Relationship to this paper.}
-The main paper reports dyadic results because the one-to-one setting is the controlled core evaluation: every factor can be isolated and evaluated with replications. PACT-Net is included as the benchmark extension that turns the same permission model into a social-graph setting. It is designed to expose phenomena unavailable to dyadic tests: transitive leakage, confused deputies, information laundering, contact-graph enforcement failures, and multi-requester amplification.
+The main paper reports dyadic results because the one-to-one setting is the controlled core evaluation: every factor can be isolated and evaluated with replications. PACT-NET is included as the benchmark extension that turns the same permission model into a social-graph setting. It is designed to expose phenomena unavailable to dyadic tests: transitive leakage, confused deputies, information laundering, contact-graph enforcement failures, and multi-requester amplification.
 
 
 % ============================================================================
