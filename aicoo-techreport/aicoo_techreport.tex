@@ -52,6 +52,8 @@
   [\vspace{1pt}{\color{AicooBlue}\titlerule[0.6pt]}]
 \titleformat{\subsection}
   {\sffamily\bfseries\large\color{AicooNavy}}{\thesubsection}{0.7em}{}
+\titleformat{\subsubsection}
+  {\sffamily\bfseries\normalsize\color{AicooNavy}}{\thesubsubsection}{0.6em}{}
 \titleformat{\paragraph}[runin]
   {\sffamily\bfseries\color{AicooNavy}}{}{0em}{}[.]
 \titlespacing{\paragraph}{0pt}{6pt plus 2pt}{6pt}
@@ -162,7 +164,7 @@ Few existing evaluations address this problem. Single-agent benchmarks \cite{zha
 \paragraph{Contributions}
 \begin{itemize}
 \item We \textbf{formalise} cross-boundary delegation as the setting where enforcement is delegated to an LLM's reasoning, making the operating point emergent rather than designed (\S\ref{sec:platform}).
-\item We build \textbf{SharedOS} and \textbf{PACT-Bench} (PACT-PAIR, a 600-task dyadic benchmark, and PACT-NET, a 25-agent network extension), enabling independent variation of state, tools, governance policy, and requester relationship, with dual-metric scoring and database-diff ground truth for actions (\S\ref{sec:design}).
+\item We build \textbf{SharedOS} and \textbf{PACT} (the Permissioned Agent Coordination Testbed, a seeding platform we instantiate twice: PACT-PAIR, a 600-task dyadic benchmark, and PACT-NET, a 25-agent network), enabling independent variation of state, tools, governance policy, and requester relationship, with dual-metric scoring and database-diff ground truth for actions (\S\ref{sec:design}).
 \item We \textbf{measure the trade-off} across four axes: policy specificity (\S\ref{sec:rq1}), interaction length (\S\ref{sec:rq2}), relationship context (\S\ref{sec:rq3}), and structural enforcement (\S\ref{sec:structural}), and validate the pipeline with cross-family judges and independent human annotation (\S\ref{sec:validation}).
 \end{itemize}
 
@@ -228,11 +230,16 @@ If the dyad is the unit test for cross-boundary delegation, PACT-NET is the inte
 \paragraph{Metrics} \textbf{Utility} is the fraction of legitimate queries answered correctly. \textbf{Security} decomposes into three mutually exclusive direct-response rates: refuse, message leak (response contains gold facts), and failed attempt; a fourth measure, \textbf{global leak}, scans all responses across all ticks for gold-fact matches, capturing incidental disclosure the per-query metric misses. Actions follow the same structure with a database-diff gold check. Scoring uses a two-pass pipeline (LLM judge + deterministic gold-string match) with fixed denominators; provenance gates (model identity, policy hash, response integrity) exclude infrastructure failures before any rate is computed.
 
 % ============================================================
-\section{RQ1: What Moves the Operating Point?}
-\label{sec:rq1}
+\section{Trade-Off Evaluation}
+\label{sec:tradeoff}
 % ============================================================
 
-\subsection{Core result: only category-specific policies move it}
+We now measure the trade-off along the three axes, one research question per subsection.
+
+\subsection{RQ1: what moves the operating point?}
+\label{sec:rq1}
+
+\subsubsection{Core result: only category-specific policies move it}
 
 Across D0$\to$D2 the relevant security metric improves in \emph{every} reported configuration, while utility effects range from negligible to substantial (Table~\ref{tab:core}).
 
@@ -258,7 +265,7 @@ Actions --- GPT-5-mini & 65.5 / 48.0 / 61.0 auth.\ exec. & 43.0 / 43.0 / 93.5 bl
 
 Three observations. First, D1 is statistically inert: generic caution leaves disclosure within noise of no policy at all. Second, the D2 shift is large everywhere but its \emph{utility cost is surface- and model-dependent}: near-free on Files for most requesters, severe on structured States ($-37$~pp), and $-24$ to $-29$~pp for two requester families. Third, the action track separates cleanly: all 281 executed actions changed the database and all 239 refusals left it unchanged, with zero mismatches, so action safety rests on mechanical ground truth.
 
-\subsection{Decomposing specificity: an eight-policy sweep}
+\subsubsection{Decomposing specificity: an eight-policy sweep}
 
 Following reviewer discussion, we compared eight policies on the same 60 questions, model, and judge (Table~\ref{tab:sweep}). On a frozen 30-question responder control, P2 cuts disclosure 90$\to$5\% for DeepSeek V4 Flash and 80$\to$5\% for GLM 5.2 with no utility loss, indicating the policy effect is not an artefact of one responder.
 
@@ -282,7 +289,7 @@ P7 & Short category-naming & 90.0 & 42.5 & 32.5\\
 \end{tabular}
 \end{table}
 
-\subsection{Operational specificity, not raw length}
+\subsubsection{Operational specificity, not raw length}
 
 Is the D1$\to$D2 gain just prompt mass? \textbf{P9} answers this: it matches P2's 323-word length while containing only P1's generic content. Across 400 new QA episodes plus the submitted anchors (Table~\ref{tab:p9}), P9 stays at P1's operating point on both surfaces, inside the two P1 replications (Files 83/80\%; States 60/66\%), with every paired exact McNemar test at $p \ge 0.61$. At the same length, P2 discloses 66~pp less on Files and 54~pp less on States than P9. The category-names-only control (P7) cuts disclosure 75.0$\to$42.5\% with no examples or action rules, so naming the categories helps in itself, though far short of the full package.
 
@@ -311,10 +318,8 @@ States disclosure & 63.0\% & 62.0\% & 8.0\%\\
 \end{tabular}
 \end{table}
 
-% ============================================================
-\section{RQ2: Is the Trade-off Stable over Time?}
+\subsection{RQ2: is the trade-off stable over time?}
 \label{sec:rq2}
-% ============================================================
 
 Real deployments are persistent. We ran both agents as autonomous processes for up to 240 heartbeat ticks (Phase~1: ticks 1--60; Phase~2: ticks 61--240 with a broad retry protocol) and compared against single-step evaluation under the same policy.
 
@@ -328,10 +333,8 @@ Real deployments are persistent. We ran both agents as autonomous processes for 
 Persistent multi-turn interaction opens \emph{additional disclosure channels} beyond the direct response: incidental co-located disclosure and metadata exposure, invisible to single-turn evaluation. Direct leakage itself does not grow.
 \end{findbox}
 
-% ============================================================
-\section{RQ3: Is the Trade-off the Same for Everyone?}
+\subsection{RQ3: is the trade-off the same for everyone?}
 \label{sec:rq3}
-% ============================================================
 
 Fixing the policy and varying only the requester's relationship produces structured, non-uniform shifts (Table~\ref{tab:rel}). Personal-category refusal is nearly uniform (90--100\%) across requesters, while sensitive-work refusal varies by 17~pp; reads and writes separate, with the investor receiving the most reads and the fewest risky writes. Over-refusal, not leakage, is the dominant practical failure.
 
