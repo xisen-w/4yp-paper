@@ -1,5 +1,5 @@
 % ============================================================
-%  Aicoo Technical Report ATR-2026-001
+%  Systemind Research Technical Report STR-2026-001
 %  How Should Your Agent Talk to Mine?
 %  Compile with: xelatex (twice)
 % ============================================================
@@ -40,18 +40,10 @@
 \definecolor{AicooInk}{HTML}{020817}    % --foreground
 \definecolor{AicooSlate}{HTML}{64748B}  % --muted-foreground
 \definecolor{AicooBorder}{HTML}{E2E8F0} % --border
+\definecolor{OxfordBlue}{HTML}{002147}
+\definecolor{ColumbiaBlue}{HTML}{69B3E7}
 
 \usepackage[colorlinks=true,linkcolor=AicooBlue,citecolor=AicooBlue,urlcolor=AicooBlue]{hyperref}
-
-% ---------- Aicoo logo mark (native TikZ redraw of public/icons/aicoo-logo.svg) ----------
-% SVG: circle r=62, stroke 20, dasharray 332/80, rotate(-20); dot r=11 at 45deg NE.
-% => arc gap of 53.2deg centred at 45deg; line width = 20/62 r; dot radius = 11/62 r.
-\newcommand{\AicooMark}[2]{% #1 = radius dimension, #2 = colour
-\begin{tikzpicture}[baseline={(0,-0.28*#1)}]
-  \draw[#2, line width={0.3226*#1}, line cap=round]
-    ([shift={(71.6:#1)}]0,0) arc[start angle=71.6, end angle=378.4, radius=#1];
-  \fill[#2] (45:#1) circle[radius={0.1774*#1}];
-\end{tikzpicture}}
 
 % ---------- Section styling ----------
 \titleformat{\section}
@@ -68,7 +60,7 @@
 \fancyhf{}
 \renewcommand{\headrulewidth}{0.5pt}
 \renewcommand{\headrule}{\color{AicooBorder}\hrule width\headwidth height 0.5pt}
-\fancyhead[L]{\raisebox{-1.2pt}{\AicooMark{4.2pt}{AicooBlue}}\hspace{5pt}{\sffamily\footnotesize\color{AicooSlate}Aicoo Technical Report ATR-2026-001}}
+\fancyhead[L]{\sffamily\footnotesize\color{AicooSlate}Systemind Research \textbullet\ Technical Report STR-2026-001}
 \fancyhead[R]{\sffamily\footnotesize\color{AicooSlate}How Should Your Agent Talk to Mine?}
 \fancyfoot[C]{\sffamily\footnotesize\color{AicooSlate}\thepage}
 
@@ -103,12 +95,11 @@
 
 \noindent
 \begin{minipage}{0.6\textwidth}
-  \raisebox{-6pt}{\AicooMark{11pt}{AicooNavy}}\hspace{10pt}
-  {\sffamily\bfseries\Large\color{AicooNavy}Aicoo Research}
+  {\sffamily\bfseries\Large{\color{OxfordBlue}Systemind} {\color{ColumbiaBlue}Research}}
 \end{minipage}
 \hfill
 \begin{minipage}{0.36\textwidth}\raggedleft
-  {\sffamily\footnotesize\color{AicooSlate}Technical Report ATR-2026-001\\August 2026}
+  {\sffamily\footnotesize\color{AicooSlate}Technical Report STR-2026-001\\August 2026}
 \end{minipage}
 
 \vspace{6pt}
@@ -146,7 +137,7 @@ Personal agents can now be delegates: systems that hold private data, wield tool
 \vspace{8pt}
 \noindent
 {\sffamily\footnotesize\color{AicooSlate}
-\raisebox{-1.5pt}{\AicooMark{4.2pt}{AicooBlue}}\hspace{5pt}Aicoo Research \textbullet\ \href{https://www.aicoo.io}{aicoo.io} \hfill Code and benchmark: \href{https://github.com/xisen-w/PACT}{github.com/xisen-w/PACT}}
+{\color{OxfordBlue}\bfseries Systemind} {\color{ColumbiaBlue}\bfseries Research} \textbullet\ \href{https://www.aicoo.io}{aicoo.io} \hfill Code and benchmark: \href{https://github.com/xisen-w/PACT}{github.com/xisen-w/PACT}}
 \end{titlepage}
 
 % ============================================================
