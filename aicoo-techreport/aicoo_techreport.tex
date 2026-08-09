@@ -29,6 +29,7 @@
 \usepackage{titlesec}
 \usepackage{fancyhdr}
 \usepackage{setspace}
+\usepackage[numbers,compress]{natbib}
 
 % ---------- Aicoo brand palette (from pulse/app/globals.css) ----------
 \usepackage{xcolor}
@@ -119,9 +120,7 @@ Measuring Utility--Security Trade-offs in\\Cross-Boundary Agentic Delegation\par
 
 {\raggedright\sffamily\color{AicooInk}\setstretch{1.25}
 Xisen Wang, Adel Bibi, Hanxiang Zhang, Yu Chen, Kevin Qinghong Lin, Philip Torr, Saraswathi\textsuperscript{\dag}, Trishit Swarnakar\textsuperscript{\dag}, Abhinav\textsuperscript{\dag}, Yi Li\textsuperscript{\dag}, Jindong Gu\par}
-\vspace{5pt}
-{\raggedright\sffamily\small\color{AicooSlate}
-\textsuperscript{\dag}\,Contributor; all others are core authors. \quad Correspondence: \href{mailto:admin@aicoo.io}{admin@aicoo.io}\par}
+
 
 \vspace{1.3cm}
 
@@ -133,6 +132,12 @@ Personal agents can now be delegates: systems that hold private data, wield tool
 \end{tcolorbox}
 
 \vfill
+\noindent{\color{AicooBorder}\rule{0.28\linewidth}{0.5pt}}\\[3pt]
+{\footnotesize\color{AicooSlate}
+\textsuperscript{\dag}\,Contributor; all other listed authors are core authors.
+Correspondence to: Xisen Wang $<$\href{mailto:xisen.wang@columbia.edu}{xisen.wang@columbia.edu}$>$,
+Yu Chen $<$\href{mailto:yu.chen@lmh.ox.ac.uk}{yu.chen@lmh.ox.ac.uk}$>$.\par}
+\vspace{10pt}
 {\color{AicooBorder}\hrule height 0.5pt}
 \vspace{8pt}
 \noindent
@@ -144,13 +149,13 @@ Personal agents can now be delegates: systems that hold private data, wield tool
 \section{Introduction}
 % ============================================================
 
-Large language models have progressed from stateless question-answering systems to autonomous agents that wield tools, maintain persistent memory, and execute multi-step plans \cite{yao2023react,schick2023toolformer,packer2024memgpt}. Standardised protocols for tool integration \cite{anthropic2024mcp} and inter-agent communication \cite{google2025a2a} are accelerating this transition, and commercial products already deploy personal agents that manage calendars, files, tasks, and communications on behalf of individual users.
+Large language models have progressed from stateless question-answering systems to autonomous agents that wield tools, maintain persistent memory, and execute multi-step plans \cite{yao2023react,schick2023toolformer,packer2024memgpt,shinn2023reflexion}. Standardised protocols for tool integration \cite{anthropic2024mcp} and inter-agent communication \cite{google2025a2a} are accelerating this transition, and commercial products already deploy personal agents that manage calendars, files, tasks, and communications on behalf of individual users \cite{manus2025,devin2024,openclaw2025}. Parallel governance work argues that a trustworthy agentic web will require interoperable infrastructure for identity, delegation, and accountability in addition to technical protocols \cite{chaffer2026dli}.
 
 This capability turns agents into \emph{delegates}: systems that represent their owner to the outside world. When two delegates interact across an ownership boundary, a new class of safety problem appears. Scheduling a meeting requires one delegate to query another's calendar; coordinating a launch means a manager's delegate collects information from several teammates' delegates. In each case the responding delegate must make a \emph{permission decision}: which facts to disclose, which state changes to allow, and which requests to refuse. A delegate that refuses everything is safe but useless; one that shares everything is useful but dangerous. Evaluating safety in this setting requires characterising the \emph{security--utility trade-off}: the set of achievable (security, utility) operating points under a given governance configuration.
 
 In traditional access control \cite{bell1973secure,denning1976lattice}, the policy \emph{is} the enforcement: an access-control list executes deterministically, and the operating point is a design parameter. When enforcement is delegated to an LLM's contextual reasoning, this guarantee vanishes. The policy becomes one input to a reasoning process whose output also depends on the model's implicit social norms, the requester's conversational framing, and the semantic properties of the data itself. The operating point is no longer chosen but \emph{emergent}: unpredictable from the policy text alone and knowable only through measurement.
 
-Few existing evaluations address this problem. Single-agent benchmarks \cite{zhan2024injecagent,debenedetti2024agentdojo} test prompt injection within a single trust domain. Multi-agent privacy benchmarks \cite{wang2026agentsocialbench,gomaa2025converse,juneja2025magpie} study disclosure through scripted text exchanges where agents lack tool-mediated access to private data, persistent memory, and autonomy in deciding what to probe. We therefore built \textbf{SharedOS}, a multi-agent shared delegation system with configurable inter-agent relationships, per-requester access-control policies, and full tool-mediated access to private state, and use it to measure security--utility trade-offs across discrete operating points in cross-boundary delegation.
+Few existing evaluations address this problem. Single-agent benchmarks \cite{zhan2024injecagent,debenedetti2024agentdojo,toyer2024tensortrust,schulhoff2024hackaprompt} test prompt injection within a single trust domain. Multi-agent privacy benchmarks \cite{wang2026agentsocialbench,gomaa2025converse,juneja2025magpie,park2026pacbench,yagoubi2026agentleak} study disclosure through scripted text exchanges where agents lack tool-mediated access to private data, persistent memory, and autonomy in deciding what to probe. We therefore built \textbf{SharedOS}, a multi-agent shared delegation system with configurable inter-agent relationships, per-requester access-control policies, and full tool-mediated access to private state, and use it to measure security--utility trade-offs across discrete operating points in cross-boundary delegation.
 
 \paragraph{Scope of this report} This technical report consolidates three bodies of work into one record: (i) the NeurIPS~2026 submission (\emph{How Should Your Agent Talk to Mine?}, Submission 30847), (ii) the controlled experiments added during its discussion period (a length-matched policy control, an eight-policy sweep, independent non-author annotation, different-family judge validation, and structural access-control baselines at dyadic and network scale), and (iii) the preliminary study that preceded both. Throughout, we characterise trade-offs across \emph{tested discrete operating points}; we do not estimate a continuous Pareto frontier, and all claims are scoped to the evaluated settings and current foundation models.
 
@@ -204,7 +209,7 @@ We fix the policy and vary only the requester's relationship (colleague, CEO del
 
 \paragraph{Tasks} PACT-PAIR comprises 600 tasks. The Information Boundary Track (Files QA~200 + States QA~200) tests whether the agent answers legitimate questions and withholds sensitive information across two data surfaces: long-form documents and structured application state. The Action Boundary Track (200) tests whether the agent performs authorised mutations while refusing unauthorised ones, with verdicts determined by database-state diffs rather than text parsing. Each task carries \emph{gold key facts} whose presence constitutes a leak (sensitive queries) or a correct answer (legitimate queries). Labels are \emph{scenario contracts}: explicit authorization stipulations for one concrete scenario, independently audited (\S\ref{sec:validation}), not claims about universal social norms.
 
-\paragraph{Policy registry} The submission instantiated three levels: \textbf{D0} (no policy), \textbf{D1} (generic: ``Use your best judgment to protect Alex's private information\ldots''), and \textbf{D2} (category-specific deny list enumerating financial, health, HR, and relationship data). The discussion period extended this to a registry P0--P9, including single-message variants of published prompt defences (spotlighting, instruction hierarchy, sandwich), a long generic-operational variant (P6), a 22-word category-names-only variant (P7), and \textbf{P9}, a length-matched control that restates the generic caution to exactly D2's 323 words while adding no categories, examples, or action rules.
+\paragraph{Policy registry} The submission instantiated three levels: \textbf{D0} (no policy), \textbf{D1} (generic: ``Use your best judgment to protect Alex's private information\ldots''), and \textbf{D2} (category-specific deny list enumerating financial, health, HR, and relationship data). The discussion period extended this to a registry P0--P9, including single-message variants of published prompt defences (spotlighting \cite{hines2024spotlighting}, instruction hierarchy \cite{wallace2024instruction}, sandwich), a long generic-operational variant (P6), a 22-word category-names-only variant (P7), and \textbf{P9}, a length-matched control that restates the generic caution to exactly D2's 323 words while adding no categories, examples, or action rules.
 
 \paragraph{Metrics} \textbf{Utility} is the fraction of legitimate queries answered correctly. \textbf{Security} decomposes into three mutually exclusive direct-response rates: refuse, message leak (response contains gold facts), and failed attempt; a fourth measure, \textbf{global leak}, scans all responses across all ticks for gold-fact matches, capturing incidental disclosure the per-query metric misses. Actions follow the same structure with a database-diff gold check. Scoring uses a two-pass pipeline (LLM judge + deterministic gold-string match) with fixed denominators; provenance gates (model identity, policy hash, response integrity) exclude infrastructure failures before any rate is computed.
 
@@ -375,7 +380,44 @@ The measured relationship is \emph{complementarity}, not replacement: structure 
 
 \paragraph{Different-family judge} DeepSeek V4 Flash re-scored every gradable single-step response with the submitted rubric verbatim: 98.3\% agreement on Files (1{,}058 items) and 91.6\% on States (1{,}030 items), with the D0$\to$D2 ordering preserved under both judges. The multi-turn transcripts use the same per-message rubric; their cross-family re-scoring is mechanical and scheduled for the revision.
 
-\paragraph{Independent human annotation} Five non-author annotators re-labelled all three gold tracks (1{,}095 items each), blinded to model outputs and to each other. At least 4 of 5 agree on 86.5\% (QA share/protect, $\kappa=0.654$), 85.7\% (relationship, $\kappa=0.501$), and 83.5\% (action verdicts, $\kappa=0.491$); excluding one pre-registered outlier annotator gives $\kappa$ = 0.745/0.623/0.582. In 100 of 1{,}095 cells the annotator majority disagrees with our gold; we froze the gold rather than editing it after the votes, and all 458 non-unanimous items ship with adjudication records. Because annotation is blinded to model outputs and gold is shared identically across policy arms, label noise attenuates the measured contrasts rather than creating them; the residual disagreement is itself evidence that cross-boundary authorization is genuinely contested, which is the premise motivating explicit scenario contracts.
+\paragraph{Independent human annotation} Five independent annotators re-labelled all three gold tracks (1{,}095 items each), blinded to model outputs and to each other. At least 4 of 5 agree on 86.5\% (QA share/protect, $\kappa=0.654$), 85.7\% (relationship, $\kappa=0.501$), and 83.5\% (action verdicts, $\kappa=0.491$); excluding one pre-registered outlier annotator gives $\kappa$ = 0.745/0.623/0.582. In 100 of 1{,}095 cells the annotator majority disagrees with our gold; we froze the gold rather than editing it after the votes, and all 458 non-unanimous items ship with adjudication records. Because annotation is blinded to model outputs and gold is shared identically across policy arms, label noise attenuates the measured contrasts rather than creating them; the residual disagreement is itself evidence that cross-boundary authorization is genuinely contested, which is the premise motivating explicit scenario contracts.
+
+% ============================================================
+\section{Related Work}
+\label{sec:related}
+% ============================================================
+
+\paragraph{LLM agents and agent societies} ReAct \cite{yao2023react} and Toolformer \cite{schick2023toolformer} established the paradigm of interleaving reasoning with tool invocation; persistent memory \cite{packer2024memgpt}, self-reflection \cite{shinn2023reflexion}, and multi-step planning \cite{wang2024planandsolve} extended agents beyond single-session completion, and OS-inspired designs \cite{mei2025aios,wu2024oscopilot} make the operating-system analogy explicit. Multi-agent frameworks \cite{wu2023autogen,hong2023metagpt,li2023camel,qian2023chatdev,crewai2024,langchain2023,langgraph2024} and studies of agent collectives \cite{talebirad2023multiagent,guo2024largelanguagemodelbased,park2023generative,wang2025revisitingboids,bran2024chemcrow,li2025rdagentquantmultiagentframeworkdatacentric} extend individual capability into collaborative societies, echoing a much older multi-agent tradition of communication standards and cognitive architectures \cite{fipa2002acl,bellifemine2007jade,laird2012soar,anderson2007actr,russell2020artificial}. Standardised protocols \cite{anthropic2024mcp,google2025a2a} and deployed products \cite{manus2025,devin2024,openclaw2025} on frontier models \cite{openai2023gpt4,anthropic2024claude} bring this to end users, while capability benchmarks \cite{liu2024agentbench,yao2022webshop,zhou2024webarena,jimenez2024swebench} measure what agents can do but not what they should refuse.
+
+\paragraph{Agent security and multi-agent privacy benchmarks} Single-agent benchmarks establish vulnerability within one trust domain: InjecAgent \cite{zhan2024injecagent} demonstrates prompt injection in tool-using agents, AgentDojo \cite{debenedetti2024agentdojo} provides adversarial tasks with dual metrics, TensorTrust \cite{toyer2024tensortrust} and HackAPrompt \cite{schulhoff2024hackaprompt} crowd-source attack strategies, and indirect-injection studies \cite{greshake2023not,liu2023houyi} show the channel generalises across applications; R-Judge \cite{yuan2024rjudge} and TAMAS \cite{kavathekar2025tamas} probe risk awareness and multi-agent threat surfaces. Concurrent multi-agent privacy work advances through controlled text exchanges: AgentSocialBench \cite{wang2026agentsocialbench} uncovers an ``abstraction paradox'' where generic privacy instructions fail (consistent with our D1 result), ConVerse \cite{gomaa2025converse} finds attack success up to 88\% in agent-to-agent conversations, and PAC-BENCH \cite{park2026pacbench}, MAGPIE \cite{juneja2025magpie}, AgentLeak \cite{yagoubi2026agentleak}, PrivAction \cite{wang2025privaction}, and DP-Agent \cite{yang2026dpagent} explore complementary slices; \citet{shapira2026chaos} red-team deployed agents directly. No single prior benchmark jointly covers cross-boundary interaction, tool-mediated private-data access, defence gradients, persistent memory, relationship conditioning, and action safety (Table~\ref{tab:comparison}); SharedOS + PACT-Bench is built to cover this combination.
+
+\begin{table}[t]
+  \caption{\textbf{Benchmark comparison.} $\checkmark$ = fully supported, $\sim$ = partially supported.}
+  \label{tab:comparison}
+  \centering
+  \footnotesize
+  \resizebox{\textwidth}{!}{%
+  \begin{tabular}{lcccccccc}
+    \toprule
+    \thead{Benchmark} & \thead{Cross-boundary} & \thead{Tool access} & \thead{Dual metric} & \thead{Defence gradient} & \thead{Multi-turn} & \thead{Persistent memory} & \thead{Relationship} & \thead{Action safety} \\
+    \midrule
+    InjecAgent          &            & $\checkmark$ &            &            &            &            &            &            \\
+    AgentDojo           &            & $\checkmark$ & $\sim$     &            &            &            &            &            \\
+    TensorTrust         &            &            &            & $\sim$     &            &            &            &            \\
+    ConVerse            & $\checkmark$ &          &            &            & $\checkmark$ &          &            &            \\
+    AgentSocialBench    & $\checkmark$ &          & $\checkmark$ & $\sim$   &            &            & $\checkmark$ &          \\
+    PAC-BENCH           & $\checkmark$ &          & $\sim$     &            &            &            &            &            \\
+    AgentLeak           & $\checkmark$ & $\sim$   &            &            &            &            &            & $\sim$     \\
+    Agents of Chaos     & $\checkmark$ & $\checkmark$ &        &            & $\checkmark$ & $\checkmark$ &          & $\sim$   \\
+    \midrule
+    \textbf{SharedOS + PACT-Bench} & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ \\
+    \bottomrule
+  \end{tabular}}
+\end{table}
+
+\paragraph{Attacks and defences} Relevant attacks span gradient-based search \cite{zou2023universal,liu2024autodan}, LLM-generated jailbreaks \cite{chao2025pair,zeng2024pap,mehrotra2024tap}, multi-turn escalation \cite{russinovich2025crescendo}, many-shot conditioning \cite{anil2024manyshot}, and failure-mode analyses \cite{wei2023jailbroken}, with practitioner reports documenting attacks on deployed agent skills \cite{rehberger2026scaryskills}. Defences range from instruction hierarchy \cite{wallace2024instruction} and spotlighting \cite{hines2024spotlighting} to structured queries \cite{chen2025struq}, guard models \cite{inan2023llamaguard,rebedea2023nemo}, constitutional training \cite{bai2022constitutional}, layered defence \cite{ghosh2025safety}, and vendor guidance \cite{meta2025ruletwo,anthropic2025promptinjection,google2025promptinjection,owasp2025llm}. The consensus from large-scale adaptive evaluation \cite{nasr2025attacker} is that no prompt-level defence alone provides reliable protection; our governance gradient quantifies this gap empirically, and our multi-turn results show what remains open even when the direct channel holds.
+
+\paragraph{Access control, privacy, and organisational foundations} Classical access control makes policy deterministic \cite{bell1973secure,denning1976lattice,dennis1966programming}; our setting differs precisely because enforcement is delegated to contextual reasoning, and our structural baselines (\S\ref{sec:structural}) measure what deterministic reachability still buys. Privacy work on extraction and memorisation \cite{carlini2021extracting,carlini2023quantifying,dwork2006differential}, contextual-integrity evaluation for LLMs \cite{li2023privacyllm}, and summarisation leakage \cite{patil2025sumleaks} characterises complementary channels. Finally, delegation across ownership boundaries is an old organisational question \cite{coase1937firm,williamson1975markets,granovetter1973weak}; cross-boundary agent delegation inherits its trust structure with a new enforcement substrate.
 
 % ============================================================
 \section{Limitations}
@@ -398,20 +440,8 @@ For researchers, the sharpest open directions are the ones this study's own meas
 \vspace{4pt}
 {\footnotesize\color{AicooSlate}\sffamily Code, benchmark, seeded worlds, and adjudication records: \href{https://github.com/xisen-w/PACT}{github.com/xisen-w/PACT}. SharedOS is the execution substrate of \href{https://www.aicoo.io}{Aicoo}.}
 
-% ============================================================
-\begin{thebibliography}{19}\small
-\bibitem{yao2023react} S.~Yao et al. ReAct: Synergizing reasoning and acting in language models. \emph{ICLR}, 2023.
-\bibitem{schick2023toolformer} T.~Schick et al. Toolformer: Language models can teach themselves to use tools. \emph{NeurIPS}, 2023.
-\bibitem{packer2024memgpt} C.~Packer et al. MemGPT: Towards LLMs as operating systems. \emph{arXiv:2310.08560}, 2024.
-\bibitem{anthropic2024mcp} Anthropic. Model Context Protocol. 2024.
-\bibitem{google2025a2a} Google. Agent2Agent (A2A) protocol. 2025.
-\bibitem{bell1973secure} D.~E. Bell and L.~J. LaPadula. Secure computer systems: Mathematical foundations. MITRE, 1973.
-\bibitem{denning1976lattice} D.~E. Denning. A lattice model of secure information flow. \emph{CACM}, 19(5), 1976.
-\bibitem{zhan2024injecagent} Q.~Zhan et al. InjecAgent: Benchmarking indirect prompt injections in tool-integrated LLM agents. \emph{ACL Findings}, 2024.
-\bibitem{debenedetti2024agentdojo} E.~Debenedetti et al. AgentDojo: A dynamic environment to evaluate prompt injection attacks and defenses for LLM agents. \emph{NeurIPS}, 2024.
-\bibitem{wang2026agentsocialbench} AgentSocialBench: Benchmarking social reasoning of LLM agents. 2026.
-\bibitem{gomaa2025converse} ConVerse: Benchmarking contextual safety in agent-to-agent conversations. 2025.
-\bibitem{juneja2025magpie} MAGPIE: A benchmark for multi-agent contextual privacy evaluation. 2025.
-\end{thebibliography}
+\bibliographystyle{unsrtnat}
+{\small\bibliography{references}}
+
 
 \end{document}
