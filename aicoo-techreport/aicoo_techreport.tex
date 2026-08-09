@@ -24,7 +24,7 @@
 \setlist{itemsep=1pt,topsep=3pt,parsep=0pt}
 \usepackage{caption}
 \usepackage{tikz}
-\usetikzlibrary{calc}
+\usetikzlibrary{calc,arrows.meta}
 \usepackage[most]{tcolorbox}
 \usepackage{titlesec}
 \usepackage{fancyhdr}
@@ -178,11 +178,66 @@ Few existing evaluations address this problem. Single-agent benchmarks \cite{zha
 A personal agent is a delegate: it holds its owner's private state and acts on their behalf. We model each agent $A_i$ as an operating system. The agent operates over a private store $K_i = (F_i, S_i, M_i)$: files $F_i$ (long-form documents in a hierarchical namespace), structured state $S_i$ (typed records such as todos, calendar events, and CRM entries), and memory $M_i$ (agent-curated summaries of prior interactions). It accesses $K_i$ exclusively through a typed tool set $T_i$; the agent cannot bypass tools, mirroring how a conventional OS mediates all access through system calls. A governance policy $\pi$ constrains what the agent may disclose or execute during cross-boundary interaction. The \emph{heartbeat} is the agent's autonomous loop: at each tick it reasons, invokes tools, and generates responses without human intervention.
 
 \begin{figure}[t]
-  \centering
-  \includegraphics[width=0.92\linewidth]{../neurips/figures/shared_os_overview.png}
-  \caption{\textbf{SharedOS: a multi-agent shared delegation system.} Each owner's agent operates over private state through typed tools. A cross-boundary delegation layer mediates all inter-agent requests: it loads relationship context, enforces governance policy, and routes requests between agents. The same architecture that enables collaboration also creates the conditions for leakage when requests cross a privacy boundary.}
-  \label{fig:sharedos}
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm, every node/.style={font=\sffamily},
+  chip/.style={draw=AicooBlue, fill=AicooTint, rounded corners=2pt, font=\sffamily\scriptsize, text=AicooNavy, inner sep=3pt, minimum height=0.48cm}]
+% ---- host strip ----
+\draw[AicooSlate, rounded corners=2pt] (0.3,0.15) rectangle (15.9,1.15);
+\node[text=AicooSlate, font=\sffamily\bfseries\footnotesize] at (8.1,0.88) {Host-owned state, behind provider ports};
+\node[text=AicooSlate, font=\sffamily\scriptsize] at (8.1,0.48) {files and folders \textbullet\ structured records \textbullet\ external tools / MCP \textbullet\ model APIs \textbullet\ audit store};
+% ---- SharedOS box ----
+\draw[AicooNavy, line width=1pt, rounded corners=3pt, fill=AicooTint!40] (0.3,1.75) rectangle (15.9,8.3);
+\node[anchor=west, text=AicooNavy, font=\sffamily\bfseries\small] at (0.55,8.0) {SharedOS};
+\node[anchor=west, text=AicooSlate, font=\sffamily\scriptsize] at (3.35,8.0) {one permission-controlled agent turn};
+% ---- turn runtime ----
+\draw[AicooBlue, fill=white, rounded corners=2pt] (0.9,5.3) rectangle (11.4,7.7);
+\node[anchor=north west, text=AicooNavy, font=\sffamily\bfseries\footnotesize] at (1.05,7.55) {Turn runtime};
+\node[anchor=north west, text=AicooSlate, font=\sffamily\scriptsize] at (3.55,7.53) {guarded loop: timeout \textbullet\ step budget \textbullet\ audit};
+\node[anchor=north west, text=AicooInk, font=\sffamily\scriptsize, text width=9.9cm] at (1.05,7.0) {\textbf{AgentTurnDriver} (swappable): receives the message, a sanitized context, and the filtered tool catalogue --- never grants};
+\node[chip] at (2.15,5.85) {standard harness};
+\node[chip] at (4.35,5.85) {Codex};
+\node[chip] at (6.1,5.85) {Claude Code};
+\node[chip] at (8.45,5.85) {any model loop};
+\node[text=AicooSlate, font=\sffamily\scriptsize] at (10.3,5.85) {\ldots};
+% ---- runtime <-> kernel ----
+\draw[-{Stealth}, AicooNavy] (3.0,5.3) -- (3.0,4.7);
+\node[anchor=west, font=\sffamily\scriptsize, text=AicooSlate] at (3.15,5.02) {admit turn \textbullet\ filter discoverable tools};
+\draw[{Stealth}-{Stealth}, AicooNavy] (8.9,5.3) -- (8.9,4.7);
+\node[anchor=west, font=\sffamily\scriptsize, text=AicooSlate] at (9.05,5.02) {re-authorize every call};
+% ---- permission kernel ----
+\draw[AicooNavy, fill=white, rounded corners=2pt] (0.9,2.7) rectangle (15.3,4.7);
+\node[anchor=north west, text=AicooNavy, font=\sffamily\bfseries\footnotesize] at (1.05,4.55) {Permission kernel};
+\node[anchor=north west, text=AicooSlate, font=\sffamily\scriptsize] at (4.05,4.53) {deny by default \textbullet\ fail closed};
+\node[anchor=north west, text=AicooInk, font=\sffamily\scriptsize, text width=13.9cm] at (1.05,4.05) {authorizes the complete tuple (resource \textbullet\ owner \textbullet\ action \textbullet\ scope \textbullet\ purpose \textbullet\ expiry) against verified grants; independent grants never combine into new authority};
+\node[draw=AicooGoldDeep, fill=white, rounded corners=2pt, font=\sffamily\scriptsize, text=AicooGoldDeep, anchor=south east, inner sep=3pt] at (15.1,2.9) {denied = first-class audited outcome};
+% ---- contracts strip ----
+\draw[AicooBlue!50, fill=white, rounded corners=2pt] (0.9,2.0) rectangle (15.3,2.45);
+\node[font=\sffamily\scriptsize, text=AicooSlate] at (8.1,2.22) {Contracts: structured Address \textbullet\ MessageEnvelope \textbullet\ CapabilityGrant \textbullet\ namespace / world isolation};
+% ---- requesting agent + message channel ----
+\node[draw=AicooBlue, fill=white, rounded corners=2pt, text=AicooNavy, font=\sffamily\footnotesize, align=center, minimum width=4.2cm] (req) at (2.9,9.45) {Requesting agent\\[-2pt]{\scriptsize\color{AicooSlate}another owner's delegate}};
+\draw[{Stealth}-{Stealth}, AicooBlue, line width=1pt] (2.9,9.0) -- (2.9,7.7);
+\node[anchor=west, font=\sffamily\scriptsize, text=AicooBlue] at (3.15,8.6) {message channel: intent \textbullet\ purpose \textbullet\ payload --- never authority};
+% ---- grant store + authority channel ----
+\node[draw=AicooGoldDeep, fill=white, rounded corners=2pt, text=AicooNavy, font=\sffamily\footnotesize, align=center, text width=4.0cm] (store) at (13.35,9.45) {Capability grant store\\[-2pt]{\scriptsize\color{AicooSlate}issuer \textbullet\ subject \textbullet\ resource \textbullet\ action \textbullet\ purpose \textbullet\ expiry}};
+\draw[-{Stealth}, AicooGoldDeep, line width=1.2pt] (13.35,8.72) -- (13.35,4.7);
+\node[align=center, font=\sffamily\scriptsize, text=AicooGoldDeep, fill=AicooTint!40, inner sep=2pt] at (13.35,6.4) {authority channel\\[-2pt]verified active grants only};
+% ---- escalation return ----
+\draw[-{Stealth}, AicooGoldDeep, dashed] (15.1,3.2) -- (15.5,3.2) -- (15.5,8.68);
+\node[rotate=90, font=\sffamily\scriptsize, text=AicooGoldDeep, fill=AicooTint!40, inner sep=1pt] at (15.66,6.0) {request $\to$ consent $\to$ new grant};
+% ---- provider ports ----
+\draw[{Stealth}-{Stealth}, AicooSlate, line width=1pt] (8.1,1.75) -- (8.1,1.15);
+\node[anchor=west, font=\sffamily\scriptsize, text=AicooSlate] at (8.3,1.47) {ResourceProvider ports: invoked only on allow};
+\end{tikzpicture}
+\caption{\textbf{SharedOS: one permission-controlled agent turn.} The message channel (blue) and the authority channel (gold) never merge: a MessageEnvelope carries intent, purpose, and payload but no grants, while authority enters only as verified capability grants evaluated by the deny-by-default kernel. The agent driver is a swappable port; it sees a sanitized context and a permission-filtered tool catalogue, never grants, and every call it requests is re-authorized individually. Because a denial is a first-class audited outcome, escalation is well defined: a CapabilityRequest becomes usable authority only when an eligible issuer's consent turns it into a new bounded grant (dashed). Hosts own all state behind ResourceProvider ports and decide when turns happen; SharedOS owns what a turn may do.}
+\label{fig:sharedos}
 \end{figure}
+
+\subsection{Explicit authority by design}
+\label{sec:explicit}
+
+SharedOS separates what classical prompt-level agents conflate: the \emph{message channel} and the \emph{authority channel} (Figure~\ref{fig:sharedos}). A message carries intent, purpose, and payload; it structurally cannot carry authority, and a grant-shaped key in a message is a parse error, not a request. Authority exists only as \emph{capability grants} in a trusted store: each grant binds issuer, subject, resource, owner, actions, scope, purpose, and expiry, and the kernel is deny-by-default, authorizing the complete requested tuple against verified grants. Independent grants never combine into an authority no issuer created; reads do not imply writes; a registered tool is neither discoverable nor invocable without its own grant; and if grant state is unavailable, the kernel fails closed.
+
+Two consequences matter for evaluation. First, \emph{the agent is a plug-in, not the boundary}. The model-facing side of a turn is a single swappable port (the turn driver): the standard SharedOS harness, Codex, Claude Code, or any model loop can occupy it, while SharedOS owns the guarded loop around it, filtering the tool catalogue before the model sees it and re-authorizing every requested call individually. The driver never receives grants or issuing authority, so the security invariants hold independently of which model sits in the slot; swapping a stronger, weaker, or adversarial agent changes behaviour inside the sandbox, not the sandbox. Second, \emph{escalation is well defined precisely because access control is explicit}. A denial is a first-class, machine-readable audited outcome, not a silent failure; an agent that lacks authority can emit a structured CapabilityRequest, which becomes usable authority only when an eligible issuer (typically the resource owner) converts it into a new grant, itself bounded by purpose, expiry, and use counts. Delegation is similarly bounded: derived grants can only narrow their parent, and revoking an ancestor invalidates the chain. Prompt-level governance offers no analogue of this loop, which is what makes the escalation-gate experiments of \S\ref{sec:structural} possible. SharedOS executes exactly one turn per invocation; when and how often turns happen (heartbeat cadence in production, tick schedules in PACT) is the host's decision.
 
 \subsection{Communication Between Personal Agents}
 
