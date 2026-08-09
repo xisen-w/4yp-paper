@@ -232,6 +232,13 @@ A personal agent is a delegate: it holds its owner's private state and acts on t
 \label{fig:sharedos}
 \end{figure}
 
+\subsection{Files as memory: one substrate for what agents know}
+\label{sec:filesasmemory}
+
+Why is a permission-controlled agent runtime more than ``a messaging layer with access checks''? Because what cross-boundary requests actually target is \emph{state}, and agent state comes in two kinds. \emph{Transient state} must be extracted at request time: calendar availability, inbox contents, the current status of a record. It lives behind live tools and is stale the moment it is copied. \emph{Accumulated understanding} builds up across interactions: what the startup is about, who matters to a project, what was agreed last week. This is the substance of memory. A runtime that only forwards messages governs neither.
+
+SharedOS commits to one representation for the accumulated kind: \emph{files}. Memory is not a second store with its own access rules; it is a role over authorized files (file-as-memory), and derived views such as indexes and context mounts must preserve the grants of their source files rather than introduce a second resource identity. The working assumption is that agents \emph{distill} knowledge and memory into files: each interaction can write its distilled understanding into the file tree, where it becomes searchable, snapshotable, and governed like everything else. The payoff is that access between two agents partitions cleanly into exactly two surfaces: \textbf{knowledge access}, file capabilities (list, search, read, write) over subtrees of accumulated understanding, and \textbf{tool access}, capabilities over the live tools that serve transient state and side effects. Both pass through the same grant model and the same kernel, so a per-relationship policy is just a pair of capability sets: a colleague can hold search over the project subtree plus free-busy calendar and nothing personal; a close friend the inverse. Had memory been an opaque second store, as in typical agent frameworks, it would be an authority the policy cannot reach, which is precisely the shape of the incidental-disclosure channel our multi-turn results expose. The evaluation surfaces in this report mirror the partition directly: Files QA probes knowledge access, States QA probes tool-mediated live state, and the action track probes tool-mediated mutation.
+
 \subsection{Explicit authority by design}
 \label{sec:explicit}
 
