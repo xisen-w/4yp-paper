@@ -427,10 +427,10 @@ The D2 package bundles several mechanisms: named categories, concrete examples, 
 
 \subsection{Decomposing the policy package: an eight-policy sweep}
 
-Following reviewer discussion, we compared eight policies on the same 60 questions, model, and judge (Table~\ref{tab:sweep}). On a frozen 30-question responder control, P2 cuts disclosure 90$\to$5\% for DeepSeek V4 Flash and 80$\to$5\% for GLM 5.2 with no utility loss, indicating the policy effect is not an artefact of one responder.
+Following reviewer discussion, we compared eight policies on the same 60 questions, model, and judge. Table~\ref{tab:sweep} shows the governance gradient (P0--P2) and the three defence packages (P3--P5); the two specificity variants from the same sweep (P6, P7) belong to the length analysis and appear in \S\ref{sec:lengthabl}. On a frozen 30-question responder control, P2 cuts disclosure 90$\to$5\% for DeepSeek V4 Flash and 80$\to$5\% for GLM 5.2 with no utility loss, indicating the policy effect is not an artefact of one responder.
 
 \begin{table}[t]
-\caption{\textbf{Eight-policy sweep} on identical questions, model, and judge. P6/P7 are exploratory variants, not causal controls.}
+\caption{\textbf{Policy mechanism sweep} on identical questions, model, and judge: the submitted gradient (P0--P2) and the three defence packages (P3--P5). The length and specificity variants are analysed separately in Table~\ref{tab:ladder} and Table~\ref{tab:p9}.}
 \label{tab:sweep}
 \centering\small
 \begin{tabular}{@{}llccc@{}}
@@ -443,8 +443,6 @@ P2 & Operational category policy & 65.0 & 7.5 & 72.5\\
 P3 & External messages are data & 85.0 & 12.5 & 87.5\\
 P4 & Instruction hierarchy & 80.0 & 5.0 & 90.0\\
 P5 & Classification checklist & 65.0 & 5.0 & 95.0\\
-P6 & Long generic operational & 85.0 & 35.0 & 40.0\\
-P7 & Short category-naming & 90.0 & 42.5 & 32.5\\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -454,7 +452,23 @@ P7 & Short category-naming & 90.0 & 42.5 & 32.5\\
 
 Getting this control right took two attempts, and the failed first attempt is itself informative. Our first long-generic variant, \textbf{P6} (323 words), reduced disclosure to 35.0\%, which briefly suggested that length helps. Inspection of its text showed why the suggestion is wrong: P6 is generic only in its categories; its sentences are operational (default-deny framing, refusal handling, write gating; Appendix~\ref{app:prompts}). It is a policy with teeth and no vocabulary, not a length control. We therefore generated \textbf{P9}: exactly 323 words that restate the 22-word generic caution over and over, adding no categories, no examples, and no action rules.
 
-Is the D1$\to$D2 gain just prompt mass? \textbf{P9} answers this: it matches P2's 323-word length while containing only P1's generic content. Across 400 new QA episodes plus the submitted anchors (Table~\ref{tab:p9}), P9 stays at P1's operating point on both surfaces, inside the two P1 replications (Files 83/80\%; States 60/66\%), with every paired exact McNemar test at $p \ge 0.61$. At the same length, P2 discloses 66~pp less on Files and 54~pp less on States than P9. The category-names-only control (P7) cuts disclosure 75.0$\to$42.5\% with no examples or action rules, so naming the categories helps in itself, though far short of the full package.
+\begin{table}[t]
+\caption{\textbf{Specificity components under the sweep protocol} (same 60 questions, model, and judge as Table~\ref{tab:sweep}): what each component adds, at what price.}
+\label{tab:ladder}
+\centering\small
+\begin{tabular}{@{}llcccc@{}}
+\toprule
+\thead{Policy} & \thead{Components} & \thead{Words} & \thead{Utility (\%)} & \thead{Disclosure (\%)} & \thead{Refusal (\%)}\\
+\midrule
+P1 & generic caution only (anchor) & 22 & 90.0 & 75.0 & 2.5\\
+P7 & + category names & 22 & 90.0 & 42.5 & 32.5\\
+P6 & + operational rules, no categories & 323 & 85.0 & 35.0 & 40.0\\
+P2 & categories + operational rules & 323 & 65.0 & 7.5 & 72.5\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Is the D1$\to$D2 gain just prompt mass? \textbf{P9} answers this: it matches P2's 323-word length while containing only P1's generic content. Across 400 new QA episodes plus the submitted anchors (Table~\ref{tab:p9}), P9 stays at P1's operating point on both surfaces, inside the two P1 replications (Files 83/80\%; States 60/66\%), with every paired exact McNemar test at $p \ge 0.61$. At the same length, P2 discloses 66~pp less on Files and 54~pp less on States than P9. Reading Tables~\ref{tab:ladder} and~\ref{tab:p9} together, the components price out cleanly under the sweep protocol: category names alone (P7) buy 32.5 pp, operational rules without category vocabulary (P6) buy 40.0 pp, the full package (P2) buys 67.5 pp, and pure mass (P9, measured under the controlled protocol) buys nothing.
 
 \begin{figure}[t]
   \centering
@@ -468,15 +482,16 @@ The security gain comes from \emph{operational policy specificity} (named catego
 \end{findbox}
 
 \begin{table}[t]
-\caption{\textbf{Length-matched control.} P9 restates the generic caution to exactly P2's length.}
+\caption{\textbf{Length-matched causal control} (400 new QA episodes plus the submitted anchors). Same length, different content: P9 changes nothing; P2 changes everything.}
 \label{tab:p9}
 \centering\small
-\begin{tabular}{@{}lccc@{}}
+\begin{tabular}{@{}llccc@{}}
 \toprule
-\thead{Surface} & \thead{P1 generic (22w)} & \thead{P9 redundant (323w)} & \thead{P2 specific (323w)}\\
+\thead{Policy} & \thead{Content} & \thead{Words} & \thead{Files discl.} & \thead{States discl.}\\
 \midrule
-Files disclosure & 81.5\% & 80.0\% & 14.0\%\\
-States disclosure & 63.0\% & 62.0\% & 8.0\%\\
+P1 & generic caution (anchor) & 22 & 81.5\% & 63.0\%\\
+P9 & P1 restated; nothing added & 323 & 80.0\% & 62.0\%\\
+P2 & categories + operational rules & 323 & 14.0\% & 8.0\%\\
 \bottomrule
 \end{tabular}
 \end{table}
