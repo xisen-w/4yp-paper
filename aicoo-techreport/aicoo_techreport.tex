@@ -73,6 +73,11 @@
   borderline west={2.2pt}{0pt}{AicooBlue},
   fonttitle=\sffamily\bfseries, coltitle=white, colbacktitle=AicooBlue, title={#1},
   arc=1.5pt, left=8pt, right=8pt, top=5pt, bottom=5pt}
+\newtcolorbox{defbox}[1][]{
+  enhanced, colback=white, colframe=AicooNavy!55, boxrule=0.6pt,
+  fonttitle=\sffamily\bfseries, coltitle=white, colbacktitle=AicooNavy, title={#1},
+  arc=1.5pt, left=9pt, right=9pt, top=6pt, bottom=6pt}
+\newcommand{\dterm}[1]{{\sffamily\bfseries\color{AicooNavy}#1}}
 \newtcolorbox{findbox}[1][]{
   enhanced, colback=white, colframe=AicooBorder, boxrule=0.5pt,
   borderline west={2.2pt}{0pt}{AicooGold},
@@ -173,9 +178,36 @@ Few existing evaluations address this problem. Single-agent benchmarks \cite{zha
 \label{sec:platform}
 % ============================================================
 
-\subsection{The Personal Agent as an Operating System}
+SharedOS is a runtime for agents that act across ownership boundaries. It executes one agent turn at a time, under explicit permission control. This section builds up the design from first principles. The definitions below are used throughout the report.
 
-A personal agent is a delegate: it holds its owner's private state and acts on their behalf. We model each agent $A_i$ as an operating system. The agent operates over a private store $K_i = (F_i, S_i, M_i)$: files $F_i$ (long-form documents in a hierarchical namespace), structured state $S_i$ (typed records such as todos, calendar events, and CRM entries), and memory $M_i$ (agent-curated summaries of prior interactions). It accesses $K_i$ exclusively through a typed tool set $T_i$; the agent cannot bypass tools, mirroring how a conventional OS mediates all access through system calls. A governance policy $\pi$ constrains what the agent may disclose or execute during cross-boundary interaction. The \emph{heartbeat} is the agent's autonomous loop: at each tick it reasons, invokes tools, and generates responses without human intervention.
+\begin{defbox}[Definitions]
+\dterm{Principal.} The entity an agent acts for: a person, a team, a service, or another agent.\par
+\dterm{Delegate.} An agent that represents a principal across a boundary. A delegate bundles the principal's \emph{access} (grants), \emph{data} (files and live state), and \emph{environment} (tools and policies).\par
+\dterm{Subagent.} A helper spawned inside a boundary. It inherits its parent's context and authority. A delegate inherits nothing; it starts from deny-by-default.\par
+\dterm{Driver.} The model harness that does a delegate's thinking for one turn. Drivers are swappable: the standard SharedOS harness, Codex, Claude Code, or any model loop.\par
+\dterm{Turn.} One bounded execution of a delegate: receive a message, reason, call tools, respond. SharedOS executes exactly one turn per invocation.\par
+\dterm{Transient state.} State that must be read live at request time: calendar slots, inbox contents, a record's current value. A copy goes stale immediately.\par
+\dterm{Accumulated understanding.} Knowledge that builds up across interactions: what the startup does, who matters to a project, what was agreed last week. This is the substance of memory.\par
+\dterm{File-as-memory.} The SharedOS representation choice: accumulated understanding lives in files, and memory is a governed view over authorized files, never a second store.\par
+\dterm{Capability grant.} The only carrier of authority. A grant binds issuer, subject, resource, owner, action, scope, purpose, and expiry.
+\end{defbox}
+
+\subsection{Two kinds of state}
+\label{sec:twokinds}
+
+Start from what a cross-boundary request actually wants: state. Agent state comes in two kinds.
+
+\emph{Transient state} lives behind live tools. When another agent asks whether Thursday is free, the answer must be read from the calendar now. Copying it into a message makes it stale.
+
+\emph{Accumulated understanding} is different. It is what the agent has come to know: the shape of the business, the history of a project, the preferences of its principal. It grows across interactions and does not expire on read.
+
+A runtime that only forwards messages governs neither kind. That is why SharedOS is not ``a messaging layer with access checks''. It is built to govern both kinds of state, under one authority model.
+
+\subsection{The delegate as an operating system}
+
+We model a delegate as a small operating system (Figure~\ref{fig:sharedos}). Its private store has one part per kind of state. Files $F_i$ hold accumulated understanding: documents, notes, and distilled knowledge in a hierarchical namespace. Live state $S_i$ sits behind external tools: todos, calendar events, typed records. Memory $M_i$ is not a third store. Under file-as-memory, the delegate distills what it learns into files, and $M_i$ is a set of governed views over $F_i$. A view inherits the grants of its source files. It cannot become a second authority.
+
+The delegate reaches all of this only through a typed tool set $T_i$, the way a process reaches disk only through system calls. A governance policy $\pi$ constrains what may be disclosed or executed during cross-boundary interaction. The \emph{heartbeat} is the delegate's autonomous loop: at each tick it reasons, calls tools, and responds, without human intervention.
 
 \begin{figure}[t]
 \centering
@@ -232,25 +264,38 @@ A personal agent is a delegate: it holds its owner's private state and acts on t
 \label{fig:sharedos}
 \end{figure}
 
-\subsection{Files as memory: one substrate for what agents know}
+\subsection{What the partition buys}
 \label{sec:filesasmemory}
 
-Why is a permission-controlled agent runtime more than ``a messaging layer with access checks''? Because what cross-boundary requests actually target is \emph{state}, and agent state comes in two kinds. \emph{Transient state} must be extracted at request time: calendar availability, inbox contents, the current status of a record. It lives behind live tools and is stale the moment it is copied. \emph{Accumulated understanding} builds up across interactions: what the startup is about, who matters to a project, what was agreed last week. This is the substance of memory. A runtime that only forwards messages governs neither.
+File-as-memory has one large payoff. Access between two delegates splits into exactly two surfaces:
 
-SharedOS commits to one representation for the accumulated kind: \emph{files}. Memory is not a second store with its own access rules; it is a role over authorized files (file-as-memory), and derived views such as indexes and context mounts must preserve the grants of their source files rather than introduce a second resource identity. The working assumption is that agents \emph{distill} knowledge and memory into files: each interaction can write its distilled understanding into the file tree, where it becomes searchable, snapshotable, and governed like everything else. The payoff is that access between two agents partitions cleanly into exactly two surfaces: \textbf{knowledge access}, file capabilities (list, search, read, write) over subtrees of accumulated understanding, and \textbf{tool access}, capabilities over the live tools that serve transient state and side effects. Both pass through the same grant model and the same kernel, so a per-relationship policy is just a pair of capability sets: a colleague can hold search over the project subtree plus free-busy calendar and nothing personal; a close friend the inverse. Had memory been an opaque second store, as in typical agent frameworks, it would be an authority the policy cannot reach, which is precisely the shape of the incidental-disclosure channel our multi-turn results expose. The evaluation surfaces in this report mirror the partition directly: Files QA probes knowledge access, States QA probes tool-mediated live state, and the action track probes tool-mediated mutation.
+\begin{itemize}
+\item \textbf{Knowledge access}: file capabilities (list, search, read, write) over subtrees of accumulated understanding.
+\item \textbf{Tool access}: capabilities over the live tools that serve transient state and side effects.
+\end{itemize}
 
-\subsection{Explicit authority by design}
+Both surfaces pass through the same kernel and the same grant model. A relationship policy is then just a pair of capability sets. A colleague can hold search over the project subtree plus free-busy calendar, and nothing personal. A close friend can hold the inverse.
+
+One state location sits outside this partition: the \emph{context} of a turn. Messages and tool results accumulate inside a conversation, and file grants do not reach them. This residue is not a corner case. It is exactly where our multi-turn results find the incidental-disclosure channel (\S\ref{sec:rq2}). The partition governs what delegates store and touch; measuring what leaks through the residue is one of the platform's main jobs.
+
+The evaluation surfaces of this report mirror the partition. Files QA probes knowledge access. States QA probes tool-mediated live state. The action track probes tool-mediated mutation.
+
+\subsection{Explicit authority}
 \label{sec:explicit}
 
-SharedOS separates what classical prompt-level agents conflate: the \emph{message channel} and the \emph{authority channel} (Figure~\ref{fig:sharedos}). A message carries intent, purpose, and payload; it structurally cannot carry authority, and a grant-shaped key in a message is a parse error, not a request. Authority exists only as \emph{capability grants} in a trusted store: each grant binds issuer, subject, resource, owner, actions, scope, purpose, and expiry, and the kernel is deny-by-default, authorizing the complete requested tuple against verified grants. Independent grants never combine into an authority no issuer created; reads do not imply writes; a registered tool is neither discoverable nor invocable without its own grant; and if grant state is unavailable, the kernel fails closed.
+SharedOS keeps two channels physically separate (Figure~\ref{fig:sharedos}). The \emph{message channel} carries intent, purpose, and payload. It cannot carry authority: a grant-shaped key inside a message is a parse error, not a request. The \emph{authority channel} carries capability grants from a trusted store. The kernel is deny-by-default. It authorizes each requested operation as a complete tuple (resource, owner, action, scope, purpose, expiry) against verified grants. Independent grants never combine into an authority no issuer created. Reads do not imply writes. A registered tool is neither discoverable nor invocable without its own grant. If grant state is unavailable, the kernel fails closed.
 
-Two consequences matter for evaluation. First, \emph{the agent is a plug-in, not the boundary}. The model-facing side of a turn is a single swappable port (the turn driver): the standard SharedOS harness, Codex, Claude Code, or any model loop can occupy it, while SharedOS owns the guarded loop around it, filtering the tool catalogue before the model sees it and re-authorizing every requested call individually. The driver never receives grants or issuing authority, so the security invariants hold independently of which model sits in the slot; swapping a stronger, weaker, or adversarial agent changes behaviour inside the sandbox, not the sandbox. Second, \emph{escalation is well defined precisely because access control is explicit}. A denial is a first-class, machine-readable audited outcome, not a silent failure; an agent that lacks authority can emit a structured CapabilityRequest, which becomes usable authority only when an eligible issuer (typically the resource owner) converts it into a new grant, itself bounded by purpose, expiry, and use counts. Delegation is similarly bounded: derived grants can only narrow their parent, and revoking an ancestor invalidates the chain. Prompt-level governance offers no analogue of this loop, which is what makes the escalation-gate experiments of \S\ref{sec:structural} possible. SharedOS executes exactly one turn per invocation; when and how often turns happen (heartbeat cadence in production, tick schedules in PACT) is the host's decision.
+So what is ``the agent'' here? The delegate is the identity: the principal, the grants, the files, the policies, and their lineage. The driver is fungible labour. The model-facing side of a turn is one swappable port, and any harness can occupy it. The driver receives a sanitized context and a filtered tool catalogue, never grants. Every call it requests is re-authorized, one by one. Swapping a stronger, weaker, or adversarial driver changes behaviour inside the sandbox, not the sandbox. A session agent on a laptop is a driver; it becomes a delegate only when it holds a principal's bundle.
 
-\subsection{Communication Between Personal Agents}
+Escalation is well defined precisely because denial is explicit. A denial is a recorded, machine-readable outcome, not a silent failure. The agent can respond with a structured CapabilityRequest. The request becomes authority only when an eligible issuer, typically the owner, converts it into a new grant, itself bounded by purpose, expiry, and use count. Delegation can only narrow: a derived grant is never broader than its parent, and revoking an ancestor invalidates the chain. This loop is what makes the escalation-gate experiments of \S\ref{sec:structural} possible.
 
-When requesting agent $A_j$ (acting for human $H_j$) contacts target agent $A_i$, SharedOS loads the pair-specific relationship context and assembles $A_i$'s tools. $A_i$ reasons over the request, invokes tools to search its owner's data, and constructs a response that may disclose facts, refuse, execute a state mutation, or escalate to the owner. Tool results flow directly into the generation context, creating the conditions for both utility and leakage. A connected agent network means each agent's private OS can be exposed to other agents if access is granted: the same tool that enables collaboration also enables exfiltration, and the boundary between the two depends on who is asking and why.
+SharedOS executes exactly one turn per invocation. When turns happen is the host's decision: heartbeat cadence in production, tick schedules in PACT.
 
-\subsection{Combinatorial Complexity}
+\subsection{Communication between delegates}
+
+Consider a society of principals, each represented by a delegate. When delegate $A_j$ contacts delegate $A_i$, SharedOS loads the pair-specific relationship context and assembles $A_i$'s tools. $A_i$ reasons over the request, searches its principal's data, and responds: disclose, refuse, execute, or escalate. Tool results flow into the generation context, which creates the conditions for both utility and leakage. The same channel that enables collaboration enables exfiltration; which one it is depends on who is asking and why. PACT-PAIR instantiates the personal case, one person with one agent; PACT-NET extends it to a network of 25 principals.
+
+\subsection{Combinatorial complexity}
 
 Because state, tools, policy, and relationship are independently configurable, SharedOS exposes a combinatorial safety surface invisible to text-exchange benchmarks. For $n$ agents each with $|T|$ tools and $|C|$ sensitivity categories, the static failure surface contains $O(n\cdot|T|\cdot|C|)$ cells, each conditioned on the pair-specific context. Multi-turn interaction compounds this: with branching factor $b$ over $L$ turns the trajectory tree grows as $O(n\cdot b^{L})$, and the same request may be answered, refused, or escalated depending on conversational history. Static test suites sample only a sparse slice of this surface. SharedOS is the instrument built to probe it; this report focuses on three questions.
 
@@ -264,7 +309,6 @@ Real deployment is multi-turn. We compare single-turn and 240-tick autonomous in
 We fix the policy and vary only the requester's relationship (colleague, CEO delegate, close friend, investor). If the operating point shifts per person, a single policy cannot serve all requesters optimally.
 \end{rqbox}
 
-% ============================================================
 \section{Permissioned Agent Coordination Testbed (PACT)}
 \label{sec:design}
 % ============================================================
@@ -512,7 +556,7 @@ This report establishes, to our knowledge, the first systematic map of security-
 
 For deployers, the results compose into a concrete evaluation recipe: (i) write the domain's scenario contracts (requester, relationship, object, operation); (ii) run paired public/protected tasks with dual metrics, including database-diff scoring for writes; (iii) evaluate candidate policies as discrete operating points along the component ladder (generic, +categories, +operational rules), so each component's contribution is visible in the target domain; (iv) verify scoring with judge-free gold-string matching plus a different-family judge; (v) accept or reject against preregistered bounds. Steps (i)--(v) run on any MCP-compatible deployment.
 
-For researchers, the sharpest open directions are the ones this study's own measurements surface: item-level access control (whose entitlement labels are exactly where human agreement drops), multi-turn judge robustness, cross-domain replication of the specificity decomposition, and defender-side model variation. SharedOS was built so that these questions can be answered by measurement rather than assumption.
+For researchers, the sharpest open directions are the ones this study's own measurements surface: item-level access control (whose entitlement labels are exactly where human agreement drops), multi-turn judge robustness, cross-domain replication of the specificity decomposition, defender-side model variation, branching and lineage of delegate identity, and behavioural equivalence between drivers occupying the same delegate bundle. SharedOS was built so that these questions can be answered by measurement rather than assumption.
 
 \vspace{6pt}
 {\color{AicooBorder}\hrule height 0.5pt}
