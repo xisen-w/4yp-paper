@@ -1,3 +1,4 @@
+% !TEX program = xelatex
 % ============================================================
 %  Systemind Research Technical Report STR-2026-001
 %  How Should Your Agent Talk to Mine?
@@ -7,11 +8,17 @@
 
 % ---------- Fonts (XeLaTeX) ----------
 \usepackage{fontspec}
-\setmainfont{texgyrepagella}[
-  Path=/usr/local/texlive/2025/texmf-dist/fonts/opentype/public/tex-gyre/,
-  Extension=.otf, UprightFont=*-regular, BoldFont=*-bold,
-  ItalicFont=*-italic, BoldItalicFont=*-bolditalic]
-\setsansfont{Helvetica Neue}
+% Portable font setup: prefer system-registered names (Overleaf/Linux),
+% fall back to TeX Live file paths (macOS local builds).
+\IfFontExistsTF{TeX Gyre Pagella}
+  {\setmainfont{TeX Gyre Pagella}}
+  {\setmainfont{texgyrepagella}[
+    Path=/usr/local/texlive/2025/texmf-dist/fonts/opentype/public/tex-gyre/,
+    Extension=.otf, UprightFont=*-regular, BoldFont=*-bold,
+    ItalicFont=*-italic, BoldItalicFont=*-bolditalic]}
+\IfFontExistsTF{Helvetica Neue}
+  {\setsansfont{Helvetica Neue}}
+  {\setsansfont{TeX Gyre Heros}}
 \usepackage{microtype}
 
 % ---------- Layout ----------
@@ -472,7 +479,7 @@ Is the D1$\to$D2 gain just prompt mass? \textbf{P9} answers this: it matches P2'
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=0.78\linewidth]{../neurips/figures/fig_specificity.pdf}
+  \includegraphics[width=0.78\linewidth]{figures/fig_specificity.pdf}
   \caption{\textbf{Policy specificity moves the operating point; length does not.} Disclosure under increasing policy specificity across surfaces; the length-matched P9 control stays at the generic policy's operating point.}
   \label{fig:spec}
 \end{figure}
